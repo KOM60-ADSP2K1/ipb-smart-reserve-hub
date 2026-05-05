@@ -12,6 +12,12 @@ from app.facility_schemas import (
     FacilityCatalogItemResponse,
     FacilityDetailResponse,
 )
+from app.reservation_time_selection import FacilityNotFound as ReservationTimeSelectionFacilityNotFound
+from app.reservation_time_selection import ReservationTimeSelectionModule
+from app.reservation_time_selection_schemas import (
+    ReservationTimeSelectionRequest,
+    ReservationTimeSelectionResponse,
+)
 
 
 def register_facility_routes(
@@ -19,6 +25,7 @@ def register_facility_routes(
     *,
     get_facility_catalog: Callable,
     get_facility_availability: Callable,
+    get_reservation_time_selection: Callable,
 ) -> None:
     @app.get("/facilities", response_model=list[FacilityCatalogItemResponse])
     async def list_facilities(
@@ -58,4 +65,24 @@ def register_facility_routes(
         try:
             return facility_availability.check_availability(facility_id, starts_at=start, ends_at=end)
         except FacilityAvailabilityNotFound:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fasilitas tidak ditemukan.")
+
+    @app.post(
+        "/facilities/{facility_id}/reservation-time-selection",
+        response_model=ReservationTimeSelectionResponse,
+    )
+    async def validate_reservation_time_selection(
+        facility_id: str,
+        payload: ReservationTimeSelectionRequest,
+        reservation_time_selection: ReservationTimeSelectionModule = Depends(get_reservation_time_selection),
+    ):
+        try:
+            return ReservationTimeSelectionResponse.from_time_selection(
+                reservation_time_selection.validate_time_selection(
+                    facility_id,
+                    starts_at=payload.starts_at,
+                    ends_at=payload.ends_at,
+                )
+            )
+        except ReservationTimeSelectionFacilityNotFound:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fasilitas tidak ditemukan.")

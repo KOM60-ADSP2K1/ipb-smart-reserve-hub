@@ -7,7 +7,7 @@ from httpx import ASGITransport, AsyncClient
 from app.facility_availability import FacilityAvailabilityModule
 from app.facilities import FacilityCatalogModule
 from app.main import create_app
-from app.models import Facility, FacilityCategory, FacilityImage, ReservationStatus
+from app.models import Facility, FacilityCategory, FacilityImage, ReservationStatus, UserRole
 from tests.data_builder import DataBuilder
 
 
@@ -333,3 +333,427 @@ async def test_students_check_facility_availability_against_blocking_reservation
 
     assert response.status_code == 200
     assert response.json() == {"available": False, "reasons": ["reserved_time"]}
+
+
+@pytest.mark.anyio
+async def test_students_validate_available_reservation_time_selection():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime.fromisoformat("2026-05-01T00:00:00+00:00"),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            f"/facilities/{facility_id}/reservation-time-selection",
+            json={
+                "starts_at": "2026-06-01T02:00:00+00:00",
+                "ends_at": "2026-06-01T04:00:00+00:00",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"available": True, "errors": []}
+
+
+@pytest.mark.anyio
+async def test_reservation_time_selection_accepts_jakarta_local_timestamps_for_open_hours():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime.fromisoformat("2026-05-01T07:00:00+07:00"),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            f"/facilities/{facility_id}/reservation-time-selection",
+            json={
+                "starts_at": "2026-06-01T09:00:00+07:00",
+                "ends_at": "2026-06-01T11:00:00+07:00",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {"available": True, "errors": []}
+
+
+@pytest.mark.anyio
+async def test_reservation_time_selection_rejects_times_outside_five_minute_increments():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime.fromisoformat("2026-05-01T00:00:00+00:00"),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            f"/facilities/{facility_id}/reservation-time-selection",
+            json={
+                "starts_at": "2026-06-01T02:03:00+00:00",
+                "ends_at": "2026-06-01T04:00:00+00:00",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "available": False,
+        "errors": [
+            {
+                "reason": "invalid_time_increment",
+                "message": "Waktu reservasi harus mengikuti kelipatan 5 menit.",
+            }
+        ],
+    }
+
+
+@pytest.mark.anyio
+async def test_reservation_time_selection_rejects_duration_below_one_hour():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime.fromisoformat("2026-05-01T00:00:00+00:00"),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            f"/facilities/{facility_id}/reservation-time-selection",
+            json={
+                "starts_at": "2026-06-01T02:00:00+00:00",
+                "ends_at": "2026-06-01T02:55:00+00:00",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "available": False,
+        "errors": [
+            {
+                "reason": "minimum_duration",
+                "message": "Durasi reservasi minimal 1 jam.",
+            }
+        ],
+    }
+
+
+@pytest.mark.anyio
+async def test_reservation_time_selection_rejects_ranges_crossing_midnight_in_jakarta():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime.fromisoformat("2026-05-01T00:00:00+00:00"),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="00:00", closes_at="23:59")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            f"/facilities/{facility_id}/reservation-time-selection",
+            json={
+                "starts_at": "2026-06-01T16:00:00+00:00",
+                "ends_at": "2026-06-01T17:00:00+00:00",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "available": False,
+        "errors": [
+            {
+                "reason": "crosses_midnight",
+                "message": "Waktu reservasi harus berada pada hari yang sama.",
+            }
+        ],
+    }
+
+
+@pytest.mark.anyio
+async def test_reservation_time_selection_rejects_times_outside_facility_open_hours():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime.fromisoformat("2026-05-01T00:00:00+00:00"),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            f"/facilities/{facility_id}/reservation-time-selection",
+            json={
+                "starts_at": "2026-06-01T11:30:00+00:00",
+                "ends_at": "2026-06-01T12:30:00+00:00",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "available": False,
+        "errors": [
+            {
+                "reason": "outside_open_hours",
+                "message": "Waktu reservasi berada di luar jam operasional fasilitas.",
+            }
+        ],
+    }
+
+
+@pytest.mark.anyio
+async def test_reservation_time_selection_rejects_blackout_periods():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime.fromisoformat("2026-05-01T00:00:00+00:00"),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    test_data.add_facility_blackout(
+        facility_id,
+        starts_at="2026-06-01T02:30:00+00:00",
+        ends_at="2026-06-01T03:30:00+00:00",
+    )
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            f"/facilities/{facility_id}/reservation-time-selection",
+            json={
+                "starts_at": "2026-06-01T02:00:00+00:00",
+                "ends_at": "2026-06-01T04:00:00+00:00",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "available": False,
+        "errors": [
+            {
+                "reason": "blackout_period",
+                "message": "Waktu reservasi berada pada periode fasilitas tidak tersedia.",
+            }
+        ],
+    }
+
+
+@pytest.mark.anyio
+async def test_reservation_time_selection_rejects_blocking_reservations():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime.fromisoformat("2026-05-01T00:00:00+00:00"),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    organization_unit_id = test_data.create_organization_unit(name="BEM KM IPB")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    test_data.create_reservation(
+        facility_id=facility_id,
+        organization_unit_id=organization_unit_id,
+        activity_title="Seminar Karier",
+        starts_at="2026-06-01T02:30:00+00:00",
+        ends_at="2026-06-01T03:30:00+00:00",
+        status=ReservationStatus.approved,
+    )
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            f"/facilities/{facility_id}/reservation-time-selection",
+            json={
+                "starts_at": "2026-06-01T02:00:00+00:00",
+                "ends_at": "2026-06-01T04:00:00+00:00",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "available": False,
+        "errors": [
+            {
+                "reason": "reserved_time",
+                "message": "Waktu reservasi sudah dipesan.",
+            }
+        ],
+    }
+
+
+@pytest.mark.anyio
+async def test_reservation_time_selection_rejects_start_less_than_default_lead_time():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime.fromisoformat("2026-05-20T00:00:00+00:00"),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            f"/facilities/{facility_id}/reservation-time-selection",
+            json={
+                "starts_at": "2026-06-01T02:00:00+00:00",
+                "ends_at": "2026-06-01T04:00:00+00:00",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "available": False,
+        "errors": [
+            {
+                "reason": "below_minimum_lead_time",
+                "message": "Reservasi harus diajukan minimal 14 hari sebelum waktu mulai.",
+            }
+        ],
+    }
+
+
+@pytest.mark.anyio
+async def test_reservation_time_selection_rejects_start_beyond_default_advance_window():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime.fromisoformat("2026-05-01T00:00:00+00:00"),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=2, opens_at="08:00", closes_at="16:00")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.post(
+            f"/facilities/{facility_id}/reservation-time-selection",
+            json={
+                "starts_at": "2026-07-01T02:00:00+00:00",
+                "ends_at": "2026-07-01T04:00:00+00:00",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "available": False,
+        "errors": [
+            {
+                "reason": "beyond_maximum_advance_window",
+                "message": "Reservasi hanya dapat diajukan maksimal 60 hari sebelum waktu mulai.",
+            }
+        ],
+    }
+
+
+@pytest.mark.anyio
+async def test_reservation_time_selection_uses_configured_minimum_lead_time():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime.fromisoformat("2026-05-30T00:00:00+00:00"),
+    )
+    test_data = DataBuilder(app)
+    test_data.create_user(email="admin@ipb.ac.id", role=UserRole.super_admin)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        admin_login = await client.post(
+            "/auth/login",
+            json={"email": "admin@ipb.ac.id", "password": "secret123"},
+        )
+        admin_token = admin_login.json()["access_token"]
+        await client.patch(
+            "/admin/settings",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            json={
+                "min_booking_lead_hours": 72,
+                "max_booking_advance_hours": 1440,
+                "document_upload_due_hours": 72,
+                "document_verification_due_hours": 48,
+                "payment_upload_due_hours": 24,
+                "payment_verification_due_hours": 24,
+                "final_approval_cutoff_hours": 168,
+                "overdue_final_approval_cutoff_hours": 96,
+                "allowed_student_email_domains": ["apps.ipb.ac.id"],
+            },
+        )
+        response = await client.post(
+            f"/facilities/{facility_id}/reservation-time-selection",
+            json={
+                "starts_at": "2026-06-01T02:00:00+00:00",
+                "ends_at": "2026-06-01T04:00:00+00:00",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "available": False,
+        "errors": [
+            {
+                "reason": "below_minimum_lead_time",
+                "message": "Reservasi harus diajukan minimal 3 hari sebelum waktu mulai.",
+            }
+        ],
+    }
+
+
+@pytest.mark.anyio
+async def test_reservation_time_selection_uses_configured_maximum_advance_window():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime.fromisoformat("2026-05-01T00:00:00+00:00"),
+    )
+    test_data = DataBuilder(app)
+    test_data.create_user(email="admin@ipb.ac.id", role=UserRole.super_admin)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        admin_login = await client.post(
+            "/auth/login",
+            json={"email": "admin@ipb.ac.id", "password": "secret123"},
+        )
+        admin_token = admin_login.json()["access_token"]
+        await client.patch(
+            "/admin/settings",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            json={
+                "min_booking_lead_hours": 336,
+                "max_booking_advance_hours": 720,
+                "document_upload_due_hours": 72,
+                "document_verification_due_hours": 48,
+                "payment_upload_due_hours": 24,
+                "payment_verification_due_hours": 24,
+                "final_approval_cutoff_hours": 168,
+                "overdue_final_approval_cutoff_hours": 96,
+                "allowed_student_email_domains": ["apps.ipb.ac.id"],
+            },
+        )
+        response = await client.post(
+            f"/facilities/{facility_id}/reservation-time-selection",
+            json={
+                "starts_at": "2026-06-01T02:00:00+00:00",
+                "ends_at": "2026-06-01T04:00:00+00:00",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "available": False,
+        "errors": [
+            {
+                "reason": "beyond_maximum_advance_window",
+                "message": "Reservasi hanya dapat diajukan maksimal 30 hari sebelum waktu mulai.",
+            }
+        ],
+    }

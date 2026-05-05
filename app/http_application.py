@@ -1,3 +1,6 @@
+from collections.abc import Callable
+from datetime import UTC, datetime
+
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
@@ -21,6 +24,7 @@ from app.facility_routes import register_facility_routes
 from app.organization_unit_repository import SqlAlchemyOrganizationUnitRepository
 from app.organization_unit_routes import register_organization_unit_routes
 from app.organization_units import OrganizationUnitManagementModule
+from app.reservation_time_selection import ReservationTimeSelectionModule
 from app.settings import SettingsModule
 from app.user_repository import SqlAlchemyUserRepository
 
@@ -31,8 +35,10 @@ class HttpRuntimeModule:
         *,
         settings: SettingsModule,
         bearer_scheme: HTTPBearer | None = None,
+        clock: Callable[[], datetime] | None = None,
     ) -> None:
         self._settings = settings
+        self._clock = clock or (lambda: datetime.now(UTC))
         self._default_booking_settings = BookingSettings.defaults(
             allowed_student_email_domains=self._settings.allowed_student_email_domains
         )
@@ -41,6 +47,7 @@ class HttpRuntimeModule:
         self.get_user_accounts = self._build_get_user_accounts()
         self.get_facility_catalog = self._build_get_facility_catalog()
         self.get_facility_availability = self._build_get_facility_availability()
+        self.get_reservation_time_selection = self._build_get_reservation_time_selection()
         self.get_organization_unit_management = self._build_get_organization_unit_management()
         self.get_booking_settings = self._build_get_booking_settings()
         self.get_current_user = self._build_get_current_user()
@@ -86,6 +93,21 @@ class HttpRuntimeModule:
     def _build_get_facility_availability(self):
         async def dependency(session: Session = Depends(self.get_session)) -> FacilityAvailabilityModule:
             return FacilityAvailabilityModule(facility_repository=SqlAlchemyFacilityRepository(session))
+
+        return dependency
+
+    def _build_get_reservation_time_selection(self):
+        async def dependency(session: Session = Depends(self.get_session)) -> ReservationTimeSelectionModule:
+            return ReservationTimeSelectionModule(
+                facility_availability=FacilityAvailabilityModule(
+                    facility_repository=SqlAlchemyFacilityRepository(session),
+                ),
+                booking_settings=BookingSettingsModule(
+                    session=session,
+                    defaults=self._default_booking_settings,
+                ).get_booking_settings(),
+                clock=self._clock,
+            )
 
         return dependency
 
@@ -135,12 +157,13 @@ class HttpRuntimeModule:
 
 
 class HttpApplicationModule:
-    def __init__(self, *, settings: SettingsModule) -> None:
+    def __init__(self, *, settings: SettingsModule, clock: Callable[[], datetime] | None = None) -> None:
         self._settings = settings
+        self._clock = clock
 
     def build(self) -> FastAPI:
         app = FastAPI(title="IPB Smart Reserve Hub")
-        runtime = HttpRuntimeModule(settings=self._settings)
+        runtime = HttpRuntimeModule(settings=self._settings, clock=self._clock)
         Base.metadata.create_all(bind=runtime.session_factory.kw["bind"])
         register_account_routes(
             app,
@@ -152,6 +175,7 @@ class HttpApplicationModule:
             app,
             get_facility_catalog=runtime.get_facility_catalog,
             get_facility_availability=runtime.get_facility_availability,
+            get_reservation_time_selection=runtime.get_reservation_time_selection,
         )
         register_organization_unit_routes(
             app,
