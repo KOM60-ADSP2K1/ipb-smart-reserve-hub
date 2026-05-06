@@ -25,6 +25,12 @@ class ReviewRepository(Protocol):
     def list_reservations_for_facility(self, facility_id: str) -> list[Reservation]:
         raise NotImplementedError
 
+    def list_all(self) -> list[FacilityReview]:
+        raise NotImplementedError
+
+    def get_by_id(self, review_id: str) -> FacilityReview | None:
+        raise NotImplementedError
+
 
 class SqlAlchemyReviewRepository:
     def __init__(self, session: Session) -> None:
@@ -72,3 +78,19 @@ class SqlAlchemyReviewRepository:
 
     def list_reservations_for_facility(self, facility_id: str) -> list[Reservation]:
         return list(self._session.scalars(select(Reservation).where(Reservation.facility_id == facility_id)))
+
+    def list_all(self) -> list[FacilityReview]:
+        return list(
+            self._session.scalars(
+                select(FacilityReview)
+                .options(joinedload(FacilityReview.facility), joinedload(FacilityReview.student))
+                .order_by(FacilityReview.created_at.desc(), FacilityReview.id.desc())
+            )
+        )
+
+    def get_by_id(self, review_id: str) -> FacilityReview | None:
+        return self._session.scalar(
+            select(FacilityReview)
+            .options(joinedload(FacilityReview.facility), joinedload(FacilityReview.student))
+            .where(FacilityReview.id == review_id)
+        )

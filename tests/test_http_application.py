@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from fastapi.security import HTTPBearer
 
 from app.api.http_application import AccountRouteDependencies
+from app.api.http_application import AuditLogRouteDependencies
 from app.api.http_application import BookingSettingRouteDependencies
 from app.api.http_application import FacilityManagementRouteDependencies
 from app.api.http_application import FacilityRouteDependencies
@@ -65,6 +66,12 @@ class StubHttpRuntimeDependencyRegistry:
             require_access=placeholder_require_access,
         )
 
+    def audit_log_routes(self):
+        return AuditLogRouteDependencies(
+            get_audit_logs=placeholder_dependency,
+            require_access=placeholder_require_access,
+        )
+
     def facility_management_routes(self):
         return FacilityManagementRouteDependencies(
             get_facility_management=placeholder_dependency,
@@ -119,7 +126,9 @@ def test_http_application_module_uses_runtime_dependency_registry_for_route_wiri
     assert "/facilities/{facility_id}/reservations" in route_paths
     assert "/student/reservations/{reservation_id}/review" in route_paths
     assert "/staff/facilities/{facility_id}/reviews" in route_paths
+    assert "/admin/reviews" in route_paths
     assert "/notifications" in route_paths
+    assert "/admin/audit-logs" in route_paths
     assert "/admin/system-status" in route_paths
 
 
@@ -138,7 +147,11 @@ def test_http_application_module_builds_app_with_foundation_routes():
     assert "/student/reviews/{review_id}" in route_paths
     assert "/staff/facilities/{facility_id}/reviews" in route_paths
     assert "/staff/facilities/{facility_id}/statistics" in route_paths
+    assert "/admin/reviews" in route_paths
+    assert "/admin/reviews/{review_id}/delete" in route_paths
+    assert "/admin/reviews/{review_id}/restore" in route_paths
     assert "/notifications" in route_paths
+    assert "/admin/audit-logs" in route_paths
     assert "/student/reservations" in route_paths
     assert "/student/reservations/{reservation_id}" in route_paths
     assert "/admin/facilities/{facility_id}/staff-assignments/{staff_id}" in route_paths

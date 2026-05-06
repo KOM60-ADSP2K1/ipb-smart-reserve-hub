@@ -7,6 +7,7 @@ from app.models import ReservationApprovalLetter, ReservationSignedApprovalLette
 from app.pdf import ApprovalLetterInput, ApprovalLetterPdfGenerator
 from app.repositories.reservation_repository import ReservationRepository
 from app.services.accounts import UserAccount
+from app.services.audit_logs import AuditLogModule
 from app.services.booking_settings import BookingSettings
 from app.services.notifications import NotificationModule
 from app.services.reservations import ReservationNotFound
@@ -90,6 +91,7 @@ class ApprovalLetterModule:
         booking_settings: BookingSettings,
         clock: Callable[[], datetime],
         notifications: NotificationModule | None = None,
+        audit_logs: AuditLogModule | None = None,
     ) -> None:
         self._reservation_repository = reservation_repository
         self._storage = storage
@@ -97,6 +99,7 @@ class ApprovalLetterModule:
         self._booking_settings = booking_settings
         self._clock = clock
         self._notifications = notifications
+        self._audit_logs = audit_logs
 
     def get_student_approval_letter(self, student: UserAccount, reservation_id: str) -> StudentApprovalLetter:
         letter = self._get_or_create_student_approval_letter(student, reservation_id)
@@ -177,6 +180,15 @@ class ApprovalLetterModule:
             message = f"Reservasi {reservation.activity_title} disetujui dokumennya dan menunggu pembayaran."
         if self._notifications is not None:
             self._notifications.student_action_recorded(reservation, title=title, message=message)
+        self._record_audit(
+            actor=staff,
+            action_type="document.approved",
+            target_type="reservation",
+            target_id=reservation.id,
+            facility_id=reservation.facility_id,
+            student_id=reservation.student_id,
+            reservation_id=reservation.id,
+        )
         return StaffDocumentReview(reservation_id=reservation.id, status=reservation.status)
 
     def download_staff_signed_approval_letter(
@@ -217,6 +229,15 @@ class ApprovalLetterModule:
                 title="Surat ditolak",
                 message=f"Surat persetujuan {reservation.activity_title} ditolak: {reason}",
             )
+        self._record_audit(
+            actor=staff,
+            action_type="document.rejected",
+            target_type="reservation",
+            target_id=reservation.id,
+            facility_id=reservation.facility_id,
+            student_id=reservation.student_id,
+            reservation_id=reservation.id,
+        )
         return StaffDocumentReview(
             reservation_id=reservation.id,
             status=reservation.status,
@@ -230,6 +251,28 @@ class ApprovalLetterModule:
         if self._reservation_repository.get_by_id_for_review(reservation_id) is not None:
             raise StaffDocumentReviewAccessDenied
         raise ReservationNotFound
+
+    def _record_audit(
+        self,
+        *,
+        actor: UserAccount | None,
+        action_type: str,
+        target_type: str,
+        target_id: str,
+        facility_id: str | None = None,
+        student_id: str | None = None,
+        reservation_id: str | None = None,
+    ) -> None:
+        if self._audit_logs is not None:
+            self._audit_logs.record(
+                actor=actor,
+                action_type=action_type,
+                target_type=target_type,
+                target_id=target_id,
+                facility_id=facility_id,
+                student_id=student_id,
+                reservation_id=reservation_id,
+            )
 
     def _get_or_create_student_approval_letter(
         self,

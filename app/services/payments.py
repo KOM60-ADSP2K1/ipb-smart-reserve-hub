@@ -6,6 +6,7 @@ import uuid
 from app.models import ReservationPaymentReceipt, ReservationStatus
 from app.repositories.reservation_repository import ReservationRepository
 from app.services.accounts import UserAccount
+from app.services.audit_logs import AuditLogModule
 from app.services.booking_settings import BookingSettings
 from app.services.notifications import NotificationModule
 from app.services.reservations import ReservationNotFound
@@ -83,12 +84,14 @@ class PaymentModule:
         booking_settings: BookingSettings,
         clock: Callable[[], datetime],
         notifications: NotificationModule | None = None,
+        audit_logs: AuditLogModule | None = None,
     ) -> None:
         self._reservation_repository = reservation_repository
         self._storage = storage
         self._booking_settings = booking_settings
         self._clock = clock
         self._notifications = notifications
+        self._audit_logs = audit_logs
 
     def get_student_payment(self, student: UserAccount, reservation_id: str) -> StudentReservationPayment:
         reservation = self._reservation_repository.get_for_student(reservation_id, student.id)
@@ -171,6 +174,15 @@ class PaymentModule:
                 title="Pembayaran disetujui",
                 message=f"Pembayaran {reservation.activity_title} disetujui dan reservasi aktif.",
             )
+        self._record_audit(
+            actor=staff,
+            action_type="payment.approved",
+            target_type="reservation",
+            target_id=reservation.id,
+            facility_id=reservation.facility_id,
+            student_id=reservation.student_id,
+            reservation_id=reservation.id,
+        )
         return StaffPaymentReview(reservation_id=reservation.id, status=reservation.status)
 
     def reject_payment_receipt(self, staff: UserAccount, reservation_id: str, *, reason: str) -> StaffPaymentReview:
@@ -188,6 +200,15 @@ class PaymentModule:
                 title="Pembayaran ditolak",
                 message=f"Bukti pembayaran {reservation.activity_title} ditolak: {reason}",
             )
+        self._record_audit(
+            actor=staff,
+            action_type="payment.rejected",
+            target_type="reservation",
+            target_id=reservation.id,
+            facility_id=reservation.facility_id,
+            student_id=reservation.student_id,
+            reservation_id=reservation.id,
+        )
         return StaffPaymentReview(
             reservation_id=reservation.id,
             status=reservation.status,
@@ -201,6 +222,28 @@ class PaymentModule:
         if self._reservation_repository.get_by_id_for_review(reservation_id) is not None:
             raise StaffPaymentReviewAccessDenied
         raise ReservationNotFound
+
+    def _record_audit(
+        self,
+        *,
+        actor: UserAccount | None,
+        action_type: str,
+        target_type: str,
+        target_id: str,
+        facility_id: str | None = None,
+        student_id: str | None = None,
+        reservation_id: str | None = None,
+    ) -> None:
+        if self._audit_logs is not None:
+            self._audit_logs.record(
+                actor=actor,
+                action_type=action_type,
+                target_type=target_type,
+                target_id=target_id,
+                facility_id=facility_id,
+                student_id=student_id,
+                reservation_id=reservation_id,
+            )
 
 
 def _to_student_payment_receipt(receipt: ReservationPaymentReceipt) -> StudentPaymentReceipt:

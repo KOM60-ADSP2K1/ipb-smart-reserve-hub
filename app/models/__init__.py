@@ -67,6 +67,26 @@ class Notification(Base):
     reservation: Mapped["Reservation | None"] = relationship()
 
 
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    actor_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), index=True)
+    actor_email: Mapped[str | None] = mapped_column(String(255), index=True)
+    action_type: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
+    target_type: Mapped[str] = mapped_column(String(128), index=True, nullable=False)
+    target_id: Mapped[str] = mapped_column(String(36), index=True, nullable=False)
+    facility_id: Mapped[str | None] = mapped_column(ForeignKey("facilities.id"), index=True)
+    student_id: Mapped[str | None] = mapped_column(ForeignKey("users.id"), index=True)
+    reservation_id: Mapped[str | None] = mapped_column(ForeignKey("reservations.id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    actor: Mapped["User | None"] = relationship(foreign_keys=[actor_id])
+    student: Mapped["User | None"] = relationship(foreign_keys=[student_id])
+    facility: Mapped["Facility | None"] = relationship()
+    reservation: Mapped["Reservation | None"] = relationship()
+
+
 class FacilityCategory(Base):
     __tablename__ = "facility_categories"
 
@@ -248,6 +268,8 @@ class FacilityReview(Base):
     rating: Mapped[int] = mapped_column(Integer, nullable=False)
     comment: Mapped[str | None] = mapped_column(Text)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    deleted_by: Mapped[str | None] = mapped_column(String(32))
+    admin_removal_reason: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

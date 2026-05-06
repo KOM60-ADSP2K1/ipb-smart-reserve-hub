@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 from app.pdf import ApprovalLetterPdfGenerator
 from app.services.approval_letters import ApprovalLetterModule
 from app.services.accounts import UserAccountModule
+from app.repositories.audit_log_repository import SqlAlchemyAuditLogRepository
+from app.services.audit_logs import AuditLogModule
 from app.repositories.booking_settings_repository import SqlAlchemyBookingSettingsRepository
 from app.services.booking_settings import BookingSettings, BookingSettingsModule
 from app.services.facility_availability import FacilityAvailabilityModule
@@ -80,6 +82,7 @@ class FacilityModuleFactory:
     def build_reservations(self, session: Session) -> ReservationModule:
         reservation_repository = SqlAlchemyReservationRepository(session)
         notifications = self.build_notifications(session)
+        audit_logs = self.build_audit_logs(session)
         booking_settings = BookingSettingsModule(
             booking_settings_repository=SqlAlchemyBookingSettingsRepository(session),
             defaults=self._default_booking_settings,
@@ -91,10 +94,18 @@ class FacilityModuleFactory:
             booking_settings=booking_settings,
             clock=self._clock,
             notifications=notifications,
+            audit_logs=audit_logs,
         )
 
     def build_reviews(self, session: Session) -> ReviewModule:
-        return ReviewModule(review_repository=SqlAlchemyReviewRepository(session), clock=self._clock)
+        return ReviewModule(
+            review_repository=SqlAlchemyReviewRepository(session),
+            clock=self._clock,
+            audit_logs=self.build_audit_logs(session),
+        )
+
+    def build_audit_logs(self, session: Session) -> AuditLogModule:
+        return AuditLogModule(audit_log_repository=SqlAlchemyAuditLogRepository(session), clock=self._clock)
 
     def build_notifications(self, session: Session) -> NotificationModule:
         return NotificationModule(
@@ -114,6 +125,7 @@ class FacilityModuleFactory:
             booking_settings=booking_settings,
             clock=self._clock,
             notifications=self.build_notifications(session),
+            audit_logs=self.build_audit_logs(session),
         )
 
     def build_payments(self, session: Session) -> PaymentModule:
@@ -127,11 +139,13 @@ class FacilityModuleFactory:
             booking_settings=booking_settings,
             clock=self._clock,
             notifications=self.build_notifications(session),
+            audit_logs=self.build_audit_logs(session),
         )
 
     def build_management(self, session: Session) -> FacilityManagementModule:
         return FacilityManagementModule(
-            facility_management_repository=SqlAlchemyFacilityManagementRepository(session)
+            facility_management_repository=SqlAlchemyFacilityManagementRepository(session),
+            audit_logs=self.build_audit_logs(session),
         )
 
 

@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import object_session
 
-from app.models import Notification, Reservation, ReservationStatus
+from app.models import AuditLog, Notification, Reservation, ReservationStatus
 from app.services.booking_settings import BookingSettings
 
 
@@ -38,6 +38,7 @@ class DeadlineWorkerModule:
             for reservation in reservations:
                 if _should_complete(reservation, now):
                     reservation.status = ReservationStatus.completed
+                    _record_deadline_audit(reservation, action_type="deadline.completed", created_at=now)
                     _notify_student(
                         reservation,
                         title="Reservasi selesai",
@@ -47,6 +48,7 @@ class DeadlineWorkerModule:
                     completed += 1
                 elif _overdue_cutoff_reached(reservation, now, self._booking_settings):
                     reservation.status = ReservationStatus.expired
+                    _record_deadline_audit(reservation, action_type="deadline.expired", created_at=now)
                     _notify_student(
                         reservation,
                         title="Reservasi kedaluwarsa",
@@ -57,6 +59,7 @@ class DeadlineWorkerModule:
                 elif _should_mark_overdue_verification(reservation, now):
                     if _staff_overdue_cutoff_reached(reservation, now, self._booking_settings):
                         reservation.status = ReservationStatus.expired
+                        _record_deadline_audit(reservation, action_type="deadline.expired", created_at=now)
                         _notify_student(
                             reservation,
                             title="Reservasi kedaluwarsa",
@@ -66,6 +69,11 @@ class DeadlineWorkerModule:
                         expired += 1
                     else:
                         reservation.status = ReservationStatus.overdue_verification
+                        _record_deadline_audit(
+                            reservation,
+                            action_type="deadline.overdue_verification",
+                            created_at=now,
+                        )
                         _notify_student(
                             reservation,
                             title="Verifikasi melewati batas waktu",
@@ -78,6 +86,7 @@ class DeadlineWorkerModule:
                         overdue_verification += 1
                 elif _should_expire_student_delay_or_normal_cutoff(reservation, now, self._booking_settings):
                     reservation.status = ReservationStatus.expired
+                    _record_deadline_audit(reservation, action_type="deadline.expired", created_at=now)
                     _notify_student(
                         reservation,
                         title="Reservasi kedaluwarsa",
@@ -174,6 +183,24 @@ def _notify_student(reservation: Reservation, *, title: str, message: str, creat
                 reservation_id=reservation.id,
                 title=title,
                 message=message,
+                created_at=created_at,
+            )
+        )
+
+
+def _record_deadline_audit(reservation: Reservation, *, action_type: str, created_at: datetime) -> None:
+    session = object_session(reservation)
+    if session is not None:
+        session.add(
+            AuditLog(
+                actor_id=None,
+                actor_email=None,
+                action_type=action_type,
+                target_type="reservation",
+                target_id=reservation.id,
+                facility_id=reservation.facility_id,
+                student_id=reservation.student_id,
+                reservation_id=reservation.id,
                 created_at=created_at,
             )
         )

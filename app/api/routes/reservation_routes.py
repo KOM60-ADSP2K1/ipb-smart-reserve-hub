@@ -17,6 +17,8 @@ from app.schemas.reservation_schemas import (
     StudentSignedApprovalLetterResponse,
 )
 from app.schemas.review_schemas import (
+    AdminReviewRemovalRequest,
+    AdminReviewResponse,
     ReviewSubmissionRequest,
     StaffFacilityReviewResponse,
     StaffFacilityStatisticsResponse,
@@ -46,6 +48,7 @@ from app.services.reservations import (
 )
 from app.services.reviews import (
     ReviewAlreadySubmitted,
+    AdminReviewRemovalReasonRequired,
     ReviewModule,
     ReviewNotFound,
     ReviewReservationNotCompleted,
@@ -186,6 +189,49 @@ def register_reservation_routes(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Staff tidak ditugaskan ke fasilitas ini.",
             )
+
+    @app.get("/admin/reviews", response_model=list[AdminReviewResponse])
+    async def list_admin_reviews(
+        facility_id: str | None = None,
+        student_id: str | None = None,
+        reservation_id: str | None = None,
+        is_deleted: bool | None = None,
+        deleted_by: str | None = None,
+        reviews: ReviewModule = Depends(get_reviews),
+        _: UserAccount = Depends(require_access(AccessPolicyAction.manage_reviews)),
+    ):
+        return reviews.list_admin_reviews(
+            facility_id=facility_id,
+            student_id=student_id,
+            reservation_id=reservation_id,
+            is_deleted=is_deleted,
+            deleted_by=deleted_by,
+        )
+
+    @app.post("/admin/reviews/{review_id}/delete", response_model=AdminReviewResponse)
+    async def delete_admin_review(
+        review_id: str,
+        payload: AdminReviewRemovalRequest,
+        reviews: ReviewModule = Depends(get_reviews),
+        current_user: UserAccount = Depends(require_access(AccessPolicyAction.manage_reviews)),
+    ):
+        try:
+            return reviews.delete_admin_review(current_user, review_id, reason=payload.reason)
+        except AdminReviewRemovalReasonRequired:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Alasan penghapusan review wajib diisi.")
+        except ReviewNotFound:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review tidak ditemukan.")
+
+    @app.post("/admin/reviews/{review_id}/restore", response_model=AdminReviewResponse)
+    async def restore_admin_review(
+        review_id: str,
+        reviews: ReviewModule = Depends(get_reviews),
+        current_user: UserAccount = Depends(require_access(AccessPolicyAction.manage_reviews)),
+    ):
+        try:
+            return reviews.restore_admin_review(current_user, review_id)
+        except ReviewNotFound:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review tidak ditemukan.")
 
     @app.post("/student/reservations/{reservation_id}/cancel", response_model=StudentReservationResponse)
     async def cancel_student_reservation(

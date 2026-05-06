@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from app.models import Facility, FacilityBlackout, FacilityImage, FacilityOpenHour
 from app.repositories.facility_management_repository import FacilityManagementRepository
 from app.services.accounts import UserAccount
+from app.services.audit_logs import AuditLogModule
 from app.services.facilities import summarize_price
 
 
@@ -111,20 +112,40 @@ class FacilityBlackoutProfile:
 
 
 class FacilityManagementModule:
-    def __init__(self, *, facility_management_repository: FacilityManagementRepository) -> None:
+    def __init__(
+        self,
+        *,
+        facility_management_repository: FacilityManagementRepository,
+        audit_logs: AuditLogModule | None = None,
+    ) -> None:
         self._facility_management_repository = facility_management_repository
+        self._audit_logs = audit_logs
 
-    def assign_staff(self, facility_id: str, staff_id: str) -> StaffAssignment:
+    def assign_staff(self, facility_id: str, staff_id: str, *, actor: UserAccount | None = None) -> StaffAssignment:
         if self._facility_management_repository.get_facility(facility_id) is None:
             raise FacilityNotFound
         if self._facility_management_repository.get_staff_user(staff_id) is None:
             raise StaffUserNotFound
 
         assignment = self._facility_management_repository.add_staff_assignment(facility_id, staff_id)
+        self._record_audit(
+            actor=actor,
+            action_type="staff_assignment.created",
+            target_type="staff_assignment",
+            target_id=assignment.id,
+            facility_id=facility_id,
+        )
         return StaffAssignment(facility_id=assignment.facility_id, staff_id=assignment.staff_id)
 
-    def unassign_staff(self, facility_id: str, staff_id: str) -> None:
+    def unassign_staff(self, facility_id: str, staff_id: str, *, actor: UserAccount | None = None) -> None:
         self._facility_management_repository.remove_staff_assignment(facility_id, staff_id)
+        self._record_audit(
+            actor=actor,
+            action_type="staff_assignment.removed",
+            target_type="staff_assignment",
+            target_id=staff_id,
+            facility_id=facility_id,
+        )
 
     def list_assigned_facilities(self, staff: UserAccount) -> list[FacilityManagementProfile]:
         return [
@@ -228,6 +249,24 @@ class FacilityManagementModule:
         if not self._facility_management_repository.staff_is_assigned(facility_id, staff.id):
             raise StaffFacilityAccessDenied
         return facility
+
+    def _record_audit(
+        self,
+        *,
+        actor: UserAccount | None,
+        action_type: str,
+        target_type: str,
+        target_id: str,
+        facility_id: str | None = None,
+    ) -> None:
+        if self._audit_logs is not None:
+            self._audit_logs.record(
+                actor=actor,
+                action_type=action_type,
+                target_type=target_type,
+                target_id=target_id,
+                facility_id=facility_id,
+            )
 
 
 def _to_facility_profile(facility: Facility) -> FacilityManagementProfile:

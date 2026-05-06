@@ -8,6 +8,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
 from app.core.access_policy import AccessDenied, AccessPolicyAction, AccessPolicyModule
+from app.api.routes.audit_log_routes import register_audit_log_routes
 from app.services.accounts import (
     AccountInactive,
     AccountTokenInvalid,
@@ -65,6 +66,12 @@ class NotificationRouteDependencies:
 
 
 @dataclass(frozen=True)
+class AuditLogRouteDependencies:
+    get_audit_logs: Callable
+    require_access: Callable[[AccessPolicyAction], Callable]
+
+
+@dataclass(frozen=True)
 class FacilityManagementRouteDependencies:
     get_facility_management: Callable
     require_access: Callable[[AccessPolicyAction], Callable]
@@ -104,6 +111,9 @@ class HttpRuntimeDependencyRegistry(Protocol):
         raise NotImplementedError
 
     def notification_routes(self) -> NotificationRouteDependencies:
+        raise NotImplementedError
+
+    def audit_log_routes(self) -> AuditLogRouteDependencies:
         raise NotImplementedError
 
     def facility_management_routes(self) -> FacilityManagementRouteDependencies:
@@ -155,6 +165,7 @@ class HttpRuntimeModule:
         self.get_reservation_time_selection = self._build_get_reservation_time_selection()
         self.get_reservations = self._build_get_reservations()
         self.get_reviews = self._build_get_reviews()
+        self.get_audit_logs = self._build_get_audit_logs()
         self.get_notifications = self._build_get_notifications()
         self.get_approval_letters = self._build_get_approval_letters()
         self.get_payments = self._build_get_payments()
@@ -197,6 +208,12 @@ class HttpRuntimeModule:
     def notification_routes(self) -> NotificationRouteDependencies:
         return NotificationRouteDependencies(
             get_notifications=self.get_notifications,
+            require_access=self.require_access,
+        )
+
+    def audit_log_routes(self) -> AuditLogRouteDependencies:
+        return AuditLogRouteDependencies(
+            get_audit_logs=self.get_audit_logs,
             require_access=self.require_access,
         )
 
@@ -271,6 +288,12 @@ class HttpRuntimeModule:
     def _build_get_reviews(self):
         async def dependency(session: Session = Depends(self.get_session)):
             return self._facility_factory.build_reviews(session)
+
+        return dependency
+
+    def _build_get_audit_logs(self):
+        async def dependency(session: Session = Depends(self.get_session)):
+            return self._facility_factory.build_audit_logs(session)
 
         return dependency
 
@@ -391,6 +414,12 @@ class HttpApplicationModule:
             app,
             get_notifications=notification_dependencies.get_notifications,
             require_access=notification_dependencies.require_access,
+        )
+        audit_log_dependencies = runtime.audit_log_routes()
+        register_audit_log_routes(
+            app,
+            get_audit_logs=audit_log_dependencies.get_audit_logs,
+            require_access=audit_log_dependencies.require_access,
         )
         facility_management_dependencies = runtime.facility_management_routes()
         register_facility_management_routes(

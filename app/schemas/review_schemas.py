@@ -34,3 +34,23 @@ class StaffFacilityStatisticsResponse(BaseModel):
     rating_average: float | None
     total_reservation_count: int
     completed_reservation_count: int
+
+
+class AdminReviewResponse(BaseModel):
+    id: str
+    reservation_id: str
+    facility_id: str
+    facility_name: str
+    student_id: str
+    student_name: str
+    rating: int
+    comment: str | None
+    is_deleted: bool
+    deleted_by: str | None
+    deleted_at: datetime | None
+    admin_removal_reason: str | None
+    created_at: datetime
+
+
+class AdminReviewRemovalRequest(BaseModel):
+    reason: str

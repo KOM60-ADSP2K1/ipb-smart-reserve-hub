@@ -6,6 +6,7 @@ import uuid
 from app.models import Reservation, ReservationStatus
 from app.repositories.reservation_repository import ReservationRepository
 from app.services.accounts import UserAccount
+from app.services.audit_logs import AuditLogModule
 from app.services.booking_settings import BookingSettings
 from app.services.notifications import NotificationModule
 from app.services.reservation_time_selection import ReservationTimeSelectionModule
@@ -100,6 +101,15 @@ class ReservationOrganizationUnitSummary:
 
 
 @dataclass(frozen=True)
+class StudentReservationReviewSummary:
+    id: str
+    is_deleted: bool
+    deleted_by: str | None
+    deleted_at: datetime | None
+    admin_removal_reason: str | None
+
+
+@dataclass(frozen=True)
 class StudentReservation:
     id: str
     reservation_code: str
@@ -119,6 +129,7 @@ class StudentReservation:
     payment_verification_due_at: datetime | None = None
     cancellation_reason: str | None = None
     cancellation_rejection_reason: str | None = None
+    review: StudentReservationReviewSummary | None = None
 
 
 @dataclass(frozen=True)
@@ -137,6 +148,7 @@ class ReservationModule:
         booking_settings: BookingSettings,
         clock: Callable[[], datetime],
         notifications: NotificationModule | None = None,
+        audit_logs: AuditLogModule | None = None,
     ) -> None:
         self._reservation_repository = reservation_repository
         self._reservation_time_selection = reservation_time_selection
@@ -144,6 +156,7 @@ class ReservationModule:
         self._booking_settings = booking_settings
         self._clock = clock
         self._notifications = notifications
+        self._audit_logs = audit_logs
 
     def submit_reservation(self, student: UserAccount, submission: ReservationSubmission) -> StudentReservation:
         facility = self._reservation_repository.get_active_facility(submission.facility_id)
@@ -193,6 +206,15 @@ class ReservationModule:
             status=ReservationStatus.pending_document_upload,
         )
         reservation = self._reservation_repository.add(reservation)
+        self._record_audit(
+            actor=student,
+            action_type="reservation.submitted",
+            target_type="reservation",
+            target_id=reservation.id,
+            facility_id=reservation.facility_id,
+            student_id=reservation.student_id,
+            reservation_id=reservation.id,
+        )
         if self._notifications is not None:
             self._notifications.reservation_submitted(reservation)
         return _to_student_reservation(reservation, now=_as_utc(self._clock()))
@@ -216,6 +238,15 @@ class ReservationModule:
         if reservation.status not in _PRE_APPROVAL_CANCELLABLE_STATUSES:
             raise ReservationCancellationUnavailable
         reservation.status = ReservationStatus.cancelled
+        self._record_audit(
+            actor=student,
+            action_type="reservation.cancelled",
+            target_type="reservation",
+            target_id=reservation.id,
+            facility_id=reservation.facility_id,
+            student_id=reservation.student_id,
+            reservation_id=reservation.id,
+        )
         return _to_student_reservation(reservation, now=_as_utc(self._clock()))
 
     def request_student_cancellation(
@@ -247,6 +278,15 @@ class ReservationModule:
     def approve_cancellation_request(self, staff: UserAccount, reservation_id: str) -> StudentReservation:
         reservation = self._get_staff_cancellation_request(staff, reservation_id)
         reservation.status = ReservationStatus.cancelled
+        self._record_audit(
+            actor=staff,
+            action_type="cancellation.approved",
+            target_type="reservation",
+            target_id=reservation.id,
+            facility_id=reservation.facility_id,
+            student_id=reservation.student_id,
+            reservation_id=reservation.id,
+        )
         return _to_student_reservation(reservation, now=_as_utc(self._clock()))
 
     def reject_cancellation_request(
@@ -262,6 +302,15 @@ class ReservationModule:
         reservation = self._get_staff_cancellation_request(staff, reservation_id)
         reservation.status = ReservationStatus.approved
         reservation.cancellation_rejection_reason = reason
+        self._record_audit(
+            actor=staff,
+            action_type="cancellation.rejected",
+            target_type="reservation",
+            target_id=reservation.id,
+            facility_id=reservation.facility_id,
+            student_id=reservation.student_id,
+            reservation_id=reservation.id,
+        )
         return _to_student_reservation(reservation, now=_as_utc(self._clock()))
 
     def _get_staff_cancellation_request(self, staff: UserAccount, reservation_id: str) -> Reservation:
@@ -273,6 +322,28 @@ class ReservationModule:
         if self._reservation_repository.get_by_id_for_review(reservation_id) is not None:
             raise StaffCancellationReviewAccessDenied
         raise ReservationNotFound
+
+    def _record_audit(
+        self,
+        *,
+        actor: UserAccount | None,
+        action_type: str,
+        target_type: str,
+        target_id: str,
+        facility_id: str | None = None,
+        student_id: str | None = None,
+        reservation_id: str | None = None,
+    ) -> None:
+        if self._audit_logs is not None:
+            self._audit_logs.record(
+                actor=actor,
+                action_type=action_type,
+                target_type=target_type,
+                target_id=target_id,
+                facility_id=facility_id,
+                student_id=student_id,
+                reservation_id=reservation_id,
+            )
 
 
 _PRE_APPROVAL_CANCELLABLE_STATUSES = (
@@ -309,6 +380,19 @@ def _to_student_reservation(reservation: Reservation, *, now: datetime) -> Stude
         payment_verification_due_at=_optional_utc(reservation.payment_verification_due_at),
         cancellation_reason=reservation.cancellation_reason,
         cancellation_rejection_reason=reservation.cancellation_rejection_reason,
+        review=_to_student_reservation_review(reservation),
+    )
+
+
+def _to_student_reservation_review(reservation: Reservation) -> StudentReservationReviewSummary | None:
+    if reservation.review is None:
+        return None
+    return StudentReservationReviewSummary(
+        id=reservation.review.id,
+        is_deleted=reservation.review.is_deleted,
+        deleted_by=reservation.review.deleted_by,
+        deleted_at=_optional_utc(reservation.review.deleted_at),
+        admin_removal_reason=reservation.review.admin_removal_reason,
     )
 
 

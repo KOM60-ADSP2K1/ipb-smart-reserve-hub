@@ -13,6 +13,8 @@ class AccessPolicyAction(str, enum.Enum):
     manage_booking_settings = "manage_booking_settings"
     manage_facility_staff_assignments = "manage_facility_staff_assignments"
     manage_assigned_facilities = "manage_assigned_facilities"
+    manage_reviews = "manage_reviews"
+    view_audit_logs = "view_audit_logs"
     view_system_status = "view_system_status"
     view_notifications = "view_notifications"
 
@@ -35,6 +37,8 @@ class AccessPolicyModule:
         AccessPolicyAction.manage_booking_settings: UserRole.super_admin,
         AccessPolicyAction.manage_facility_staff_assignments: UserRole.super_admin,
         AccessPolicyAction.manage_assigned_facilities: UserRole.staff,
+        AccessPolicyAction.manage_reviews: UserRole.super_admin,
+        AccessPolicyAction.view_audit_logs: UserRole.super_admin,
         AccessPolicyAction.view_system_status: UserRole.super_admin,
         AccessPolicyAction.view_notifications: (UserRole.student, UserRole.staff, UserRole.super_admin),
     }

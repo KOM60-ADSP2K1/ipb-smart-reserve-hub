@@ -41,10 +41,10 @@ def register_facility_management_routes(
         facility_id: str,
         staff_id: str,
         facility_management: FacilityManagementModule = Depends(get_facility_management),
-        _: UserAccount = Depends(require_access(AccessPolicyAction.manage_facility_staff_assignments)),
+        current_user: UserAccount = Depends(require_access(AccessPolicyAction.manage_facility_staff_assignments)),
     ):
         try:
-            return facility_management.assign_staff(facility_id, staff_id)
+            return facility_management.assign_staff(facility_id, staff_id, actor=current_user)
         except FacilityNotFound:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fasilitas tidak ditemukan.")
         except StaffUserNotFound:
@@ -61,9 +61,9 @@ def register_facility_management_routes(
         facility_id: str,
         staff_id: str,
         facility_management: FacilityManagementModule = Depends(get_facility_management),
-        _: UserAccount = Depends(require_access(AccessPolicyAction.manage_facility_staff_assignments)),
+        current_user: UserAccount = Depends(require_access(AccessPolicyAction.manage_facility_staff_assignments)),
     ):
-        facility_management.unassign_staff(facility_id, staff_id)
+        facility_management.unassign_staff(facility_id, staff_id, actor=current_user)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
 
     @app.get("/staff/facilities", response_model=list[FacilityManagementProfileResponse])

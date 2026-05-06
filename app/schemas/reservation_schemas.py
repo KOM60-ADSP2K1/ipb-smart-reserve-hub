@@ -23,6 +23,14 @@ class ReservationOrganizationUnitResponse(BaseModel):
     name: str
 
 
+class StudentReservationReviewResponse(BaseModel):
+    id: str
+    is_deleted: bool
+    deleted_by: str | None
+    deleted_at: datetime | None
+    admin_removal_reason: str | None
+
+
 class StudentReservationResponse(BaseModel):
     id: str
     reservation_code: str
@@ -42,6 +50,7 @@ class StudentReservationResponse(BaseModel):
     payment_verification_due_at: datetime | None = None
     cancellation_reason: str | None = None
     cancellation_rejection_reason: str | None = None
+    review: StudentReservationReviewResponse | None = None
 
 
 class StudentCancellationRequestBody(BaseModel):

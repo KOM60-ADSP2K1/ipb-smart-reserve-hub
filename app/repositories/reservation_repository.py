@@ -104,7 +104,11 @@ class SqlAlchemyReservationRepository:
         return list(
             self._session.scalars(
                 select(Reservation)
-                .options(joinedload(Reservation.facility), joinedload(Reservation.organization_unit))
+                .options(
+                    joinedload(Reservation.facility),
+                    joinedload(Reservation.organization_unit),
+                    joinedload(Reservation.review),
+                )
                 .where(Reservation.student_id == student_id)
                 .order_by(Reservation.created_at.desc())
             )
@@ -113,7 +117,11 @@ class SqlAlchemyReservationRepository:
     def get_for_student(self, reservation_id: str, student_id: str) -> Reservation | None:
         return self._session.scalar(
             select(Reservation)
-            .options(joinedload(Reservation.facility), joinedload(Reservation.organization_unit))
+            .options(
+                joinedload(Reservation.facility),
+                joinedload(Reservation.organization_unit),
+                joinedload(Reservation.review),
+            )
             .where(Reservation.id == reservation_id, Reservation.student_id == student_id)
         )
 
