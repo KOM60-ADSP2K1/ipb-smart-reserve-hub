@@ -45,3 +45,21 @@ class StudentApprovalLetterResponse(BaseModel):
     content_type: str
     size_bytes: int
     generated_at: datetime
+
+
+class StudentSignedApprovalLetterResponse(BaseModel):
+    reservation_id: str
+    filename: str
+    content_type: str
+    size_bytes: int
+    uploaded_at: datetime
+
+
+class StaffDocumentReviewResponse(BaseModel):
+    reservation_id: str
+    status: str
+    rejection_reason: str | None = None
+
+
+class StaffDocumentRejectionRequest(BaseModel):
+    reason: str

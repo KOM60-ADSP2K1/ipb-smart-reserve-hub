@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 import uuid
 
-from app.models import ReservationApprovalLetter
+from app.models import ReservationApprovalLetter, ReservationSignedApprovalLetter, ReservationStatus
 from app.pdf import ApprovalLetterInput, ApprovalLetterPdfGenerator
 from app.repositories.reservation_repository import ReservationRepository
 from app.services.accounts import UserAccount
@@ -26,6 +26,56 @@ class StudentApprovalLetterDownload:
     filename: str
     content_type: str
     content: bytes
+
+
+@dataclass(frozen=True)
+class StaffSignedApprovalLetterDownload:
+    filename: str
+    content_type: str
+    content: bytes
+
+
+@dataclass(frozen=True)
+class SignedApprovalLetterUpload:
+    filename: str
+    content_type: str
+    content: bytes
+
+
+@dataclass(frozen=True)
+class StudentSignedApprovalLetter:
+    reservation_id: str
+    filename: str
+    content_type: str
+    size_bytes: int
+    uploaded_at: datetime
+
+
+@dataclass(frozen=True)
+class StaffDocumentReview:
+    reservation_id: str
+    status: ReservationStatus
+    rejection_reason: str | None = None
+
+
+class ApprovalLetterNotGenerated(Exception):
+    pass
+
+
+class InvalidSignedApprovalLetterFile(Exception):
+    pass
+
+
+class SignedApprovalLetterFileTooLarge(Exception):
+    pass
+
+
+class StaffDocumentReviewAccessDenied(Exception):
+    pass
+
+
+class DocumentRejectionReasonRequired(Exception):
+    pass
 
 
 class ApprovalLetterModule:
@@ -57,6 +107,94 @@ class ApprovalLetterModule:
             content_type=letter.content_type,
             content=self._storage.get(letter.storage_key),
         )
+
+    def upload_student_signed_approval_letter(
+        self,
+        student: UserAccount,
+        reservation_id: str,
+        upload: SignedApprovalLetterUpload,
+    ) -> StudentSignedApprovalLetter:
+        reservation = self._reservation_repository.get_for_student(reservation_id, student.id)
+        if reservation is None:
+            raise ReservationNotFound
+        if reservation.approval_letter is None:
+            raise ApprovalLetterNotGenerated
+
+        if not _is_allowed_signed_approval_letter_file(upload):
+            raise InvalidSignedApprovalLetterFile
+        if len(upload.content) > 5 * 1024 * 1024:
+            raise SignedApprovalLetterFileTooLarge
+
+        uploaded_at = _as_utc(self._clock())
+        storage_key = f"signed-approval-letters/{reservation.id}/{uuid.uuid4().hex}-{upload.filename}"
+        self._storage.put(storage_key, upload.content, content_type=upload.content_type)
+        reservation.signed_approval_letter = ReservationSignedApprovalLetter(
+            reservation_id=reservation.id,
+            storage_key=storage_key,
+            filename=upload.filename,
+            content_type=upload.content_type,
+            size_bytes=len(upload.content),
+            uploaded_at=uploaded_at,
+        )
+        reservation.status = ReservationStatus.pending_document_review
+        return _to_student_signed_approval_letter(reservation.signed_approval_letter)
+
+    def approve_signed_approval_letter(self, staff: UserAccount, reservation_id: str) -> StaffDocumentReview:
+        reservation = self._get_staff_review_reservation(staff, reservation_id)
+        if reservation.signed_approval_letter is None:
+            raise ApprovalLetterNotGenerated
+
+        if reservation.price_rupiah == 0:
+            reservation.status = ReservationStatus.approved
+        else:
+            reservation.status = ReservationStatus.pending_payment
+        return StaffDocumentReview(reservation_id=reservation.id, status=reservation.status)
+
+    def download_staff_signed_approval_letter(
+        self,
+        staff: UserAccount,
+        reservation_id: str,
+    ) -> StaffSignedApprovalLetterDownload:
+        reservation = self._get_staff_review_reservation(staff, reservation_id)
+        if reservation.signed_approval_letter is None:
+            raise ApprovalLetterNotGenerated
+        letter = reservation.signed_approval_letter
+        return StaffSignedApprovalLetterDownload(
+            filename=letter.filename,
+            content_type=letter.content_type,
+            content=self._storage.get(letter.storage_key),
+        )
+
+    def reject_signed_approval_letter(
+        self,
+        staff: UserAccount,
+        reservation_id: str,
+        *,
+        reason: str,
+    ) -> StaffDocumentReview:
+        reason = reason.strip()
+        if not reason:
+            raise DocumentRejectionReasonRequired
+
+        reservation = self._get_staff_review_reservation(staff, reservation_id)
+        if reservation.signed_approval_letter is None:
+            raise ApprovalLetterNotGenerated
+
+        reservation.status = ReservationStatus.rejected
+        reservation.rejection_reason = reason
+        return StaffDocumentReview(
+            reservation_id=reservation.id,
+            status=reservation.status,
+            rejection_reason=reservation.rejection_reason,
+        )
+
+    def _get_staff_review_reservation(self, staff: UserAccount, reservation_id: str):
+        reservation = self._reservation_repository.get_for_assigned_staff_review(reservation_id, staff.id)
+        if reservation is not None:
+            return reservation
+        if self._reservation_repository.get_by_id_for_review(reservation_id) is not None:
+            raise StaffDocumentReviewAccessDenied
+        raise ReservationNotFound
 
     def _get_or_create_student_approval_letter(
         self,
@@ -97,6 +235,22 @@ def _to_student_approval_letter(letter: ReservationApprovalLetter) -> StudentApp
         size_bytes=letter.size_bytes,
         generated_at=_as_utc(letter.generated_at),
     )
+
+
+def _to_student_signed_approval_letter(letter: ReservationSignedApprovalLetter) -> StudentSignedApprovalLetter:
+    return StudentSignedApprovalLetter(
+        reservation_id=letter.reservation_id,
+        filename=letter.filename,
+        content_type=letter.content_type,
+        size_bytes=letter.size_bytes,
+        uploaded_at=_as_utc(letter.uploaded_at),
+    )
+
+
+def _is_allowed_signed_approval_letter_file(upload: SignedApprovalLetterUpload) -> bool:
+    allowed_content_types = {"application/pdf", "image/jpeg", "image/png"}
+    allowed_extensions = (".pdf", ".jpg", ".jpeg", ".png")
+    return upload.content_type.lower() in allowed_content_types and upload.filename.lower().endswith(allowed_extensions)
 
 
 def _as_utc(value: datetime) -> datetime:

@@ -185,6 +185,7 @@ class Reservation(Base):
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     status: Mapped[ReservationStatus] = mapped_column(Enum(ReservationStatus), nullable=False)
+    rejection_reason: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
@@ -195,6 +196,10 @@ class Reservation(Base):
     organization_unit: Mapped[OrganizationUnit] = relationship(back_populates="reservations")
     student: Mapped[User] = relationship()
     approval_letter: Mapped["ReservationApprovalLetter | None"] = relationship(
+        back_populates="reservation",
+        cascade="all, delete-orphan",
+    )
+    signed_approval_letter: Mapped["ReservationSignedApprovalLetter | None"] = relationship(
         back_populates="reservation",
         cascade="all, delete-orphan",
     )
@@ -216,3 +221,21 @@ class ReservationApprovalLetter(Base):
     generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     reservation: Mapped[Reservation] = relationship(back_populates="approval_letter")
+
+
+class ReservationSignedApprovalLetter(Base):
+    __tablename__ = "reservation_signed_approval_letters"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    reservation_id: Mapped[str] = mapped_column(
+        ForeignKey("reservations.id"),
+        unique=True,
+        nullable=False,
+    )
+    storage_key: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    content_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    size_bytes: Mapped[int] = mapped_column(Integer, nullable=False)
+    uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+    reservation: Mapped[Reservation] = relationship(back_populates="signed_approval_letter")

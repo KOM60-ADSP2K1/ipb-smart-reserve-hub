@@ -5,7 +5,7 @@ from typing import Protocol
 from sqlalchemy import exists, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.models import Facility, OrganizationUnit, Reservation, ReservationStatus
+from app.models import Facility, FacilityStaffAssignment, OrganizationUnit, Reservation, ReservationStatus
 from app.services.facility_availability import BLOCKING_RESERVATION_STATUSES
 
 
@@ -45,6 +45,12 @@ class ReservationRepository(Protocol):
         raise NotImplementedError
 
     def get_for_student(self, reservation_id: str, student_id: str) -> Reservation | None:
+        raise NotImplementedError
+
+    def get_for_assigned_staff_review(self, reservation_id: str, staff_id: str) -> Reservation | None:
+        raise NotImplementedError
+
+    def get_by_id_for_review(self, reservation_id: str) -> Reservation | None:
         raise NotImplementedError
 
 
@@ -109,4 +115,22 @@ class SqlAlchemyReservationRepository:
             select(Reservation)
             .options(joinedload(Reservation.facility), joinedload(Reservation.organization_unit))
             .where(Reservation.id == reservation_id, Reservation.student_id == student_id)
+        )
+
+    def get_for_assigned_staff_review(self, reservation_id: str, staff_id: str) -> Reservation | None:
+        return self._session.scalar(
+            select(Reservation)
+            .join(FacilityStaffAssignment, FacilityStaffAssignment.facility_id == Reservation.facility_id)
+            .options(joinedload(Reservation.facility), joinedload(Reservation.signed_approval_letter))
+            .where(
+                Reservation.id == reservation_id,
+                FacilityStaffAssignment.staff_id == staff_id,
+            )
+        )
+
+    def get_by_id_for_review(self, reservation_id: str) -> Reservation | None:
+        return self._session.scalar(
+            select(Reservation)
+            .options(joinedload(Reservation.facility), joinedload(Reservation.signed_approval_letter))
+            .where(Reservation.id == reservation_id)
         )
