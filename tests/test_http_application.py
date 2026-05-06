@@ -9,6 +9,7 @@ from app.api.http_application import FacilityManagementRouteDependencies
 from app.api.http_application import FacilityRouteDependencies
 from app.api.http_application import HttpApplicationModule
 from app.api.http_application import HttpRuntimeModule
+from app.api.http_application import NotificationRouteDependencies
 from app.api.http_application import OrganizationUnitRouteDependencies
 from app.api.http_application import ReservationRouteDependencies
 from app.api.http_application import SystemStatusRouteDependencies
@@ -54,6 +55,12 @@ class StubHttpRuntimeDependencyRegistry:
             get_reservations=placeholder_dependency,
             get_approval_letters=placeholder_dependency,
             get_payments=placeholder_dependency,
+            require_access=placeholder_require_access,
+        )
+
+    def notification_routes(self):
+        return NotificationRouteDependencies(
+            get_notifications=placeholder_dependency,
             require_access=placeholder_require_access,
         )
 
@@ -109,6 +116,7 @@ def test_http_application_module_uses_runtime_dependency_registry_for_route_wiri
     assert app.state.session_factory is registry.session_factory
     assert "/auth/login" in route_paths
     assert "/facilities/{facility_id}/reservations" in route_paths
+    assert "/notifications" in route_paths
     assert "/admin/system-status" in route_paths
 
 
@@ -123,6 +131,7 @@ def test_http_application_module_builds_app_with_foundation_routes():
     assert "/facilities" in route_paths
     assert "/facilities/{facility_id}" in route_paths
     assert "/facilities/{facility_id}/reservations" in route_paths
+    assert "/notifications" in route_paths
     assert "/student/reservations" in route_paths
     assert "/student/reservations/{reservation_id}" in route_paths
     assert "/admin/facilities/{facility_id}/staff-assignments/{staff_id}" in route_paths

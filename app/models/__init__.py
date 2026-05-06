@@ -18,7 +18,9 @@ class ReservationStatus(str, enum.Enum):
     pending_document_upload = "pending_document_upload"
     pending_document_review = "pending_document_review"
     pending_payment = "pending_payment"
+    overdue_verification = "overdue_verification"
     approved = "approved"
+    cancellation_requested = "cancellation_requested"
     completed = "completed"
     cancelled = "cancelled"
     rejected = "rejected"
@@ -48,6 +50,21 @@ class User(Base):
         default=lambda: datetime.now(UTC),
         nullable=False,
     )
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    recipient_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    reservation_id: Mapped[str | None] = mapped_column(ForeignKey("reservations.id"))
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    recipient: Mapped[User] = relationship()
+    reservation: Mapped["Reservation | None"] = relationship()
 
 
 class FacilityCategory(Base):
@@ -184,8 +201,14 @@ class Reservation(Base):
     organization_unit_name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    document_upload_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    document_verification_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    payment_upload_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    payment_verification_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     status: Mapped[ReservationStatus] = mapped_column(Enum(ReservationStatus), nullable=False)
     rejection_reason: Mapped[str | None] = mapped_column(Text)
+    cancellation_reason: Mapped[str | None] = mapped_column(Text)
+    cancellation_rejection_reason: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),

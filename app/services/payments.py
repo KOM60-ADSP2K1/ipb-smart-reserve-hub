@@ -1,11 +1,13 @@
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 import uuid
 
 from app.models import ReservationPaymentReceipt, ReservationStatus
 from app.repositories.reservation_repository import ReservationRepository
 from app.services.accounts import UserAccount
+from app.services.booking_settings import BookingSettings
+from app.services.notifications import NotificationModule
 from app.services.reservations import ReservationNotFound
 from app.storage import PrivateStorage
 
@@ -78,11 +80,15 @@ class PaymentModule:
         *,
         reservation_repository: ReservationRepository,
         storage: PrivateStorage,
+        booking_settings: BookingSettings,
         clock: Callable[[], datetime],
+        notifications: NotificationModule | None = None,
     ) -> None:
         self._reservation_repository = reservation_repository
         self._storage = storage
+        self._booking_settings = booking_settings
         self._clock = clock
+        self._notifications = notifications
 
     def get_student_payment(self, student: UserAccount, reservation_id: str) -> StudentReservationPayment:
         reservation = self._reservation_repository.get_for_student(reservation_id, student.id)
@@ -127,6 +133,20 @@ class PaymentModule:
             size_bytes=len(upload.content),
             uploaded_at=uploaded_at,
         )
+        reservation.payment_verification_due_at = uploaded_at + timedelta(
+            hours=self._booking_settings.payment_verification_due_hours
+        )
+        if self._notifications is not None:
+            self._notifications.student_action_recorded(
+                reservation,
+                title="Bukti pembayaran berhasil diunggah",
+                message=f"Bukti pembayaran {reservation.activity_title} sedang menunggu review.",
+            )
+            self._notifications.staff_action_needed(
+                reservation,
+                title="Bukti pembayaran menunggu review",
+                message=f"Bukti pembayaran {reservation.activity_title} menunggu verifikasi.",
+            )
         return _to_student_payment_receipt(reservation.payment_receipt)
 
     def download_staff_payment_receipt(self, staff: UserAccount, reservation_id: str) -> StaffPaymentReceiptDownload:
@@ -145,6 +165,12 @@ class PaymentModule:
         if reservation.payment_receipt is None:
             raise PaymentReceiptNotUploaded
         reservation.status = ReservationStatus.approved
+        if self._notifications is not None:
+            self._notifications.student_action_recorded(
+                reservation,
+                title="Pembayaran disetujui",
+                message=f"Pembayaran {reservation.activity_title} disetujui dan reservasi aktif.",
+            )
         return StaffPaymentReview(reservation_id=reservation.id, status=reservation.status)
 
     def reject_payment_receipt(self, staff: UserAccount, reservation_id: str, *, reason: str) -> StaffPaymentReview:
@@ -156,6 +182,12 @@ class PaymentModule:
             raise PaymentReceiptNotUploaded
         reservation.status = ReservationStatus.rejected
         reservation.rejection_reason = reason
+        if self._notifications is not None:
+            self._notifications.student_action_recorded(
+                reservation,
+                title="Pembayaran ditolak",
+                message=f"Bukti pembayaran {reservation.activity_title} ditolak: {reason}",
+            )
         return StaffPaymentReview(
             reservation_id=reservation.id,
             status=reservation.status,

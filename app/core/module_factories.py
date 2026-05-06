@@ -12,11 +12,13 @@ from app.services.facility_availability import FacilityAvailabilityModule
 from app.repositories.facility_availability_reader import SqlAlchemyFacilityAvailabilityReader
 from app.repositories.facility_catalog_reader import SqlAlchemyFacilityCatalogReader
 from app.repositories.facility_management_repository import SqlAlchemyFacilityManagementRepository
+from app.repositories.notification_repository import SqlAlchemyNotificationRepository
 from app.services.facilities import FacilityCatalogModule
 from app.services.facility_management import FacilityManagementModule
 from app.repositories.organization_unit_repository import SqlAlchemyOrganizationUnitRepository
 from app.repositories.reservation_repository import SqlAlchemyReservationRepository
 from app.services.organization_units import OrganizationUnitManagementModule
+from app.services.notifications import NotificationModule
 from app.services.payments import PaymentModule
 from app.services.reservations import ReservationModule, ReservationSubmissionConflictGuard
 from app.services.reservation_time_selection import ReservationTimeSelectionModule
@@ -75,25 +77,51 @@ class FacilityModuleFactory:
 
     def build_reservations(self, session: Session) -> ReservationModule:
         reservation_repository = SqlAlchemyReservationRepository(session)
+        notifications = self.build_notifications(session)
+        booking_settings = BookingSettingsModule(
+            booking_settings_repository=SqlAlchemyBookingSettingsRepository(session),
+            defaults=self._default_booking_settings,
+        ).get_booking_settings()
         return ReservationModule(
             reservation_repository=reservation_repository,
             reservation_time_selection=self.build_reservation_time_selection(session),
             submission_conflict_guard=ReservationSubmissionConflictGuard(conflict_reader=reservation_repository),
+            booking_settings=booking_settings,
+            clock=self._clock,
+            notifications=notifications,
+        )
+
+    def build_notifications(self, session: Session) -> NotificationModule:
+        return NotificationModule(
+            notification_repository=SqlAlchemyNotificationRepository(session),
+            clock=self._clock,
         )
 
     def build_approval_letters(self, session: Session) -> ApprovalLetterModule:
+        booking_settings = BookingSettingsModule(
+            booking_settings_repository=SqlAlchemyBookingSettingsRepository(session),
+            defaults=self._default_booking_settings,
+        ).get_booking_settings()
         return ApprovalLetterModule(
             reservation_repository=SqlAlchemyReservationRepository(session),
             storage=self._private_storage,
             pdf_generator=self._approval_letter_pdf_generator,
+            booking_settings=booking_settings,
             clock=self._clock,
+            notifications=self.build_notifications(session),
         )
 
     def build_payments(self, session: Session) -> PaymentModule:
+        booking_settings = BookingSettingsModule(
+            booking_settings_repository=SqlAlchemyBookingSettingsRepository(session),
+            defaults=self._default_booking_settings,
+        ).get_booking_settings()
         return PaymentModule(
             reservation_repository=SqlAlchemyReservationRepository(session),
             storage=self._private_storage,
+            booking_settings=booking_settings,
             clock=self._clock,
+            notifications=self.build_notifications(session),
         )
 
     def build_management(self, session: Session) -> FacilityManagementModule:

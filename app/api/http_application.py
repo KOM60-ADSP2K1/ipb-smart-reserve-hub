@@ -20,6 +20,7 @@ from app.services.booking_settings import BookingSettings
 from app.core.database import Base, build_session_factory
 from app.api.routes.facility_management_routes import register_facility_management_routes
 from app.api.routes.facility_routes import register_facility_routes
+from app.api.routes.notification_routes import register_notification_routes
 from app.api.routes.organization_unit_routes import register_organization_unit_routes
 from app.api.routes.reservation_routes import register_reservation_routes
 from app.api.routes.system_status_routes import register_system_status_routes
@@ -53,6 +54,12 @@ class ReservationRouteDependencies:
     get_reservations: Callable
     get_approval_letters: Callable
     get_payments: Callable
+    require_access: Callable[[AccessPolicyAction], Callable]
+
+
+@dataclass(frozen=True)
+class NotificationRouteDependencies:
+    get_notifications: Callable
     require_access: Callable[[AccessPolicyAction], Callable]
 
 
@@ -93,6 +100,9 @@ class HttpRuntimeDependencyRegistry(Protocol):
         raise NotImplementedError
 
     def reservation_routes(self) -> ReservationRouteDependencies:
+        raise NotImplementedError
+
+    def notification_routes(self) -> NotificationRouteDependencies:
         raise NotImplementedError
 
     def facility_management_routes(self) -> FacilityManagementRouteDependencies:
@@ -143,6 +153,7 @@ class HttpRuntimeModule:
         self.get_facility_availability = self._build_get_facility_availability()
         self.get_reservation_time_selection = self._build_get_reservation_time_selection()
         self.get_reservations = self._build_get_reservations()
+        self.get_notifications = self._build_get_notifications()
         self.get_approval_letters = self._build_get_approval_letters()
         self.get_payments = self._build_get_payments()
         self.get_facility_management = self._build_get_facility_management()
@@ -177,6 +188,12 @@ class HttpRuntimeModule:
             get_reservations=self.get_reservations,
             get_approval_letters=self.get_approval_letters,
             get_payments=self.get_payments,
+            require_access=self.require_access,
+        )
+
+    def notification_routes(self) -> NotificationRouteDependencies:
+        return NotificationRouteDependencies(
+            get_notifications=self.get_notifications,
             require_access=self.require_access,
         )
 
@@ -245,6 +262,12 @@ class HttpRuntimeModule:
     def _build_get_reservations(self):
         async def dependency(session: Session = Depends(self.get_session)):
             return self._facility_factory.build_reservations(session)
+
+        return dependency
+
+    def _build_get_notifications(self):
+        async def dependency(session: Session = Depends(self.get_session)):
+            return self._facility_factory.build_notifications(session)
 
         return dependency
 
@@ -352,6 +375,12 @@ class HttpApplicationModule:
             get_approval_letters=reservation_dependencies.get_approval_letters,
             get_payments=reservation_dependencies.get_payments,
             require_access=reservation_dependencies.require_access,
+        )
+        notification_dependencies = runtime.notification_routes()
+        register_notification_routes(
+            app,
+            get_notifications=notification_dependencies.get_notifications,
+            require_access=notification_dependencies.require_access,
         )
         facility_management_dependencies = runtime.facility_management_routes()
         register_facility_management_routes(

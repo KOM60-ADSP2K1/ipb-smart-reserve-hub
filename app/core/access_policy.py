@@ -14,6 +14,7 @@ class AccessPolicyAction(str, enum.Enum):
     manage_facility_staff_assignments = "manage_facility_staff_assignments"
     manage_assigned_facilities = "manage_assigned_facilities"
     view_system_status = "view_system_status"
+    view_notifications = "view_notifications"
 
 
 class AccessPolicyError(Exception):
@@ -35,9 +36,13 @@ class AccessPolicyModule:
         AccessPolicyAction.manage_facility_staff_assignments: UserRole.super_admin,
         AccessPolicyAction.manage_assigned_facilities: UserRole.staff,
         AccessPolicyAction.view_system_status: UserRole.super_admin,
+        AccessPolicyAction.view_notifications: (UserRole.student, UserRole.staff, UserRole.super_admin),
     }
 
     def require_action(self, user_account: UserAccount, action: AccessPolicyAction) -> UserAccount:
-        if user_account.role != self._allowed_roles_by_action[action]:
+        allowed_roles = self._allowed_roles_by_action[action]
+        if isinstance(allowed_roles, UserRole):
+            allowed_roles = (allowed_roles,)
+        if user_account.role not in allowed_roles:
             raise AccessDenied
         return user_account
