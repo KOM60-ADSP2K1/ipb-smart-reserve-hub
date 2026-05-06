@@ -7,6 +7,7 @@ from app.models import Reservation, ReservationStatus
 from app.repositories.reservation_repository import ReservationRepository
 from app.services.accounts import UserAccount
 from app.services.booking_settings import BookingSettings
+from app.services.notifications import NotificationModule
 from app.services.reservation_time_selection import ReservationTimeSelectionModule
 
 
@@ -111,12 +112,14 @@ class ReservationModule:
         submission_conflict_guard: ReservationSubmissionConflictGuard,
         booking_settings: BookingSettings,
         clock: Callable[[], datetime],
+        notifications: NotificationModule | None = None,
     ) -> None:
         self._reservation_repository = reservation_repository
         self._reservation_time_selection = reservation_time_selection
         self._submission_conflict_guard = submission_conflict_guard
         self._booking_settings = booking_settings
         self._clock = clock
+        self._notifications = notifications
 
     def submit_reservation(self, student: UserAccount, submission: ReservationSubmission) -> StudentReservation:
         facility = self._reservation_repository.get_active_facility(submission.facility_id)
@@ -165,7 +168,10 @@ class ReservationModule:
             + timedelta(hours=self._booking_settings.document_upload_due_hours),
             status=ReservationStatus.pending_document_upload,
         )
-        return _to_student_reservation(self._reservation_repository.add(reservation), now=_as_utc(self._clock()))
+        reservation = self._reservation_repository.add(reservation)
+        if self._notifications is not None:
+            self._notifications.reservation_submitted(reservation)
+        return _to_student_reservation(reservation, now=_as_utc(self._clock()))
 
     def list_student_reservations(self, student: UserAccount) -> list[StudentReservation]:
         return [

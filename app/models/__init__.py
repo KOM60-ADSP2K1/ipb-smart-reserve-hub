@@ -51,6 +51,21 @@ class User(Base):
     )
 
 
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    recipient_id: Mapped[str] = mapped_column(ForeignKey("users.id"), index=True, nullable=False)
+    reservation_id: Mapped[str | None] = mapped_column(ForeignKey("reservations.id"))
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    recipient: Mapped[User] = relationship()
+    reservation: Mapped["Reservation | None"] = relationship()
+
+
 class FacilityCategory(Base):
     __tablename__ = "facility_categories"
 

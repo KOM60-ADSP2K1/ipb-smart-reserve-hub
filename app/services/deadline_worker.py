@@ -3,8 +3,9 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
+from sqlalchemy.orm import object_session
 
-from app.models import Reservation, ReservationStatus
+from app.models import Notification, Reservation, ReservationStatus
 from app.services.booking_settings import BookingSettings
 
 
@@ -37,19 +38,52 @@ class DeadlineWorkerModule:
             for reservation in reservations:
                 if _should_complete(reservation, now):
                     reservation.status = ReservationStatus.completed
+                    _notify_student(
+                        reservation,
+                        title="Reservasi selesai",
+                        message=f"Reservasi {reservation.activity_title} sudah selesai.",
+                        created_at=now,
+                    )
                     completed += 1
                 elif _overdue_cutoff_reached(reservation, now, self._booking_settings):
                     reservation.status = ReservationStatus.expired
+                    _notify_student(
+                        reservation,
+                        title="Reservasi kedaluwarsa",
+                        message=f"Reservasi {reservation.activity_title} kedaluwarsa karena melewati batas waktu.",
+                        created_at=now,
+                    )
                     expired += 1
                 elif _should_mark_overdue_verification(reservation, now):
                     if _staff_overdue_cutoff_reached(reservation, now, self._booking_settings):
                         reservation.status = ReservationStatus.expired
+                        _notify_student(
+                            reservation,
+                            title="Reservasi kedaluwarsa",
+                            message=f"Reservasi {reservation.activity_title} kedaluwarsa karena melewati batas waktu.",
+                            created_at=now,
+                        )
                         expired += 1
                     else:
                         reservation.status = ReservationStatus.overdue_verification
+                        _notify_student(
+                            reservation,
+                            title="Verifikasi melewati batas waktu",
+                            message=(
+                                f"Reservasi {reservation.activity_title} membutuhkan tindak lanjut TU. "
+                                f"Hubungi {reservation.facility.contact_name} di {reservation.facility.contact_phone}."
+                            ),
+                            created_at=now,
+                        )
                         overdue_verification += 1
                 elif _should_expire_student_delay_or_normal_cutoff(reservation, now, self._booking_settings):
                     reservation.status = ReservationStatus.expired
+                    _notify_student(
+                        reservation,
+                        title="Reservasi kedaluwarsa",
+                        message=f"Reservasi {reservation.activity_title} kedaluwarsa karena melewati batas waktu.",
+                        created_at=now,
+                    )
                     expired += 1
             session.commit()
         return DeadlineWorkerResult(
@@ -129,3 +163,17 @@ def _as_utc(value: datetime) -> datetime:
     if value.tzinfo is None:
         return value.replace(tzinfo=UTC)
     return value.astimezone(UTC)
+
+
+def _notify_student(reservation: Reservation, *, title: str, message: str, created_at: datetime) -> None:
+    session = object_session(reservation)
+    if session is not None:
+        session.add(
+            Notification(
+                recipient_id=reservation.student_id,
+                reservation_id=reservation.id,
+                title=title,
+                message=message,
+                created_at=created_at,
+            )
+        )
