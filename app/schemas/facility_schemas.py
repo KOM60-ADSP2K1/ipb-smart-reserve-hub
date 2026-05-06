@@ -39,6 +39,14 @@ class FacilityReviewSummaryResponse(BaseModel):
     review_count: int
 
 
+class FacilityPublicReviewResponse(BaseModel):
+    id: str
+    rating: int
+    comment: str | None
+    author_name: str
+    created_at: datetime
+
+
 class FacilityDetailResponse(BaseModel):
     id: str
     name: str
@@ -51,6 +59,7 @@ class FacilityDetailResponse(BaseModel):
     price: FacilityPriceResponse
     open_hours_summary: str
     review_summary: FacilityReviewSummaryResponse
+    reviews: list[FacilityPublicReviewResponse]
 
 
 class FacilityCalendarEntryResponse(BaseModel):

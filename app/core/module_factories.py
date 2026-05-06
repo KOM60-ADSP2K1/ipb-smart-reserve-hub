@@ -17,11 +17,13 @@ from app.services.facilities import FacilityCatalogModule
 from app.services.facility_management import FacilityManagementModule
 from app.repositories.organization_unit_repository import SqlAlchemyOrganizationUnitRepository
 from app.repositories.reservation_repository import SqlAlchemyReservationRepository
+from app.repositories.review_repository import SqlAlchemyReviewRepository
 from app.services.organization_units import OrganizationUnitManagementModule
 from app.services.notifications import NotificationModule
 from app.services.payments import PaymentModule
 from app.services.reservations import ReservationModule, ReservationSubmissionConflictGuard
 from app.services.reservation_time_selection import ReservationTimeSelectionModule
+from app.services.reviews import ReviewModule
 from app.services.system_status import SystemStatusModule
 from app.storage import PrivateStorage
 from app.core.settings import SettingsModule
@@ -90,6 +92,9 @@ class FacilityModuleFactory:
             clock=self._clock,
             notifications=notifications,
         )
+
+    def build_reviews(self, session: Session) -> ReviewModule:
+        return ReviewModule(review_repository=SqlAlchemyReviewRepository(session), clock=self._clock)
 
     def build_notifications(self, session: Session) -> NotificationModule:
         return NotificationModule(

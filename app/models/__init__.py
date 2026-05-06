@@ -129,6 +129,7 @@ class Facility(Base):
         cascade="all, delete-orphan",
     )
     reservations: Mapped[list["Reservation"]] = relationship(back_populates="facility")
+    reviews: Mapped[list["FacilityReview"]] = relationship(back_populates="facility")
     staff_assignments: Mapped[list["FacilityStaffAssignment"]] = relationship(
         back_populates="facility",
         cascade="all, delete-orphan",
@@ -230,6 +231,33 @@ class Reservation(Base):
         back_populates="reservation",
         cascade="all, delete-orphan",
     )
+    review: Mapped["FacilityReview | None"] = relationship(
+        back_populates="reservation",
+        cascade="all, delete-orphan",
+    )
+
+
+class FacilityReview(Base):
+    __tablename__ = "facility_reviews"
+    __table_args__ = (UniqueConstraint("reservation_id", name="uq_facility_review_reservation"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    reservation_id: Mapped[str] = mapped_column(ForeignKey("reservations.id"), nullable=False)
+    facility_id: Mapped[str] = mapped_column(ForeignKey("facilities.id"), nullable=False)
+    student_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)
+    comment: Mapped[str | None] = mapped_column(Text)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        nullable=False,
+    )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    reservation: Mapped[Reservation] = relationship(back_populates="review")
+    facility: Mapped[Facility] = relationship(back_populates="reviews")
+    student: Mapped[User] = relationship()
 
 
 class ReservationApprovalLetter(Base):

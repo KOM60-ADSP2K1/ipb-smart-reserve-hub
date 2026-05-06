@@ -204,6 +204,7 @@ async def test_students_view_facility_detail_public_information():
             "rating_average": None,
             "review_count": 0,
         },
+        "reviews": [],
     }
 
 

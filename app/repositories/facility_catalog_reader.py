@@ -1,11 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Protocol
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
-from app.models import Facility, Reservation, ReservationStatus
+from app.models import Facility, FacilityReview, Reservation, ReservationStatus
 
 
 PUBLIC_CALENDAR_RESERVATION_STATUSES = (
@@ -42,6 +42,16 @@ class FacilityCatalogRecord:
     rating_average: float | None
     review_count: int
     images: list[FacilityCatalogImageRecord]
+    reviews: list["FacilityReviewRecord"] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class FacilityReviewRecord:
+    id: str
+    rating: int
+    comment: str | None
+    author_name: str
+    created_at: datetime
 
 
 @dataclass(frozen=True)
@@ -77,7 +87,11 @@ class SqlAlchemyFacilityCatalogReader:
     def list_active_facilities(self) -> list[FacilityCatalogRecord]:
         facilities = self._session.scalars(
             select(Facility)
-            .options(joinedload(Facility.category), joinedload(Facility.images))
+            .options(
+                joinedload(Facility.category),
+                joinedload(Facility.images),
+                joinedload(Facility.reviews).joinedload(FacilityReview.student),
+            )
             .where(Facility.is_active.is_(True))
             .order_by(Facility.name)
         ).unique()
@@ -86,7 +100,11 @@ class SqlAlchemyFacilityCatalogReader:
     def get_active_facility_by_id(self, facility_id: str) -> FacilityCatalogRecord | None:
         facility = self._session.scalar(
             select(Facility)
-            .options(joinedload(Facility.category), joinedload(Facility.images))
+            .options(
+                joinedload(Facility.category),
+                joinedload(Facility.images),
+                joinedload(Facility.reviews).joinedload(FacilityReview.student),
+            )
             .where(Facility.id == facility_id, Facility.is_active.is_(True))
         )
         if facility is None:
@@ -135,8 +153,8 @@ class SqlAlchemyFacilityCatalogReader:
             contact_email=facility.contact_email,
             price_rupiah=facility.price_rupiah,
             open_hours_summary=facility.open_hours_summary,
-            rating_average=facility.rating_average,
-            review_count=facility.review_count,
+            rating_average=_review_average(facility),
+            review_count=len(_visible_reviews(facility)),
             images=[
                 FacilityCatalogImageRecord(
                     url=image.url,
@@ -146,4 +164,25 @@ class SqlAlchemyFacilityCatalogReader:
                 )
                 for image in facility.images
             ],
+            reviews=[
+                FacilityReviewRecord(
+                    id=review.id,
+                    rating=review.rating,
+                    comment=review.comment,
+                    author_name=review.student.full_name,
+                    created_at=review.created_at,
+                )
+                for review in _visible_reviews(facility)
+            ],
         )
+
+
+def _visible_reviews(facility: Facility) -> list:
+    return [review for review in facility.reviews if not review.is_deleted]
+
+
+def _review_average(facility: Facility) -> float | None:
+    reviews = _visible_reviews(facility)
+    if not reviews:
+        return None
+    return round(sum(review.rating for review in reviews) / len(reviews), 1)

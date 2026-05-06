@@ -53,6 +53,7 @@ class StubHttpRuntimeDependencyRegistry:
     def reservation_routes(self):
         return ReservationRouteDependencies(
             get_reservations=placeholder_dependency,
+            get_reviews=placeholder_dependency,
             get_approval_letters=placeholder_dependency,
             get_payments=placeholder_dependency,
             require_access=placeholder_require_access,
@@ -116,6 +117,8 @@ def test_http_application_module_uses_runtime_dependency_registry_for_route_wiri
     assert app.state.session_factory is registry.session_factory
     assert "/auth/login" in route_paths
     assert "/facilities/{facility_id}/reservations" in route_paths
+    assert "/student/reservations/{reservation_id}/review" in route_paths
+    assert "/staff/facilities/{facility_id}/reviews" in route_paths
     assert "/notifications" in route_paths
     assert "/admin/system-status" in route_paths
 
@@ -131,6 +134,10 @@ def test_http_application_module_builds_app_with_foundation_routes():
     assert "/facilities" in route_paths
     assert "/facilities/{facility_id}" in route_paths
     assert "/facilities/{facility_id}/reservations" in route_paths
+    assert "/student/reservations/{reservation_id}/review" in route_paths
+    assert "/student/reviews/{review_id}" in route_paths
+    assert "/staff/facilities/{facility_id}/reviews" in route_paths
+    assert "/staff/facilities/{facility_id}/statistics" in route_paths
     assert "/notifications" in route_paths
     assert "/student/reservations" in route_paths
     assert "/student/reservations/{reservation_id}" in route_paths

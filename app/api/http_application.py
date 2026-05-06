@@ -52,6 +52,7 @@ class FacilityRouteDependencies:
 @dataclass(frozen=True)
 class ReservationRouteDependencies:
     get_reservations: Callable
+    get_reviews: Callable
     get_approval_letters: Callable
     get_payments: Callable
     require_access: Callable[[AccessPolicyAction], Callable]
@@ -153,6 +154,7 @@ class HttpRuntimeModule:
         self.get_facility_availability = self._build_get_facility_availability()
         self.get_reservation_time_selection = self._build_get_reservation_time_selection()
         self.get_reservations = self._build_get_reservations()
+        self.get_reviews = self._build_get_reviews()
         self.get_notifications = self._build_get_notifications()
         self.get_approval_letters = self._build_get_approval_letters()
         self.get_payments = self._build_get_payments()
@@ -186,6 +188,7 @@ class HttpRuntimeModule:
     def reservation_routes(self) -> ReservationRouteDependencies:
         return ReservationRouteDependencies(
             get_reservations=self.get_reservations,
+            get_reviews=self.get_reviews,
             get_approval_letters=self.get_approval_letters,
             get_payments=self.get_payments,
             require_access=self.require_access,
@@ -262,6 +265,12 @@ class HttpRuntimeModule:
     def _build_get_reservations(self):
         async def dependency(session: Session = Depends(self.get_session)):
             return self._facility_factory.build_reservations(session)
+
+        return dependency
+
+    def _build_get_reviews(self):
+        async def dependency(session: Session = Depends(self.get_session)):
+            return self._facility_factory.build_reviews(session)
 
         return dependency
 
@@ -372,6 +381,7 @@ class HttpApplicationModule:
         register_reservation_routes(
             app,
             get_reservations=reservation_dependencies.get_reservations,
+            get_reviews=reservation_dependencies.get_reviews,
             get_approval_letters=reservation_dependencies.get_approval_letters,
             get_payments=reservation_dependencies.get_payments,
             require_access=reservation_dependencies.require_access,

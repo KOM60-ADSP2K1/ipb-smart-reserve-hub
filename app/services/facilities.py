@@ -50,6 +50,15 @@ class FacilityReviewSummary:
 
 
 @dataclass(frozen=True)
+class FacilityPublicReview:
+    id: str
+    rating: int
+    comment: str | None
+    author_name: str
+    created_at: datetime
+
+
+@dataclass(frozen=True)
 class FacilityPublicDetail:
     id: str
     name: str
@@ -62,6 +71,7 @@ class FacilityPublicDetail:
     price: FacilityPrice
     open_hours_summary: str
     review_summary: FacilityReviewSummary
+    reviews: list[FacilityPublicReview]
 
 
 @dataclass(frozen=True)
@@ -123,6 +133,16 @@ class FacilityCatalogModule:
                 rating_average=facility.rating_average,
                 review_count=facility.review_count,
             ),
+            reviews=[
+                FacilityPublicReview(
+                    id=review.id,
+                    rating=review.rating,
+                    comment=review.comment,
+                    author_name=review.author_name,
+                    created_at=_as_utc(review.created_at),
+                )
+                for review in facility.reviews
+            ],
         )
 
     def list_public_calendar_entries(

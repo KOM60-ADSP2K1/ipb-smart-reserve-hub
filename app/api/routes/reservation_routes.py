@@ -16,6 +16,12 @@ from app.schemas.reservation_schemas import (
     StudentReservationResponse,
     StudentSignedApprovalLetterResponse,
 )
+from app.schemas.review_schemas import (
+    ReviewSubmissionRequest,
+    StaffFacilityReviewResponse,
+    StaffFacilityStatisticsResponse,
+    StudentReviewResponse,
+)
 from app.services.approval_letters import (
     ApprovalLetterModule,
     ApprovalLetterNotGenerated,
@@ -38,6 +44,15 @@ from app.services.reservations import (
     ReservationTimeUnavailable,
     StaffCancellationReviewAccessDenied,
 )
+from app.services.reviews import (
+    ReviewAlreadySubmitted,
+    ReviewModule,
+    ReviewNotFound,
+    ReviewReservationNotCompleted,
+    ReviewReservationNotFound,
+    ReviewSubmission,
+    StaffReviewAccessDenied,
+)
 from app.services.payments import (
     InvalidPaymentReceiptFile,
     PaymentModule,
@@ -54,6 +69,7 @@ def register_reservation_routes(
     app: FastAPI,
     *,
     get_reservations: Callable,
+    get_reviews: Callable,
     get_approval_letters: Callable,
     get_payments: Callable,
     require_access: Callable[[AccessPolicyAction], Callable],
@@ -107,6 +123,69 @@ def register_reservation_routes(
             return reservations.get_student_reservation(current_user, reservation_id)
         except ReservationNotFound:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservasi tidak ditemukan.")
+
+    @app.post(
+        "/student/reservations/{reservation_id}/review",
+        status_code=status.HTTP_201_CREATED,
+        response_model=StudentReviewResponse,
+    )
+    async def submit_student_review(
+        reservation_id: str,
+        payload: ReviewSubmissionRequest,
+        reviews: ReviewModule = Depends(get_reviews),
+        current_user: UserAccount = Depends(require_access(AccessPolicyAction.enter_student_shell)),
+    ):
+        try:
+            return reviews.submit_student_review(
+                current_user,
+                reservation_id,
+                ReviewSubmission(rating=payload.rating, comment=payload.comment),
+            )
+        except ReviewReservationNotFound:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservasi tidak ditemukan.")
+        except ReviewReservationNotCompleted:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Reservasi belum selesai.")
+        except ReviewAlreadySubmitted:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Review untuk reservasi ini sudah dikirim.")
+
+    @app.delete("/student/reviews/{review_id}", response_model=StudentReviewResponse)
+    async def delete_student_review(
+        review_id: str,
+        reviews: ReviewModule = Depends(get_reviews),
+        current_user: UserAccount = Depends(require_access(AccessPolicyAction.enter_student_shell)),
+    ):
+        try:
+            return reviews.delete_student_review(current_user, review_id)
+        except ReviewNotFound:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review tidak ditemukan.")
+
+    @app.get("/staff/facilities/{facility_id}/reviews", response_model=list[StaffFacilityReviewResponse])
+    async def list_staff_facility_reviews(
+        facility_id: str,
+        reviews: ReviewModule = Depends(get_reviews),
+        current_user: UserAccount = Depends(require_access(AccessPolicyAction.manage_assigned_facilities)),
+    ):
+        try:
+            return reviews.list_staff_facility_reviews(current_user, facility_id)
+        except StaffReviewAccessDenied:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Staff tidak ditugaskan ke fasilitas ini.",
+            )
+
+    @app.get("/staff/facilities/{facility_id}/statistics", response_model=StaffFacilityStatisticsResponse)
+    async def get_staff_facility_statistics(
+        facility_id: str,
+        reviews: ReviewModule = Depends(get_reviews),
+        current_user: UserAccount = Depends(require_access(AccessPolicyAction.manage_assigned_facilities)),
+    ):
+        try:
+            return reviews.get_staff_facility_statistics(current_user, facility_id)
+        except StaffReviewAccessDenied:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Staff tidak ditugaskan ke fasilitas ini.",
+            )
 
     @app.post("/student/reservations/{reservation_id}/cancel", response_model=StudentReservationResponse)
     async def cancel_student_reservation(
