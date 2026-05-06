@@ -16,3 +16,9 @@ class SystemStatusResponse(BaseModel):
     storage: StatusCheckResponse
     application: ApplicationStatusResponse
     worker: StatusCheckResponse
+
+
+class HealthCheckResponse(BaseModel):
+    backend: StatusCheckResponse
+    database: StatusCheckResponse
+    application: ApplicationStatusResponse

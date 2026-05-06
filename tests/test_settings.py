@@ -1,3 +1,5 @@
+import pytest
+
 from app.services.booking_settings import BookingSettings
 from app.core.settings import SettingsModule
 
@@ -12,6 +14,17 @@ def test_settings_module_loads_environment_and_normalizes_allowed_domains(monkey
     assert settings.database_url == "sqlite+pysqlite:///settings-test.db"
     assert settings.secret_key == "environment-secret"
     assert settings.allowed_student_email_domains == ("apps.ipb.ac.id", "ipb.ac.id")
+
+
+def test_production_settings_require_explicit_safe_secret_and_database(monkeypatch):
+    monkeypatch.setenv("IPB_ENVIRONMENT", "production")
+    monkeypatch.delenv("IPB_SECRET_KEY", raising=False)
+    monkeypatch.delenv("IPB_DATABASE_URL", raising=False)
+
+    with pytest.raises(ValueError) as error:
+        SettingsModule.from_environment()
+
+    assert str(error.value) == "Production settings require IPB_DATABASE_URL and IPB_SECRET_KEY."
 
 
 def test_application_settings_do_not_construct_booking_settings():

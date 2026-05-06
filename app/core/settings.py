@@ -6,6 +6,7 @@ from app.core.student_email_policy import DEFAULT_ALLOWED_STUDENT_EMAIL_DOMAINS,
 
 DEFAULT_DATABASE_URL = "sqlite+pysqlite:///./ipb_smart_reserve_hub.db"
 DEFAULT_SECRET_KEY = "dev-secret-change-me"
+PRODUCTION_ENVIRONMENT = "production"
 
 
 @dataclass(frozen=True)
@@ -17,13 +18,16 @@ class SettingsModule:
     @classmethod
     def from_environment(cls, environ: Mapping[str, str] | None = None) -> "SettingsModule":
         source = environ if environ is not None else os.environ
-        return cls(
+        settings = cls(
             database_url=source.get("IPB_DATABASE_URL", DEFAULT_DATABASE_URL),
             secret_key=source.get("IPB_SECRET_KEY", DEFAULT_SECRET_KEY),
             allowed_student_email_domains=cls._parse_allowed_domains(
                 source.get("IPB_ALLOWED_STUDENT_EMAIL_DOMAINS")
             ),
         )
+        if source.get("IPB_ENVIRONMENT") == PRODUCTION_ENVIRONMENT:
+            settings._validate_production(source)
+        return settings
 
     def with_overrides(
         self,
@@ -49,3 +53,9 @@ class SettingsModule:
     @staticmethod
     def _normalize_allowed_domains(domains: tuple[str, ...]) -> tuple[str, ...]:
         return normalize_allowed_student_email_domains(domains)
+
+    def _validate_production(self, source: Mapping[str, str]) -> None:
+        if not source.get("IPB_DATABASE_URL") or not source.get("IPB_SECRET_KEY"):
+            raise ValueError("Production settings require IPB_DATABASE_URL and IPB_SECRET_KEY.")
+        if self.database_url.startswith("sqlite") or self.secret_key == DEFAULT_SECRET_KEY:
+            raise ValueError("Production settings require IPB_DATABASE_URL and IPB_SECRET_KEY.")
