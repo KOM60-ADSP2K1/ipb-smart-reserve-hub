@@ -7,6 +7,7 @@ from app.main import create_app
 from app.models import Reservation, ReservationStatus, UserRole
 from app.repositories.reservation_repository import ReservationFacilityRecord, ReservationOrganizationUnitRecord
 from app.services.accounts import UserAccount
+from app.services.booking_settings import BookingSettings
 from app.services.reservation_time_selection import ReservationTimeSelection
 from app.services.reservations import (
     ReservationModule,
@@ -54,6 +55,8 @@ def test_reservation_submission_rejects_commit_time_conflict_after_available_tim
         reservation_repository=reservation_repository,
         reservation_time_selection=AvailableTimeSelection(),
         submission_conflict_guard=RejectingSubmissionConflictGuard(),
+        booking_settings=BookingSettings.defaults(),
+        clock=lambda: datetime(2026, 5, 1, tzinfo=UTC),
     )
 
     with pytest.raises(ReservationTimeUnavailable):
@@ -130,6 +133,7 @@ async def test_student_submits_reservation_details_and_views_held_reservation():
     assert created_body["price_rupiah"] == 150000
     assert created_body["organization_unit"]["name"] == "BEM KM IPB"
     assert created_body["participant_count"] == 80
+    assert created_body["document_upload_due_at"] == "2026-05-04T00:00:00Z"
 
     assert reservation_list.status_code == 200
     assert reservation_list.json() == [created_body]

@@ -307,6 +307,7 @@ async def test_student_uploads_signed_approval_letter_after_generated_letter_exi
         "uploaded_at": "2026-05-01T03:00:00Z",
     }
     assert updated.json()["status"] == "pending_document_review"
+    assert updated.json()["document_verification_due_at"] == "2026-05-03T03:00:00Z"
 
 
 @pytest.mark.anyio
@@ -647,6 +648,7 @@ async def test_assigned_staff_approval_moves_paid_facility_reservation_to_pendin
     assert review.json()["reservation_id"] == reservation["id"]
     assert review.json()["status"] == "pending_payment"
     assert updated.json()["status"] == "pending_payment"
+    assert updated.json()["payment_upload_due_at"] == "2026-05-02T03:00:00Z"
 
 
 @pytest.mark.anyio

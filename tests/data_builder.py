@@ -10,11 +10,13 @@ from app.models import (
     FacilityOpenHour,
     OrganizationUnit,
     Reservation,
+    ReservationPaymentReceipt,
     ReservationStatus,
     User,
     UserRole,
 )
 from app.core.security import hash_password
+from app.services.accounts import UserAccount
 
 
 class DataBuilder:
@@ -125,6 +127,11 @@ class DataBuilder:
         starts_at: str,
         ends_at: str,
         status: ReservationStatus,
+        document_upload_due_at: str | None = None,
+        document_verification_due_at: str | None = None,
+        payment_upload_due_at: str | None = None,
+        payment_verification_due_at: str | None = None,
+        has_payment_receipt: bool = False,
     ) -> str:
         with self._session_factory() as session:
             student = User(
@@ -143,11 +150,38 @@ class DataBuilder:
                 event_description="Private event description",
                 starts_at=datetime.fromisoformat(starts_at),
                 ends_at=datetime.fromisoformat(ends_at),
+                document_upload_due_at=_datetime_or_none(document_upload_due_at),
+                document_verification_due_at=_datetime_or_none(document_verification_due_at),
+                payment_upload_due_at=_datetime_or_none(payment_upload_due_at),
+                payment_verification_due_at=_datetime_or_none(payment_verification_due_at),
                 status=status,
             )
+            if has_payment_receipt:
+                reservation.payment_receipt = ReservationPaymentReceipt(
+                    storage_key=f"payment-receipts/{activity_title}",
+                    filename="receipt.png",
+                    content_type="image/png",
+                    size_bytes=10,
+                    uploaded_at=datetime.fromisoformat("2026-06-01T00:00:00+00:00"),
+                )
             session.add(reservation)
             session.commit()
             return reservation.id
+
+    def get_reservation_status(self, reservation_id: str) -> ReservationStatus:
+        with self._session_factory() as session:
+            return session.get(Reservation, reservation_id).status
+
+    def user_account_for_reservation(self, reservation_id: str) -> UserAccount:
+        with self._session_factory() as session:
+            reservation = session.get(Reservation, reservation_id)
+            return UserAccount(
+                id=reservation.student.id,
+                email=reservation.student.email,
+                full_name=reservation.student.full_name,
+                role=reservation.student.role,
+                is_active=reservation.student.is_active,
+            )
 
     def add_facility_open_hour(
         self,
@@ -186,3 +220,9 @@ class DataBuilder:
                 )
             )
             session.commit()
+
+
+def _datetime_or_none(value: str | None) -> datetime | None:
+    if value is None:
+        return None
+    return datetime.fromisoformat(value)

@@ -198,6 +198,7 @@ async def test_student_uploads_payment_receipt_for_pending_paid_reservation():
         "uploaded_at": "2026-05-01T03:00:00Z",
     }
     assert updated.json()["status"] == "pending_payment"
+    assert updated.json()["payment_verification_due_at"] == "2026-05-02T03:00:00Z"
 
 
 @pytest.mark.anyio

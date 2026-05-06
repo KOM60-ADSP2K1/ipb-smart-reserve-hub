@@ -36,6 +36,10 @@ class StudentReservationResponse(BaseModel):
     starts_at: datetime
     ends_at: datetime
     price_rupiah: int
+    document_upload_due_at: datetime | None = None
+    document_verification_due_at: datetime | None = None
+    payment_upload_due_at: datetime | None = None
+    payment_verification_due_at: datetime | None = None
 
 
 class StudentApprovalLetterResponse(BaseModel):

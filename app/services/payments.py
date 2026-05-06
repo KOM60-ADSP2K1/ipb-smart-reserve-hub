@@ -1,11 +1,12 @@
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 import uuid
 
 from app.models import ReservationPaymentReceipt, ReservationStatus
 from app.repositories.reservation_repository import ReservationRepository
 from app.services.accounts import UserAccount
+from app.services.booking_settings import BookingSettings
 from app.services.reservations import ReservationNotFound
 from app.storage import PrivateStorage
 
@@ -78,10 +79,12 @@ class PaymentModule:
         *,
         reservation_repository: ReservationRepository,
         storage: PrivateStorage,
+        booking_settings: BookingSettings,
         clock: Callable[[], datetime],
     ) -> None:
         self._reservation_repository = reservation_repository
         self._storage = storage
+        self._booking_settings = booking_settings
         self._clock = clock
 
     def get_student_payment(self, student: UserAccount, reservation_id: str) -> StudentReservationPayment:
@@ -126,6 +129,9 @@ class PaymentModule:
             content_type=upload.content_type,
             size_bytes=len(upload.content),
             uploaded_at=uploaded_at,
+        )
+        reservation.payment_verification_due_at = uploaded_at + timedelta(
+            hours=self._booking_settings.payment_verification_due_hours
         )
         return _to_student_payment_receipt(reservation.payment_receipt)
 

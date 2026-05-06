@@ -75,24 +75,40 @@ class FacilityModuleFactory:
 
     def build_reservations(self, session: Session) -> ReservationModule:
         reservation_repository = SqlAlchemyReservationRepository(session)
+        booking_settings = BookingSettingsModule(
+            booking_settings_repository=SqlAlchemyBookingSettingsRepository(session),
+            defaults=self._default_booking_settings,
+        ).get_booking_settings()
         return ReservationModule(
             reservation_repository=reservation_repository,
             reservation_time_selection=self.build_reservation_time_selection(session),
             submission_conflict_guard=ReservationSubmissionConflictGuard(conflict_reader=reservation_repository),
+            booking_settings=booking_settings,
+            clock=self._clock,
         )
 
     def build_approval_letters(self, session: Session) -> ApprovalLetterModule:
+        booking_settings = BookingSettingsModule(
+            booking_settings_repository=SqlAlchemyBookingSettingsRepository(session),
+            defaults=self._default_booking_settings,
+        ).get_booking_settings()
         return ApprovalLetterModule(
             reservation_repository=SqlAlchemyReservationRepository(session),
             storage=self._private_storage,
             pdf_generator=self._approval_letter_pdf_generator,
+            booking_settings=booking_settings,
             clock=self._clock,
         )
 
     def build_payments(self, session: Session) -> PaymentModule:
+        booking_settings = BookingSettingsModule(
+            booking_settings_repository=SqlAlchemyBookingSettingsRepository(session),
+            defaults=self._default_booking_settings,
+        ).get_booking_settings()
         return PaymentModule(
             reservation_repository=SqlAlchemyReservationRepository(session),
             storage=self._private_storage,
+            booking_settings=booking_settings,
             clock=self._clock,
         )
 

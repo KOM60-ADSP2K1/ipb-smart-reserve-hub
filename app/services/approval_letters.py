@@ -1,12 +1,13 @@
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 import uuid
 
 from app.models import ReservationApprovalLetter, ReservationSignedApprovalLetter, ReservationStatus
 from app.pdf import ApprovalLetterInput, ApprovalLetterPdfGenerator
 from app.repositories.reservation_repository import ReservationRepository
 from app.services.accounts import UserAccount
+from app.services.booking_settings import BookingSettings
 from app.services.reservations import ReservationNotFound
 from app.storage import PrivateStorage
 
@@ -85,11 +86,13 @@ class ApprovalLetterModule:
         reservation_repository: ReservationRepository,
         storage: PrivateStorage,
         pdf_generator: ApprovalLetterPdfGenerator,
+        booking_settings: BookingSettings,
         clock: Callable[[], datetime],
     ) -> None:
         self._reservation_repository = reservation_repository
         self._storage = storage
         self._pdf_generator = pdf_generator
+        self._booking_settings = booking_settings
         self._clock = clock
 
     def get_student_approval_letter(self, student: UserAccount, reservation_id: str) -> StudentApprovalLetter:
@@ -137,6 +140,9 @@ class ApprovalLetterModule:
             uploaded_at=uploaded_at,
         )
         reservation.status = ReservationStatus.pending_document_review
+        reservation.document_verification_due_at = uploaded_at + timedelta(
+            hours=self._booking_settings.document_verification_due_hours
+        )
         return _to_student_signed_approval_letter(reservation.signed_approval_letter)
 
     def approve_signed_approval_letter(self, staff: UserAccount, reservation_id: str) -> StaffDocumentReview:
@@ -148,6 +154,9 @@ class ApprovalLetterModule:
             reservation.status = ReservationStatus.approved
         else:
             reservation.status = ReservationStatus.pending_payment
+            reservation.payment_upload_due_at = _as_utc(self._clock()) + timedelta(
+                hours=self._booking_settings.payment_upload_due_hours
+            )
         return StaffDocumentReview(reservation_id=reservation.id, status=reservation.status)
 
     def download_staff_signed_approval_letter(
