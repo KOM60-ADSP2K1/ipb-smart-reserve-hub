@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./lib/auth-context";
@@ -7,13 +8,13 @@ import { RegisterPage } from "./pages/RegisterPage";
 import { StudentShell } from "./pages/StudentShell";
 import { FacilitiesPage } from "./pages/FacilitiesPage";
 
-const queryClient = new QueryClient();
-
 function Placeholder({ label }: { label: string }) {
   return <p>{label}</p>;
 }
 
 export function App() {
+  const [queryClient] = useState(() => new QueryClient());
+
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>

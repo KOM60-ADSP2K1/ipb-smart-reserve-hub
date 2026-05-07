@@ -12,3 +12,16 @@ export interface TokenResponse {
   access_token: string;
   token_type: string;
 }
+
+export interface FacilityCatalogItem {
+  id: string;
+  name: string;
+  location: string;
+  capacity: number;
+  category: string;
+  cover_image_url: string | null;
+  rating_average: number | null;
+  review_count: number;
+  price_summary: string;
+  open_hours_summary: string;
+}

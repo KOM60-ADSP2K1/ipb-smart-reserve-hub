@@ -53,6 +53,10 @@ export const handlers = [
     );
   }),
 
+  http.get(`${API_BASE}/facilities`, () => {
+    return HttpResponse.json([]);
+  }),
+
   http.get(`${API_BASE}/auth/me`, ({ request }) => {
     const auth = request.headers.get("Authorization");
     if (auth === "Bearer fake-token-123") {
