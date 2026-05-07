@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from typing import Protocol
 
 from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -386,6 +387,13 @@ class HttpApplicationModule:
 
     def build(self) -> FastAPI:
         app = FastAPI(title="IPB Smart Reserve Hub")
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
         runtime = self._runtime_dependency_registry or HttpRuntimeModule(settings=self._settings, clock=self._clock)
         runtime.create_schema()
         account_dependencies = runtime.account_routes()

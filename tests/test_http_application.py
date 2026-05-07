@@ -133,6 +133,18 @@ def test_http_application_module_uses_runtime_dependency_registry_for_route_wiri
     assert "/admin/system-status" in route_paths
 
 
+def test_http_application_enables_cors_middleware():
+    from starlette.middleware.cors import CORSMiddleware
+
+    app = HttpApplicationModule(settings=SettingsModule(database_url="sqlite+pysqlite:///:memory:")).build()
+    cors_middlewares = [m for m in app.user_middleware if m.cls is CORSMiddleware]
+
+    assert len(cors_middlewares) == 1
+    assert cors_middlewares[0].kwargs["allow_methods"] == ["*"]
+    assert cors_middlewares[0].kwargs["allow_headers"] == ["*"]
+    assert cors_middlewares[0].kwargs["allow_credentials"] is True
+
+
 def test_http_application_module_builds_app_with_foundation_routes():
     app = HttpApplicationModule(settings=SettingsModule(database_url="sqlite+pysqlite:///:memory:")).build()
     route_paths = {route.path for route in app.routes}
