@@ -80,6 +80,26 @@ sqlite+pysqlite:///./ipb_smart_reserve_hub.db
 
 Saat aplikasi start, schema SQLAlchemy dibuat otomatis melalui runtime FastAPI. Untuk production, lihat `docs/backend-deployment.md`.
 
+### Dev Seed Data
+
+Untuk mengisi database lokal dengan data demo frontend yang konsisten:
+
+```sh
+uv run python -m app.dev.seed
+```
+
+Command ini hanya untuk development dan akan menolak berjalan saat `IPB_ENVIRONMENT=production`. Command aman dijalankan berulang kali; data seed yang sama akan diperbarui tanpa membuat duplikat user, fasilitas, unit organisasi, open hour, gambar, assignment staff, atau reservasi blocking.
+
+Credential lokal yang dibuat:
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Student | `demo.student@apps.ipb.ac.id` | `demo12345` |
+| Staff | `demo.staff@ipb.ac.id` | `demo12345` |
+| Super Admin | `demo.admin@ipb.ac.id` | `demo12345` |
+
+Seed juga membuat synthetic Student `demo.blocking@apps.ipb.ac.id` untuk pemilik reservasi blocking kalender publik. Akun demo Student utama sengaja dibiarkan tanpa reservasi awal agar alur frontend baru mudah diverifikasi.
+
 ## Testing
 
 Jalankan semua test:
