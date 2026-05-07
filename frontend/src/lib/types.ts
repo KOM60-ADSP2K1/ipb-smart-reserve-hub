@@ -25,3 +25,49 @@ export interface FacilityCatalogItem {
   price_summary: string;
   open_hours_summary: string;
 }
+
+export interface FacilityContact {
+  name: string;
+  phone: string;
+  email: string | null;
+}
+
+export interface FacilityImage {
+  url: string;
+  alt_text: string;
+  is_cover: boolean;
+}
+
+export interface FacilityPrice {
+  is_free: boolean;
+  amount_rupiah: number;
+  summary: string;
+}
+
+export interface FacilityReviewSummary {
+  rating_average: number | null;
+  review_count: number;
+}
+
+export interface FacilityPublicReview {
+  id: string;
+  rating: number;
+  comment: string | null;
+  author_name: string;
+  created_at: string;
+}
+
+export interface FacilityDetail {
+  id: string;
+  name: string;
+  location: string;
+  capacity: number;
+  category: string;
+  description: string;
+  contact: FacilityContact;
+  images: FacilityImage[];
+  price: FacilityPrice;
+  open_hours_summary: string;
+  review_summary: FacilityReviewSummary;
+  reviews: FacilityPublicReview[];
+}

@@ -193,6 +193,22 @@ describe("Student Facility Catalog", () => {
           },
         ]),
       ),
+      http.get("http://localhost:8000/facilities/fac-42", () =>
+        HttpResponse.json({
+          id: "fac-42",
+          name: "Auditorium Andi Hakim Nasoetion",
+          location: "Kampus Dramaga",
+          capacity: 500,
+          category: "Auditorium",
+          description: "Deskripsi.",
+          contact: { name: "Admin", phone: "0812", email: null },
+          images: [],
+          price: { is_free: false, amount_rupiah: 5000000, summary: "Rp 5.000.000" },
+          open_hours_summary: "Senin–Jumat, 08:00–17:00",
+          review_summary: { rating_average: null, review_count: 0 },
+          reviews: [],
+        }),
+      ),
     );
 
     const user = userEvent.setup();
@@ -209,7 +225,7 @@ describe("Student Facility Catalog", () => {
     await user.click(facilityLink);
 
     expect(
-      await screen.findByText(/^detail fasilitas$/i),
+      await screen.findByRole("button", { name: /reservasi/i }),
     ).toBeInTheDocument();
   });
 
