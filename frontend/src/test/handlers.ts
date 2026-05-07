@@ -3,6 +3,34 @@ import { http, HttpResponse } from "msw";
 const API_BASE = "http://localhost:8000";
 
 export const handlers = [
+  http.post(`${API_BASE}/auth/register`, async ({ request }) => {
+    const body = (await request.json()) as {
+      email: string;
+      password: string;
+      full_name: string;
+      nim: string;
+      phone: string;
+    };
+
+    if (!body.email.endsWith("@apps.ipb.ac.id")) {
+      return HttpResponse.json(
+        { detail: "Email harus menggunakan domain institusi yang diizinkan." },
+        { status: 400 },
+      );
+    }
+
+    return HttpResponse.json(
+      {
+        id: "user-new",
+        email: body.email,
+        full_name: body.full_name,
+        role: "student",
+        is_active: true,
+      },
+      { status: 201 },
+    );
+  }),
+
   http.post(`${API_BASE}/auth/login`, async ({ request }) => {
     const body = (await request.json()) as {
       email: string;
