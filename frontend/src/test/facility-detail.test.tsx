@@ -106,7 +106,9 @@ describe("Student Facility Detail", () => {
     const reserve = await screen.findByRole("button", { name: /reservasi/i });
     await user.click(reserve);
 
-    expect(await screen.findByText(/^pilih waktu$/i)).toBeInTheDocument();
+    expect(
+      await screen.findByRole("heading", { name: /pilih waktu reservasi/i }),
+    ).toBeInTheDocument();
   });
 
   it("shows a loading state while the facility detail is being fetched", async () => {

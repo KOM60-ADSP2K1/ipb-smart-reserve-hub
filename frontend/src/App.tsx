@@ -8,6 +8,7 @@ import { RegisterPage } from "./pages/RegisterPage";
 import { StudentShell } from "./pages/StudentShell";
 import { FacilitiesPage } from "./pages/FacilitiesPage";
 import { FacilityDetailPage } from "./pages/FacilityDetailPage";
+import { ReservationTimeSelectionPage } from "./pages/ReservationTimeSelectionPage";
 
 function Placeholder({ label }: { label: string }) {
   return <p>{label}</p>;
@@ -33,7 +34,7 @@ export function App() {
           >
             <Route path="facilities" element={<FacilitiesPage />} />
             <Route path="facilities/:facilityId" element={<FacilityDetailPage />} />
-            <Route path="facilities/:facilityId/reserve/time" element={<Placeholder label="Pilih Waktu" />} />
+            <Route path="facilities/:facilityId/reserve/time" element={<ReservationTimeSelectionPage />} />
             <Route path="facilities/:facilityId/reserve/details" element={<Placeholder label="Detail Reservasi" />} />
             <Route path="facilities/:facilityId/reserve/confirm" element={<Placeholder label="Konfirmasi" />} />
             <Route path="reservations/:reservationId" element={<Placeholder label="Detail Reservasi" />} />
