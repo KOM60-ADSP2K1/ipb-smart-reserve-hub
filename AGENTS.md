@@ -12,9 +12,11 @@
 ## Frontend Implementation Workflow
 
 - Use the `frontend-implementation` skill when building or modifying frontend screens, translating design references into React/Vite/Tailwind UI, or integrating frontend flows with backend APIs.
-- For visual implementation, inspect `docs/frontend/IPB RSH Design/`, `docs/frontend/DESIGN.md`, `docs/frontend/emerald_reserve_design_system_specification.md`, and `docs/frontend/frontend-architecture.md`.
-- Verify meaningful UI work with screenshot checks across desktop and mobile viewports when a runnable frontend exists.
-- For backend integration, also use the `tdd` skill and keep visual changes minimal unless the backend behavior requires a visible state.
+- Read `docs/frontend/frontend-stack.md` first for the current stack, testing split, API conventions, and auth/session rules.
+- For visual implementation, inspect the relevant current docs: `docs/frontend/DESIGN.md`, `docs/frontend/per-page-plan/`, `docs/frontend/per-component-plan/`, and `docs/frontend/html-reference/`.
+- Implement frontend work in two phases: first design implementation with deterministic fixtures and Playwright screenshot tests; then backend integration with the `tdd` skill.
+- The design phase is screenshot-driven and should not use the backend `tdd` skill. Verify meaningful UI work across desktop `1440 x 900` and mobile `390 x 844` viewports when a runnable frontend exists.
+- During backend integration, replace fixtures with API calls through TDD while preserving the implemented design unless backend behavior requires a missing visible state.
 
 ## Agent skills
 

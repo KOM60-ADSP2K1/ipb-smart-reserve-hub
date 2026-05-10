@@ -1,86 +1,76 @@
 ---
 name: frontend-implementation
-description: Implements IPB Smart Reserve Hub frontend screens with React, Vite, Tailwind CSS, visual screenshot checks, and backend integration. Use when building or modifying frontend UI, translating design screenshots into components, wiring frontend flows to backend APIs, or preserving implemented design while adding behavior.
+description: Implements frontend screens and flows in this React/Vite/Tailwind app through design-first screenshot testing, then API integration with the repo's tdd skill. Use when building or modifying frontend pages, components, routes, UI states, visual references, or frontend-backend flows in this repository.
 ---
 
 # Frontend Implementation
 
 ## Scope
 
-Use this skill for frontend work in the IPB Smart Reserve Hub app. The target stack is React, Vite, TypeScript, Tailwind CSS, React Router, TanStack Query, Vitest, React Testing Library, and MSW, matching `docs/frontend/frontend-architecture.md`.
+Use this skill for frontend work in IPB Smart Reserve Hub. The workflow has two phases:
 
-Frontend work has two modes:
+1. **Design implementation:** build the UI with deterministic fixtures and prove the visual behavior with Playwright screenshots.
+2. **Integration implementation:** wire the completed design to backend APIs using the repo's `tdd` skill, without redesigning the screen.
 
-- **Design implementation:** build screens/components from the design references and verify them visually.
-- **Backend integration:** wire existing or newly built UI to backend APIs using the repo's `tdd` skill, while making minimal visual changes.
+Always read `docs/frontend/frontend-stack.md` first. For visual context, inspect the docs that exist for the target slice:
 
-## Source Material
+- `docs/frontend/DESIGN.md` for tokens, typography, colors, spacing, radii, and component tone.
+- `docs/frontend/per-page-plan/` for page-specific behavior and layout plans.
+- `docs/frontend/per-component-plan/` for reusable component contracts.
+- `docs/frontend/html-reference/` for layout and interaction intent.
+- `docs/frontend/frontend-architecture.md`, `docs/frontend/emerald_reserve_design_system_specification.md`, or `docs/frontend/IPB RSH Design/` only if present.
 
-Before implementing UI, inspect:
+Treat HTML references and screenshots as visual direction, not pixel-perfect contracts. They do not override `DESIGN.md` unless a page/component plan explicitly says so.
 
-- `docs/frontend/IPB RSH Design/` for screen references.
-- `docs/frontend/DESIGN.md` for tokens and component guidance.
-- `docs/frontend/emerald_reserve_design_system_specification.md` for design-system details.
-- `docs/frontend/frontend-architecture.md` for frontend boundaries and API integration decisions.
+## Phase 1: Design Implementation
 
-Treat screenshots as visual direction, not mandatory pixel-perfect specs. Preserve recognizable layout, hierarchy, tone, and interaction patterns.
+This phase is screenshot-driven. Do not use the backend `tdd` skill yet.
 
-## Visual Language Summary
+1. Identify the target route, page, component, states, and closest docs.
+2. Define the next visible behavior as a Playwright screenshot expectation before implementation.
+3. Use deterministic local fixtures, mock data, and local assets. Do not depend on remote placeholder or Unsplash URLs in screenshot baselines.
+4. Implement the smallest UI slice needed for the screenshot to pass.
+5. Run or add Playwright screenshot checks for desktop `1440 x 900` and mobile `390 x 844`.
+6. Inspect screenshots for layout, hierarchy, typography, spacing, responsive behavior, overflow, clipping, contrast, blank media, and incoherent overlap.
+7. Refactor only while screenshots stay green.
 
-The app should feel institutional, clean, and operational. Use Satoshi-style sans typography, generous whitespace, off-white page backgrounds, white rounded panels, soft emerald-tinted shadows, and high-quality campus/facility photography where the screen calls for imagery.
+Design constraints:
 
-Core patterns:
+- Use React, Vite, TypeScript, Tailwind CSS, React Router, and `lucide-react`.
+- Use Satoshi typography from `DESIGN.md`; do not carry over Inter or Playfair from HTML references unless a later plan explicitly changes that direction.
+- Keep workflow screens operational and usable, not generic marketing pages.
+- Keep visible states complete where relevant: loading, empty, error, disabled, selected, pending, success, and rejected.
+- Use reusable components when they match existing project patterns or remove meaningful duplication.
+- Avoid backend contract changes during this phase.
 
-- Brand: large `IPB SRH` wordmark treatment in emerald/green tones.
-- Navigation: white top bar, centered primary nav, left search field, right notification/profile actions.
-- Color: deep emerald text/surfaces, bright emerald primary actions, soft mint success states, amber pending states, soft red rejected/error states, neutral grey borders.
-- Layout: wide desktop compositions, constrained content, strong horizontal rhythm, large page padding, and 8px spacing grid.
-- Cards and panels: white surfaces, 12-24px radius depending on scale, subtle borders/shadows, roomy internal padding.
-- Forms: labeled fields with icons where helpful, rounded inputs, clear validation/status messaging.
-- Reservation flow: visible stepper, calendar/time panels, right-side action panel on desktop, clear continue/back affordances.
-- Admin screens: dense but readable tables, compact badges, icon actions, restrained dashboard cards.
-- Footer: oversized `IPB SRH` brand mark with simple link column.
+## Phase 2: Integration Implementation
 
-Avoid generic marketing layouts when implementing workflow screens. Prioritize usable reservation/admin workflows over decorative presentation.
-
-## Design Implementation Workflow
-
-1. Identify the closest screenshot(s) and docs for the requested screen.
-2. Map repeated UI to reusable components only when it reduces duplication or matches existing project patterns.
-3. Implement with Tailwind utility classes and existing component primitives when present.
-4. Keep responsive behavior explicit: desktop should match the wide references; mobile should preserve hierarchy without text overlap.
-5. Use lucide icons when available for search, calendar, clock, upload, filter, notification, check, reject, and navigation actions.
-6. Run the app locally if needed and capture screenshots for relevant desktop and mobile viewports.
-7. Compare screenshots against the reference direction and fix visible issues: spacing drift, broken alignment, overflow, unreadable contrast, missing imagery, or wrong status emphasis.
-
-Screenshot checks should include at least one desktop viewport and one mobile viewport for user-facing screens. Use the repo's existing Playwright or screenshot tooling if present; otherwise use the available browser automation path for the current environment.
-
-## Backend Integration Workflow
-
-For API wiring, load and follow the `tdd` skill.
+Start this phase only after the design is implemented and screenshot-tested. Load `.agents/skills/tdd/SKILL.md` and follow it for integration work.
 
 Use a vertical red-green-refactor loop:
 
-1. Write one failing behavior test through routed UI and HTTP-level mocks.
-2. Implement the smallest integration change to pass.
-3. Refactor only while tests are green.
+1. Define the next integration behavior through a public route, service, or user-facing interaction.
+2. Write one failing Vitest/React Testing Library behavior test for routing, API loading/submission, auth guards, validation, or backend error mapping.
+3. Replace fixtures with API calls using TanStack Query and the repo's typed API/client pattern.
+4. Implement the smallest integration change to pass.
+5. Refactor only while unit/integration tests and screenshots stay green.
 
-Integration rules:
+Integration constraints:
 
-- Preserve the already-implemented visual structure unless the backend behavior requires a visible state.
-- Prefer adding loading, empty, error, success, and disabled states inside existing components rather than redesigning the screen.
-- Keep backend concerns in typed API/client/query layers instead of scattering fetch logic through components.
-- Use MSW for frontend behavior tests; avoid mocking component internals.
-- Backend validation remains the source of truth for reservation rules and availability.
+- Preserve the implemented visual structure, styling, copy hierarchy, spacing, and screenshot baselines unless backend behavior exposes a required missing state.
+- Use `VITE_API_BASE_URL`, defaulting to `http://localhost:8000`.
+- Use React Hook Form and Zod for fast frontend required/format feedback.
+- Treat backend responses as the source of truth for domain rules, including NIM parsing, reservation availability, booking windows, lifecycle permissions, and review eligibility.
+- Store bearer tokens in memory and mirror to `sessionStorage`, not `localStorage`.
+- Restore tokens from `sessionStorage` on startup and validate with `GET /auth/me`.
+- Clear tokens on logout, `401`, or failed `GET /auth/me`.
 
 ## Verification
 
 Before finishing frontend work:
 
-- Run the relevant test command from the actual frontend package scripts.
-- Run lint/typecheck/build if those scripts exist.
+- Run relevant Playwright screenshot tests for changed pages/states.
+- Run relevant Vitest/React Testing Library tests after integration wiring.
+- Run lint, typecheck, and build scripts when available.
 - Start the dev server for app work and provide the local URL.
-- Capture and inspect screenshots for changed pages.
-- Confirm there is no text overlap, clipped controls, blank media, unreadable status badge, or accidental broad visual regression.
-
-If the frontend project or required scripts do not exist yet, state that clearly and create the smallest stack-consistent foundation needed for the requested slice.
+- State clearly if a required frontend package, script, or referenced doc does not exist.
