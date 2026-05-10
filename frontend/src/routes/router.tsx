@@ -1,6 +1,7 @@
 import { createBrowserRouter, type RouteObject } from 'react-router';
 
 import { LoginPage } from '../features/auth/LoginPage';
+import { RegisterPage } from '../features/auth/RegisterPage';
 import { NotConfiguredRoute } from '../pages/NotConfiguredRoute';
 import { RoleLandingPage } from '../pages/RoleLandingPage';
 import { StackReadyPage } from '../pages/StackReadyPage';
@@ -13,6 +14,10 @@ export const routes: RouteObject[] = [
   {
     path: '/login',
     element: <LoginPage />,
+  },
+  {
+    path: '/register',
+    element: <RegisterPage />,
   },
   {
     path: '/student',
