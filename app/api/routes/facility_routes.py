@@ -9,6 +9,7 @@ from app.services.facilities import FacilityCatalogModule, FacilityNotFound
 from app.schemas.facility_schemas import (
     FacilityAvailabilityResponse,
     FacilityCalendarEntryResponse,
+    FacilityCategoryResponse,
     FacilityCatalogItemResponse,
     FacilityDetailResponse,
 )
@@ -27,6 +28,12 @@ def register_facility_routes(
     get_facility_availability: Callable,
     get_reservation_time_selection: Callable,
 ) -> None:
+    @app.get("/facility-categories", response_model=list[FacilityCategoryResponse])
+    async def list_facility_categories(
+        facility_catalog: FacilityCatalogModule = Depends(get_facility_catalog),
+    ) -> list:
+        return facility_catalog.list_public_categories()
+
     @app.get("/facilities", response_model=list[FacilityCatalogItemResponse])
     async def list_facilities(
         facility_catalog: FacilityCatalogModule = Depends(get_facility_catalog),

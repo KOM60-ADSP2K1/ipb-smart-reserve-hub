@@ -6,6 +6,7 @@ from app.core.settings import SettingsModule
 from app.dev.seed import DEMO_PASSWORD, ProductionSeedRefused, seed_development_data
 from app.models import (
     Facility,
+    FacilityCategory,
     FacilityImage,
     FacilityOpenHour,
     FacilityStaffAssignment,
@@ -87,6 +88,12 @@ def test_dev_seed_creates_frontend_reservation_tracer_data(tmp_path):
 
         assert len(session.scalars(select(OrganizationUnit).where(OrganizationUnit.is_active.is_(True))).all()) >= 2
         assert session.scalar(select(FacilityStaffAssignment))
+        categories = session.scalars(select(FacilityCategory).order_by(FacilityCategory.name)).all()
+        assert [(category.name, category.slug, category.icon_hint) for category in categories] == [
+            ("Auditorium", "auditorium", "presentation"),
+            ("Olahraga", "olahraga", "dumbbell"),
+            ("Ruang Kelas", "ruang-kelas", "school"),
+        ]
 
         demo_student_reservations = session.scalars(
             select(Reservation).where(Reservation.student_id == demo_student.id)

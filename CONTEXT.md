@@ -50,6 +50,8 @@ A Facility Category is a managed label used to group Facilities for browsing and
 
 In the MVP, each Facility belongs to one Facility Category.
 
+Facility Category slugs are backend-owned public identifiers for student discovery URLs and filters. Active Facility Categories are publicly listed with an optional icon hint and a count of active Facilities visible in the Facility Catalog; inactive categories are hidden from public browsing.
+
 ## Facility Image
 
 A Facility Image is a public image for a Facility.

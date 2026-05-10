@@ -2,10 +2,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Protocol
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 
-from app.models import Facility, FacilityReview, Reservation
+from app.models import Facility, FacilityCategory, FacilityReview, Reservation
 from app.services.public_facility_calendar import PublicFacilityCalendarModule
 
 
@@ -37,6 +37,15 @@ class FacilityCatalogRecord:
 
 
 @dataclass(frozen=True)
+class FacilityCategoryRecord:
+    id: str
+    name: str
+    slug: str
+    icon_hint: str | None
+    facility_count: int
+
+
+@dataclass(frozen=True)
 class FacilityReviewRecord:
     id: str
     rating: int
@@ -56,6 +65,9 @@ class FacilityCalendarReservationRecord:
 
 
 class FacilityCatalogReader(Protocol):
+    def list_public_categories(self) -> list[FacilityCategoryRecord]:
+        raise NotImplementedError
+
     def list_active_facilities(self) -> list[FacilityCatalogRecord]:
         raise NotImplementedError
 
@@ -80,6 +92,29 @@ class SqlAlchemyFacilityCatalogReader:
     ) -> None:
         self._session = session
         self._public_facility_calendar = public_facility_calendar or PublicFacilityCalendarModule()
+
+    def list_public_categories(self) -> list[FacilityCategoryRecord]:
+        active_facility_count = func.count(Facility.id)
+        rows = self._session.execute(
+            select(FacilityCategory, active_facility_count)
+            .outerjoin(
+                Facility,
+                (Facility.category_id == FacilityCategory.id) & Facility.is_active.is_(True),
+            )
+            .where(FacilityCategory.is_active.is_(True))
+            .group_by(FacilityCategory.id)
+            .order_by(FacilityCategory.name)
+        )
+        return [
+            FacilityCategoryRecord(
+                id=category.id,
+                name=category.name,
+                slug=category.slug,
+                icon_hint=category.icon_hint,
+                facility_count=facility_count,
+            )
+            for category, facility_count in rows
+        ]
 
     def list_active_facilities(self) -> list[FacilityCatalogRecord]:
         facilities = self._session.scalars(

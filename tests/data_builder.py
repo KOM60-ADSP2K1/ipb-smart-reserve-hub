@@ -23,6 +23,25 @@ class DataBuilder:
     def __init__(self, app) -> None:
         self._session_factory = app.state.session_factory
 
+    def create_facility_category(
+        self,
+        *,
+        name: str,
+        slug: str,
+        icon_hint: str | None = None,
+        is_active: bool = True,
+    ) -> str:
+        with self._session_factory() as session:
+            category = FacilityCategory(
+                name=name,
+                slug=slug,
+                icon_hint=icon_hint,
+                is_active=is_active,
+            )
+            session.add(category)
+            session.commit()
+            return category.id
+
     def create_user(
         self,
         *,
@@ -49,13 +68,19 @@ class DataBuilder:
         name: str,
         is_active: bool = True,
         category_name: str = "Auditorium",
+        category_slug: str = "auditorium",
+        category_icon_hint: str | None = "presentation",
         price_rupiah: int = 0,
         payment_instructions: str | None = None,
     ) -> str:
         with self._session_factory() as session:
             category = session.scalar(select(FacilityCategory).where(FacilityCategory.name == category_name))
             if category is None:
-                category = FacilityCategory(name=category_name)
+                category = FacilityCategory(
+                    name=category_name,
+                    slug=category_slug,
+                    icon_hint=category_icon_hint,
+                )
             facility = Facility(
                 name=name,
                 category=category,

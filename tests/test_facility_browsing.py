@@ -155,6 +155,63 @@ async def test_students_browse_active_facilities_from_catalog():
 
 
 @pytest.mark.anyio
+async def test_public_facility_categories_include_slugs_icon_hints_and_active_facility_counts():
+    app = create_app(database_url="sqlite+pysqlite:///:memory:")
+    test_data = DataBuilder(app)
+    auditorium_id = test_data.create_facility_category(
+        name="Auditorium",
+        slug="auditorium",
+        icon_hint="presentation",
+    )
+    classroom_id = test_data.create_facility_category(
+        name="Ruang Kelas",
+        slug="ruang-kelas",
+        icon_hint="school",
+    )
+    test_data.create_facility_category(
+        name="Kategori Lama",
+        slug="kategori-lama",
+        icon_hint="archive",
+        is_active=False,
+    )
+    test_data.create_facility(
+        name="Auditorium Andi Hakim Nasoetion",
+        category_name="Auditorium",
+        category_slug="auditorium",
+        category_icon_hint="presentation",
+    )
+    test_data.create_facility(
+        name="Auditorium Nonaktif",
+        category_name="Auditorium",
+        category_slug="auditorium",
+        category_icon_hint="presentation",
+        is_active=False,
+    )
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        response = await client.get("/facility-categories")
+
+    assert response.status_code == 200
+    assert response.json() == [
+        {
+            "id": auditorium_id,
+            "name": "Auditorium",
+            "slug": "auditorium",
+            "icon_hint": "presentation",
+            "facility_count": 1,
+        },
+        {
+            "id": classroom_id,
+            "name": "Ruang Kelas",
+            "slug": "ruang-kelas",
+            "icon_hint": "school",
+            "facility_count": 0,
+        },
+    ]
+
+
+@pytest.mark.anyio
 async def test_students_view_facility_detail_public_information():
     app = create_app(database_url="sqlite+pysqlite:///:memory:")
     test_data = DataBuilder(app)

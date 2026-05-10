@@ -7,6 +7,7 @@ from app.schemas.account_schemas import (
 )
 from app.schemas.facility_schemas import (
     FacilityCatalogItemResponse,
+    FacilityCategoryResponse,
     FacilityContactResponse,
     FacilityDetailResponse,
     FacilityImageResponse,
@@ -17,6 +18,7 @@ from app.schemas.facility_schemas import (
 __all__ = [
     "AdminCreateUserRequest",
     "FacilityCatalogItemResponse",
+    "FacilityCategoryResponse",
     "FacilityContactResponse",
     "FacilityDetailResponse",
     "FacilityImageResponse",

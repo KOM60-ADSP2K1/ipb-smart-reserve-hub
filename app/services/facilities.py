@@ -24,6 +24,15 @@ class FacilityCatalogItem:
 
 
 @dataclass(frozen=True)
+class FacilityCategorySummary:
+    id: str
+    name: str
+    slug: str
+    icon_hint: str | None
+    facility_count: int
+
+
+@dataclass(frozen=True)
 class FacilityContact:
     name: str
     phone: str
@@ -99,6 +108,18 @@ class FacilityCatalogModule:
     ) -> None:
         self._facility_catalog_reader = facility_catalog_reader
         self._public_facility_reviews = public_facility_reviews or PublicFacilityReviewModule()
+
+    def list_public_categories(self) -> list[FacilityCategorySummary]:
+        return [
+            FacilityCategorySummary(
+                id=category.id,
+                name=category.name,
+                slug=category.slug,
+                icon_hint=category.icon_hint,
+                facility_count=category.facility_count,
+            )
+            for category in self._facility_catalog_reader.list_public_categories()
+        ]
 
     def list_active_facilities(self) -> list[FacilityCatalogItem]:
         facilities = self._facility_catalog_reader.list_active_facilities()

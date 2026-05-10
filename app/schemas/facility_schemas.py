@@ -16,6 +16,14 @@ class FacilityCatalogItemResponse(BaseModel):
     open_hours_summary: str
 
 
+class FacilityCategoryResponse(BaseModel):
+    id: str
+    name: str
+    slug: str
+    icon_hint: str | None
+    facility_count: int
+
+
 class FacilityContactResponse(BaseModel):
     name: str
     phone: str

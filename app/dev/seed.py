@@ -56,9 +56,24 @@ def seed_development_data(*, settings: SettingsModule | None = None, environment
         staff = _ensure_user(session, email="demo.staff@ipb.ac.id", full_name="Demo Staff", role=UserRole.staff)
         _ensure_user(session, email="demo.admin@ipb.ac.id", full_name="Demo Super Admin", role=UserRole.super_admin)
 
-        auditorium = _ensure_category(session, "Auditorium")
-        ruang_kelas = _ensure_category(session, "Ruang Kelas")
-        olahraga = _ensure_category(session, "Olahraga")
+        auditorium = _ensure_category(
+            session,
+            name="Auditorium",
+            slug="auditorium",
+            icon_hint="presentation",
+        )
+        ruang_kelas = _ensure_category(
+            session,
+            name="Ruang Kelas",
+            slug="ruang-kelas",
+            icon_hint="school",
+        )
+        olahraga = _ensure_category(
+            session,
+            name="Olahraga",
+            slug="olahraga",
+            icon_hint="dumbbell",
+        )
 
         facilities = [
             _ensure_facility(
@@ -199,11 +214,14 @@ def _ensure_user(
     return user
 
 
-def _ensure_category(session, name: str) -> FacilityCategory:
+def _ensure_category(session, *, name: str, slug: str, icon_hint: str | None) -> FacilityCategory:
     category = session.scalar(select(FacilityCategory).where(FacilityCategory.name == name))
     if category is None:
-        category = FacilityCategory(name=name, is_active=True)
+        category = FacilityCategory(name=name, slug=slug, icon_hint=icon_hint, is_active=True)
         session.add(category)
+    category.slug = slug
+    category.icon_hint = icon_hint
+    category.is_active = True
     return category
 
 

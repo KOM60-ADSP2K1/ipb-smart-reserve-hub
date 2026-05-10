@@ -16,12 +16,12 @@ Severity labels:
 ## Student Home
 
 - Blocking for integration: student home needs a backend-supported featured/explorable facilities query, such as `GET /facilities/featured` or `GET /facilities?featured=true&limit=8`.
-- Blocking for integration: student home facility type shortcuts need a public facility category list with stable slugs or IDs.
+- Resolved: `GET /facility-categories` provides active public Facility Categories with stable slugs, optional icon hints, and active facility counts for home shortcuts.
 
 ## Facility Catalog
 
 - Blocking for integration: `GET /facilities` currently returns an unpaginated list and has no documented query params for search, category, minimum capacity, sort, page, or page size.
-- Blocking for integration: public facility category data should expose stable slugs or IDs for URL filters.
+- Resolved: public Facility Category data exposes stored slugs through `GET /facility-categories` for URL filters.
 
 ## Reservation Detail Form
 

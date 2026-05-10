@@ -186,6 +186,7 @@ Role yang dipakai:
 
 | Method | Endpoint | Role | Kegunaan |
 | --- | --- | --- | --- |
+| `GET` | `/facility-categories` | Public | Daftar kategori fasilitas aktif untuk shortcut/filter, berisi `id`, `name`, `slug`, `icon_hint`, dan `facility_count` fasilitas aktif. |
 | `GET` | `/facilities` | Public | Daftar fasilitas aktif dengan ringkasan dan rating. |
 | `GET` | `/facilities/{facility_id}` | Public | Detail fasilitas aktif. |
 | `GET` | `/facilities/{facility_id}/calendar` | Public | Kalender publik slot yang terblokir tanpa data privat. Query: `start`, `end`. |
