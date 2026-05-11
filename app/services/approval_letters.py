@@ -38,6 +38,13 @@ class StudentApprovalLetterDownload:
 
 
 @dataclass(frozen=True)
+class StudentSignedApprovalLetterDownload:
+    filename: str
+    content_type: str
+    content: bytes
+
+
+@dataclass(frozen=True)
 class StaffSignedApprovalLetterDownload:
     filename: str
     content_type: str
@@ -172,6 +179,23 @@ class ApprovalLetterModule:
                 message=f"Surat persetujuan {reservation.activity_title} menunggu verifikasi.",
             )
         return _to_student_signed_approval_letter(reservation.signed_approval_letter)
+
+    def download_student_signed_approval_letter(
+        self,
+        student: UserAccount,
+        reservation_id: str,
+    ) -> StudentSignedApprovalLetterDownload:
+        reservation = self._reservation_repository.get_for_student(reservation_id, student.id)
+        if reservation is None:
+            raise ReservationNotFound
+        if reservation.signed_approval_letter is None:
+            raise ApprovalLetterNotGenerated
+        letter = reservation.signed_approval_letter
+        return StudentSignedApprovalLetterDownload(
+            filename=letter.filename,
+            content_type=letter.content_type,
+            content=self._storage.get(letter.storage_key),
+        )
 
     def approve_signed_approval_letter(self, staff: UserAccount, reservation_id: str) -> StaffDocumentReview:
         reservation = self._get_staff_review_reservation(staff, reservation_id)

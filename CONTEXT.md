@@ -128,6 +128,8 @@ Student reservation create, list, and detail responses expose `document`, `payme
 
 The document projection owns generated approval letter metadata, signed approval letter metadata, document review status, and document rejection reason. The payment projection owns payment required state, receipt metadata, payment review status, and payment rejection reason. Missing files are represented as null metadata, never fake filenames or dates.
 
+Student-owned Private File Downloads let students reopen uploaded signed approval letters and payment receipts for their own Reservations. These downloads use Reservation ownership checks and return stored bytes, stored content type, and the uploaded filename as an attachment. Frontend callers should show these actions from non-null signed approval letter or receipt metadata in the Student Reservation Workflow Projections.
+
 Terminal Reservation rejection records a nullable rejection source on the Reservation. Document review rejection stores `document`, payment review rejection stores `payment`, and old rejected Reservations without a source are exposed as `unknown`. Cancellation rejection is a separate review outcome and does not set terminal rejection source.
 
 ## Staff Reservation Review Access

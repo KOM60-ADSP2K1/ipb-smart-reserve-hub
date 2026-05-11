@@ -390,6 +390,24 @@ def register_reservation_routes(
                 detail="Ukuran bukti pembayaran maksimal 5 MB.",
             )
 
+    @app.get("/student/reservations/{reservation_id}/payment-receipt/download")
+    async def download_student_payment_receipt(
+        reservation_id: str,
+        payments: PaymentModule = Depends(get_payments),
+        current_user: UserAccount = Depends(require_access(AccessPolicyAction.enter_student_shell)),
+    ):
+        try:
+            download = payments.download_student_payment_receipt(current_user, reservation_id)
+        except ReservationNotFound:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservasi tidak ditemukan.")
+        except PaymentReceiptNotUploaded:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bukti pembayaran belum diunggah.")
+        return Response(
+            content=download.content,
+            media_type=download.content_type,
+            headers={"Content-Disposition": f'attachment; filename="{download.filename}"'},
+        )
+
     @app.get("/staff/reservations/{reservation_id}/payment-receipt/download")
     async def download_staff_payment_receipt(
         reservation_id: str,
@@ -526,6 +544,27 @@ def register_reservation_routes(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Ukuran surat bertanda tangan maksimal 5 MB.",
             )
+
+    @app.get("/student/reservations/{reservation_id}/signed-approval-letter/download")
+    async def download_student_signed_approval_letter(
+        reservation_id: str,
+        approval_letters: ApprovalLetterModule = Depends(get_approval_letters),
+        current_user: UserAccount = Depends(require_access(AccessPolicyAction.enter_student_shell)),
+    ):
+        try:
+            download = approval_letters.download_student_signed_approval_letter(current_user, reservation_id)
+        except ReservationNotFound:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservasi tidak ditemukan.")
+        except ApprovalLetterNotGenerated:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Surat bertanda tangan belum diunggah.",
+            )
+        return Response(
+            content=download.content,
+            media_type=download.content_type,
+            headers={"Content-Disposition": f'attachment; filename="{download.filename}"'},
+        )
 
     @app.post(
         "/staff/reservations/{reservation_id}/document-review/approve",

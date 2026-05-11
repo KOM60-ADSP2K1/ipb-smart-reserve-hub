@@ -220,6 +220,7 @@ Nilai `ReservationStatus` tetap status lifecycle utama. Substate UI seperti uplo
 | `GET` | `/student/reservations/{reservation_id}/approval-letter` | Student | Membuat atau mengambil metadata surat persetujuan. |
 | `GET` | `/student/reservations/{reservation_id}/approval-letter/download` | Student | Download surat persetujuan milik mahasiswa. |
 | `POST` | `/student/reservations/{reservation_id}/signed-approval-letter` | Student | Upload surat persetujuan bertanda tangan. File: PDF/JPG/JPEG/PNG max 5 MB. |
+| `GET` | `/student/reservations/{reservation_id}/signed-approval-letter/download` | Student | Download ulang surat persetujuan bertanda tangan milik mahasiswa jika sudah diunggah. |
 | `GET` | `/staff/reservations/{reservation_id}/signed-approval-letter/download` | Staff assigned | Download surat bertanda tangan untuk review. |
 | `POST` | `/staff/reservations/{reservation_id}/document-review/approve` | Staff assigned | Approve dokumen. Gratis menjadi `approved`, berbayar menjadi `pending_payment`. |
 | `POST` | `/staff/reservations/{reservation_id}/document-review/reject` | Staff assigned | Reject dokumen dengan alasan. |
@@ -230,6 +231,7 @@ Nilai `ReservationStatus` tetap status lifecycle utama. Substate UI seperti uplo
 | --- | --- | --- | --- |
 | `GET` | `/student/reservations/{reservation_id}/payment` | Student | Melihat instruksi pembayaran untuk reservasi berbayar yang menunggu pembayaran. |
 | `POST` | `/student/reservations/{reservation_id}/payment-receipt` | Student | Upload bukti pembayaran. File: JPG/JPEG/PNG max 5 MB. |
+| `GET` | `/student/reservations/{reservation_id}/payment-receipt/download` | Student | Download ulang bukti pembayaran milik mahasiswa jika sudah diunggah. |
 | `GET` | `/staff/reservations/{reservation_id}/payment-receipt/download` | Staff assigned | Download bukti pembayaran untuk review. |
 | `POST` | `/staff/reservations/{reservation_id}/payment-review/approve` | Staff assigned | Approve pembayaran dan mengaktifkan reservasi. |
 | `POST` | `/staff/reservations/{reservation_id}/payment-review/reject` | Staff assigned | Reject pembayaran dengan alasan. |

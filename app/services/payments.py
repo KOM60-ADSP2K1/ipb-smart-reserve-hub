@@ -44,6 +44,13 @@ class StudentPaymentReceipt:
 
 
 @dataclass(frozen=True)
+class StudentPaymentReceiptDownload:
+    filename: str
+    content_type: str
+    content: bytes
+
+
+@dataclass(frozen=True)
 class StaffPaymentReceiptDownload:
     filename: str
     content_type: str
@@ -163,6 +170,23 @@ class PaymentModule:
                 message=f"Bukti pembayaran {reservation.activity_title} menunggu verifikasi.",
             )
         return _to_student_payment_receipt(reservation.payment_receipt)
+
+    def download_student_payment_receipt(
+        self,
+        student: UserAccount,
+        reservation_id: str,
+    ) -> StudentPaymentReceiptDownload:
+        reservation = self._reservation_repository.get_for_student(reservation_id, student.id)
+        if reservation is None:
+            raise ReservationNotFound
+        if reservation.payment_receipt is None:
+            raise PaymentReceiptNotUploaded
+        receipt = reservation.payment_receipt
+        return StudentPaymentReceiptDownload(
+            filename=receipt.filename,
+            content_type=receipt.content_type,
+            content=self._storage.get(receipt.storage_key),
+        )
 
     def download_staff_payment_receipt(self, staff: UserAccount, reservation_id: str) -> StaffPaymentReceiptDownload:
         reservation = self._get_staff_payment_review_reservation(staff, reservation_id)

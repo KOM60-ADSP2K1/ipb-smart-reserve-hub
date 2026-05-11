@@ -42,7 +42,8 @@ Severity labels:
 
 - Resolved: student reservation detail responses expose signed approval letter metadata through `document.signed_approval_letter`.
 - Resolved: student reservation detail responses expose payment receipt metadata through `payment.receipt`.
-- Nice-to-have: student-facing view/download support for uploaded signed approval letters and payment receipts, if students should be able to reopen submitted files.
+- Resolved: students can reopen uploaded signed approval letters with `GET /student/reservations/{reservation_id}/signed-approval-letter/download` when `document.signed_approval_letter` metadata is non-null.
+- Resolved: students can reopen uploaded payment receipts with `GET /student/reservations/{reservation_id}/payment-receipt/download` when `payment.receipt` metadata is non-null.
 
 ## Student Profile
 
