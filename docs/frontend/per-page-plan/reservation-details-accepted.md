@@ -59,13 +59,15 @@ Inspect approved reservation details, documents, and request cancellation if nee
 
 - `GET /student/reservations/:reservationId`.
 - `POST /student/reservations/:reservationId/cancellation-request`.
+- Document hub uses `document.approval_letter`, `document.signed_approval_letter`, and `payment.receipt` metadata when present.
+- Student download actions:
+  - `GET /student/reservations/:reservationId/signed-approval-letter/download`.
+  - `GET /student/reservations/:reservationId/payment-receipt/download`.
 - Facility gallery may require detail facility data if reservation response remains minimal.
 
 ## Backend Gaps
 
-- Blocking for integration: reservation detail response does not expose signed approval letter metadata.
-- Blocking for integration: reservation detail response does not expose payment receipt metadata for paid reservations.
-- Nice-to-have: student-facing view/download support for uploaded documents/receipts.
+None identified.
 
 ## Validation & Errors
 

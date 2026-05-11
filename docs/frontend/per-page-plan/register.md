@@ -176,6 +176,9 @@ Create a student account with institutional identity data, then continue to logi
   - `full_name`
   - `role`
   - `is_active`
+  - `nim`
+  - `phone`
+  - `academic_profile`
 - Client-owned state:
   - Full name input.
   - NIM input.
@@ -192,12 +195,11 @@ Create a student account with institutional identity data, then continue to logi
   - Duplicate email detection.
   - Account creation.
 - Domain ownership:
-  - Backend owns NIM parsing and future academic profile derivation.
+  - Backend owns NIM parsing and academic profile derivation.
   - Frontend only performs required/light format guardrails.
 
 ## Backend Gaps
 
-- Blocking for integration: backend needs academic profile derivation from NIM for later student profile fields.
 - Nice-to-have: registration response could return an access token if product later wants immediate login after registration.
 - Nice-to-have: public auth/config endpoint exposing allowed registration student domains.
 - Nice-to-have: backend could enforce stricter phone format if phone format becomes a business rule.

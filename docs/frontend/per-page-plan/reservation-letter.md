@@ -70,7 +70,7 @@ Download generated approval letter, upload the signed approval letter, and submi
 
 ## Backend Gaps
 
-- Blocking for integration: student reservation responses need signed approval letter metadata for later detail/document hub states.
+None identified.
 
 ## Validation & Errors
 

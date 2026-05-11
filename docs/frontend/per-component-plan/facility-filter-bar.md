@@ -54,7 +54,8 @@ Standardize facility catalog and home search filter controls.
 
 ## API/Data Dependencies
 
-- Category list with stable slugs/IDs.
+- `GET /facility-categories` provides category `id`, `name`, `slug`, `icon_hint`, and `facility_count`.
+- Catalog filtering sends the selected slug as `GET /facilities?category=<slug>`.
 
 ## Open Decisions
 

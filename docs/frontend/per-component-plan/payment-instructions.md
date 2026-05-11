@@ -50,7 +50,8 @@ Standardize payment amount, reservation code, instructions, and deadline display
 
 ## API/Data Dependencies
 
-- `GET /student/reservations/:reservationId/payment`.
+- `GET /student/reservations/:reservationId/payment` returns `reservation_id`, `reservation_code`, `amount_rupiah`, and `payment_instructions`.
+- Upload deadline comes from `payment_upload_due_at` on `GET /student/reservations/:reservationId`.
 
 ## Open Decisions
 

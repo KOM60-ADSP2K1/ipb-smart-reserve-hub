@@ -18,7 +18,7 @@ Understand that the reservation was rejected and choose the next navigation step
 ## Primary Flows
 
 - Load rejected reservation.
-- Show rejection status and reason if backend provides one.
+- Show rejection status and reason from the reservation `rejection` projection.
 - Primary CTA: `Kembali ke Daftar Reservasi`.
 - Secondary CTA: `Buat Reservasi Baru`.
 - No resubmission or revision flow.
@@ -39,7 +39,7 @@ Understand that the reservation was rejected and choose the next navigation step
 ## Implementation Workflow
 
 - Phase 1: design with rejected fixture.
-- Phase 2: integration TDD after backend exposes rejection context.
+- Phase 2: integration TDD with reservation rejection projections.
 
 ## Test Expectations
 
@@ -60,12 +60,12 @@ Understand that the reservation was rejected and choose the next navigation step
 ## Data & API Integration
 
 - `GET /student/reservations/:reservationId`.
-- Show when reservation is `rejected` and rejection came from document review.
+- Show when reservation is `rejected` and `rejection.source` is `document` or `unknown`.
+- Show `rejection.reason` when present.
 
 ## Backend Gaps
 
-- Blocking for integration: student reservation response needs enough rejection context to distinguish document rejection from payment rejection when status is `rejected`.
-- Blocking for integration: student-visible document rejection reason is needed if the page should explain why verification failed.
+None identified.
 
 ## Validation & Errors
 

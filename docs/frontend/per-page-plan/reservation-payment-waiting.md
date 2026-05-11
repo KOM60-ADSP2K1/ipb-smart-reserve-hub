@@ -33,13 +33,13 @@ Confirm that payment proof was uploaded and is waiting for staff verification.
 ## Design Decisions
 
 - Preserve: visual language from verification waiting page.
-- Adapt: payment-specific copy and optional receipt metadata when backend supports it.
+- Adapt: payment-specific copy and receipt metadata from the reservation payment projection.
 - Reject: re-upload controls; payment rejected has a separate terminal page.
 
 ## Implementation Workflow
 
 - Phase 1: design with waiting fixture.
-- Phase 2: integration after receipt/review state is exposed.
+- Phase 2: integration with student reservation payment projection.
 
 ## Test Expectations
 
@@ -59,11 +59,13 @@ Confirm that payment proof was uploaded and is waiting for staff verification.
 
 ## Data & API Integration
 
-- Desired state source: student reservation detail includes payment receipt/review state.
+- State source: `GET /student/reservations/:reservationId`.
+- Show when `payment.receipt` is present and `payment.review_status` is waiting/pending.
+- Display receipt metadata from `payment.receipt`.
 
 ## Backend Gaps
 
-- Blocking for integration: student reservation response needs payment receipt/review state so frontend can identify waiting verification.
+None identified.
 
 ## Validation & Errors
 

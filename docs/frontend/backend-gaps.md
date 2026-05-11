@@ -2,6 +2,8 @@
 
 This file records backend gaps discovered while planning frontend pages and shared components. The frontend integration backend slices have landed, so resolved entries below now act as a closure index instead of an implementation backlog.
 
+Current status: no blocking frontend integration backend gaps are identified in the student/auth page and shared component plans.
+
 ## Stable Contract Documentation
 
 - `README.md` is the stable API reference for endpoint names, query parameters, request fields, response projections, private file downloads, and reservation status notes.

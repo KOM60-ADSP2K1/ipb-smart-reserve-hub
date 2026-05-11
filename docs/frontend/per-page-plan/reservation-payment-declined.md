@@ -17,7 +17,7 @@ Understand that payment verification failed and leave the terminal reservation s
 ## Primary Flows
 
 - Load rejected payment context.
-- Show rejection reason if backend exposes it.
+- Show rejection reason from the reservation `rejection` projection.
 - Primary CTA: return to reservation list.
 - Secondary CTA: create a new reservation.
 - No receipt replacement or resubmission flow.
@@ -38,7 +38,7 @@ Understand that payment verification failed and leave the terminal reservation s
 ## Implementation Workflow
 
 - Phase 1: design with declined fixture.
-- Phase 2: integration after backend exposes rejection context.
+- Phase 2: integration with reservation rejection projections.
 
 ## Test Expectations
 
@@ -55,12 +55,13 @@ Understand that payment verification failed and leave the terminal reservation s
 
 ## Data & API Integration
 
-- Desired source: student reservation response includes payment rejection reason/context.
+- Source: `GET /student/reservations/:reservationId`.
+- Show when reservation is `rejected` and `rejection.source` is `payment`.
+- Show `rejection.reason` or `payment.rejection_reason` when present.
 
 ## Backend Gaps
 
-- Blocking for integration: student reservation response needs payment rejection reason.
-- Blocking for integration: student reservation response needs enough context to distinguish payment rejection from document rejection.
+None identified.
 
 ## Validation & Errors
 

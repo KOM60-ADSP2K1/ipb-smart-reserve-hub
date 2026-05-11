@@ -45,7 +45,7 @@ Find, compare, filter, sort, and open facilities that match a reservation need.
 ## Implementation Workflow
 
 - Phase 1: design implementation with deterministic paginated fixture data.
-- Phase 2: integration TDD after backend filtering/pagination exists.
+- Phase 2: integration TDD with the public facility catalog API.
 
 ## Test Expectations
 
@@ -66,7 +66,7 @@ Find, compare, filter, sort, and open facilities that match a reservation need.
 
 ## Data & API Integration
 
-- Desired backend API: `GET /facilities?q=&category=&min_capacity=&sort=&page=&page_size=`.
+- Backend API: `GET /facilities?q=&category=&min_capacity=&sort=&page=&page_size=`.
 - Frontend URL/API mapping:
   - `q` -> `q`
   - `category` -> `category`
@@ -74,12 +74,13 @@ Find, compare, filter, sort, and open facilities that match a reservation need.
   - `sort` -> `sort`
   - `page` -> `page`
 - UI needs: `id`, `name`, `location`, `capacity`, `category`, `cover_image_url`, `rating_average`, `review_count`, `price_summary`, `open_hours_summary`.
+- Response envelope: `items`, `page`, `page_size`, `total_items`, `total_pages`.
+- Category options come from `GET /facility-categories` with `id`, `name`, `slug`, `icon_hint`, and `facility_count`.
 - Backend owns filtering, sorting, pagination, category slugs, and result counts.
 
 ## Backend Gaps
 
-- Blocking for integration: `GET /facilities` needs search/category/min-capacity/sort/page/page-size query support.
-- Blocking for integration: public categories need stable slugs/IDs for URL filters.
+None identified.
 
 ## Validation & Errors
 

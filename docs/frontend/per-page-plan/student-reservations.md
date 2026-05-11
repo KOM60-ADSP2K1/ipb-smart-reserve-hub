@@ -65,10 +65,11 @@ View ongoing and historical reservations, open details, and perform valid reserv
 - `POST /student/reservations/:reservationId/cancellation-request`.
 - Ongoing statuses: `pending_document_upload`, `pending_document_review`, `pending_payment`, `overdue_verification`, `approved`, `cancellation_requested`.
 - History statuses: `completed`, `rejected`, `cancelled`, `expired`.
+- Routing to document/payment waiting and declined pages uses the reservation `document`, `payment`, and `rejection` projections, not extra UI-only statuses.
 
 ## Backend Gaps
 
-- Blocking for integration: payment/document substate gaps affect routing from list cards into payment waiting/declined and document/payment declined pages.
+None identified.
 
 ## Validation & Errors
 

@@ -63,13 +63,14 @@ Provide event details and create the reservation record.
 
 - `GET /organization-units`.
 - `POST /facilities/:facilityId/reservations`.
-- Request fields currently supported: `activity_title`, `event_description`, `participant_count`, `organization_unit_id`, `contact_phone`, `starts_at`, `ends_at`.
-- Planned MVP extra requirements: AV support, logistics coordination, extra cleaning, security personnel.
+- Request fields: `activity_title`, `event_description`, `participant_count`, `organization_unit_id`, `contact_phone`, `starts_at`, `ends_at`, `extra_requirements`.
+- `extra_requirements` fields: `av_support`, `logistics_coordination`, `extra_cleaning`, `security_personnel`, `notes`.
+- If `extra_requirements` is omitted, backend defaults all flags to `false` and `notes` to `null`.
 - Backend owns final availability/conflict guard.
 
 ## Backend Gaps
 
-- Blocking for integration: reservation submission does not accept structured extra requirements required by MVP UI.
+None identified.
 
 ## Validation & Errors
 

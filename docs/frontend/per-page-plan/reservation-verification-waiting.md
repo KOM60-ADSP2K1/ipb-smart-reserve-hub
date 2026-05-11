@@ -63,11 +63,11 @@ Understand that the signed approval letter has been submitted and staff verifica
 
 - `GET /student/reservations/:reservationId`.
 - Desired status: `pending_document_review`.
-- UI needs reservation code, facility, starts/ends, document verification due date if present.
+- UI needs reservation code, facility, starts/ends, `document.signed_approval_letter`, `document.review_status`, and document verification due date if present.
 
 ## Backend Gaps
 
-- Blocking for integration: student reservation responses need document upload metadata if UI must distinguish uploaded/waiting states from upload-needed states.
+None identified.
 
 ## Validation & Errors
 

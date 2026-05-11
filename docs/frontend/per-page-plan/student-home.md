@@ -81,8 +81,8 @@ Quickly start discovering facilities by search, category/type shortcut, or featu
   - Keep the next section visible below the hero on desktop and mobile.
   - Replace lorem copy with concise Indonesian copy.
   - Search redirects to facility catalog URL filters instead of filtering home content.
-  - Facility type shortcuts use backend category slugs/IDs when available.
-  - Featured facilities use backend-supported curated query when available.
+  - Facility type shortcuts use backend category slugs/IDs from `GET /facility-categories`.
+  - Featured facilities use `GET /facilities?featured=true&limit=8`.
 - Reject:
   - Passive landing-page-only hero.
   - Dashboard widgets, reservation stats, or personalized recommendations for MVP.
@@ -162,16 +162,17 @@ Quickly start discovering facilities by search, category/type shortcut, or featu
     - `q`
     - `category`
     - `minCapacity`
-- Desired category API:
-  - Public facility category list with stable slugs/IDs.
+- Category API:
+  - `GET /facility-categories`.
   - UI needs:
     - `id`
     - `name`
     - `slug`
-    - optional `icon_hint`
-    - optional `facility_count`
-- Desired featured facility API:
-  - `GET /facilities/featured` or `GET /facilities?featured=true&limit=8`.
+    - `icon_hint`
+    - `facility_count`
+- Featured facility API:
+  - `GET /facilities?featured=true&limit=8`.
+  - Response is the standard paginated facility envelope.
   - UI needs facility-card fields:
     - `id`
     - `name`
@@ -195,8 +196,7 @@ Quickly start discovering facilities by search, category/type shortcut, or featu
 
 ## Backend Gaps
 
-- Blocking for integration: student home needs a public facility category list with stable slugs or IDs for type shortcuts.
-- Blocking for integration: student home needs a backend-supported featured/explorable facilities query, such as `GET /facilities/featured` or `GET /facilities?featured=true&limit=8`.
+None identified.
 
 ## Validation & Errors
 

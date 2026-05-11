@@ -63,11 +63,12 @@ Read payment instructions, upload proof of payment, and submit it for verificati
 
 - `GET /student/reservations/:reservationId/payment`.
 - `POST /student/reservations/:reservationId/payment-receipt`.
+- Student reservation detail/list responses expose `payment.required`, `payment.receipt`, `payment.review_status`, and `payment.rejection_reason` for routing between upload-needed, waiting, declined, and accepted states.
 - Payment receipt accepts JPG/JPEG/PNG, max 5 MB.
 
 ## Backend Gaps
 
-- Blocking for integration: student reservation responses need payment receipt/review state to distinguish upload needed, waiting verification, and declined states.
+None identified.
 
 ## Validation & Errors
 

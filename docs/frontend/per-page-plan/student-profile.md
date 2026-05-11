@@ -32,13 +32,13 @@ View account identity, NIM, phone, and academic profile information.
 ## Design Decisions
 
 - Preserve: read-only profile card and academic info layout.
-- Adapt: include MVP academic information derived from NIM after backend support exists.
+- Adapt: include MVP academic information derived from NIM by the backend.
 - Reject: profile editing controls for MVP.
 
 ## Implementation Workflow
 
 - Phase 1: design with full academic fixture.
-- Phase 2: integration after `GET /auth/me` exposes planned fields.
+- Phase 2: integration with `GET /auth/me`.
 
 ## Test Expectations
 
@@ -57,14 +57,15 @@ View account identity, NIM, phone, and academic profile information.
 
 ## Data & API Integration
 
-- Current: `GET /auth/me`.
-- Planned fields: `nim`, `phone`, `program_studi`, `faculty`, `entry_year`, `degree`.
+- `GET /auth/me`.
+- Student response fields: `nim`, `phone`, and nested `academic_profile`.
+- `academic_profile` fields: `program_studi`, `faculty`, `entry_year`, `degree`.
+- Unknown or unparsable NIM values keep the page load successful and expose null academic fields.
 - Backend owns academic profile derivation from NIM.
 
 ## Backend Gaps
 
-- Blocking for integration: `GET /auth/me` currently returns account fields only and does not expose NIM, phone, or academic profile fields.
-- Blocking for integration: backend needs academic profile derivation from NIM.
+None identified.
 
 ## Validation & Errors
 

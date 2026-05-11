@@ -51,7 +51,9 @@ Standardize cards in the student reservation list.
 
 ## API/Data Dependencies
 
-- Student reservation list response.
+- `GET /student/reservations`.
+- Uses lifecycle `status` for primary grouping.
+- Uses `document`, `payment`, and `rejection` projections to route to document/payment upload, waiting, declined, accepted, completed, or terminal detail states.
 
 ## Open Decisions
 

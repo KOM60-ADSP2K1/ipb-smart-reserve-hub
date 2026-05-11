@@ -56,8 +56,8 @@ Standardize file selection/upload UI for signed approval letters and payment rec
 
 ## API/Data Dependencies
 
-- Signed letter upload endpoint.
-- Payment receipt upload endpoint.
+- Signed letter upload: `POST /student/reservations/:reservationId/signed-approval-letter`.
+- Payment receipt upload: `POST /student/reservations/:reservationId/payment-receipt`.
 
 ## Open Decisions
 

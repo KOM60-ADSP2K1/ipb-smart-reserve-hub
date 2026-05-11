@@ -180,15 +180,18 @@ Current `GET /auth/me` fields:
 - `full_name`
 - `role`
 - `is_active`
-
-Planned MVP student profile fields:
-
 - `nim`
 - `phone`
+- `academic_profile`
+
+`academic_profile` is present for student users and contains:
+
 - `program_studi`
 - `faculty`
 - `entry_year`
 - `degree`
+
+Academic profile fields can be `null` when NIM parsing is unknown or incomplete.
 
 Backend gaps are summarized in `../backend-gaps.md`.
 

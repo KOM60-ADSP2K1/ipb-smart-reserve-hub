@@ -56,10 +56,14 @@ Review completed reservation details and submit a review when eligible.
 
 - `GET /student/reservations/:reservationId`.
 - Uses `review` field to determine review action visibility.
+- Document hub uses `document.approval_letter`, `document.signed_approval_letter`, and `payment.receipt` metadata when present.
+- Student download actions:
+  - `GET /student/reservations/:reservationId/signed-approval-letter/download`.
+  - `GET /student/reservations/:reservationId/payment-receipt/download`.
 
 ## Backend Gaps
 
-- Blocking for integration: reservation detail response does not expose signed approval letter/payment receipt metadata for document hub.
+None identified.
 
 ## Validation & Errors
 
