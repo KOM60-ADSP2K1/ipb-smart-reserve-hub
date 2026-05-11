@@ -2,6 +2,8 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { DesignFoundationPreview } from "./features/design-foundation/DesignFoundationPreview";
 import { AuthProvider, RequirePublic, RequireStudent, useAuth } from "./features/auth/authSession";
 import { StudentAppShell } from "./features/student-shell/StudentAppShell";
+import { FacilityCatalogPage } from "./features/facilities/FacilityCatalogPage";
+import { FacilityDetailsPage } from "./features/facilities/FacilityDetailsPage";
 
 export function App() {
   return (
@@ -16,8 +18,8 @@ export function App() {
           <Route element={<RequireStudent />}>
             <Route element={<StudentShellRoute />}>
               <Route element={<StudentHomePlaceholder />} path="/student" />
-              <Route element={<FacilityCatalogPlaceholder />} path="/student/facilities" />
-              <Route element={<FacilityDetailsPlaceholder />} path="/student/facilities/:facilityId" />
+              <Route element={<FacilityCatalogPage />} path="/student/facilities" />
+              <Route element={<FacilityDetailsPage />} path="/student/facilities/:facilityId" />
               <Route element={<ReservationWorkflowPlaceholder title="Pilih Waktu Reservasi" />} path="/student/facilities/:facilityId/reserve/time" />
               <Route element={<ReservationWorkflowPlaceholder title="Detail Kegiatan" />} path="/student/facilities/:facilityId/reserve/details" />
               <Route element={<StudentReservationsPlaceholder />} path="/student/reservations" />
@@ -77,14 +79,6 @@ function StudentHomePlaceholder() {
       </div>
     </section>
   );
-}
-
-function FacilityCatalogPlaceholder() {
-  return <ContentPlaceholder eyebrow="Fasilitas" title="Katalog Fasilitas" body="Hasil pencarian dan filter fasilitas akan tampil di halaman ini." />;
-}
-
-function FacilityDetailsPlaceholder() {
-  return <ContentPlaceholder eyebrow="Detail Fasilitas" title="Detail Fasilitas" body="Ringkasan fasilitas, galeri, kontak, dan aksi reservasi akan berbagi shell yang sama." />;
 }
 
 function StudentReservationsPlaceholder() {

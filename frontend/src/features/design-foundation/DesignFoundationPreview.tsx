@@ -4,6 +4,10 @@ import { FormField } from "../../components/ui/FormField";
 import { PasswordField } from "../../components/ui/PasswordField";
 import { StatePanel } from "../../components/ui/StatePanel";
 import { UserAccount } from "../auth/types";
+import { FacilityCard } from "../facilities/FacilityCard";
+import { FacilityFilterBar } from "../facilities/FacilityFilterBar";
+import { FacilityGallery } from "../facilities/FacilityGallery";
+import { facilityCategories, facilityDetails } from "../facilities/fixtureData";
 import { StudentAppShell } from "../student-shell/StudentAppShell";
 
 const previewStudent: UserAccount = {
@@ -108,6 +112,38 @@ export function DesignFoundationPreview() {
           <div>
             <p className="text-label-sm uppercase text-primary-on-container">States</p>
             <p className="mt-xs text-body-md">Loading, empty, and error panels stay calm and stable.</p>
+          </div>
+        </section>
+
+        <section className="grid gap-md">
+          <div>
+            <p className="text-label-bold uppercase text-secondary">Implemented components</p>
+            <h2 className="mt-xs text-h3 text-primary-container">Facility discovery</h2>
+            <p className="mt-sm max-w-3xl text-body-md text-on-surface-variant">
+              Shared catalog filters, stable facility media, comparison cards, and gallery layouts used by student discovery routes.
+            </p>
+          </div>
+          <div className="grid gap-lg rounded-lg border border-outline-variant bg-surface-container-low p-md shadow-ambient md:p-lg">
+            <FacilityFilterBar
+              categories={facilityCategories.slice(0, 4)}
+              onReset={() => undefined}
+              onSubmit={() => undefined}
+              values={{
+                category: "auditorium",
+                minCapacity: "100",
+                q: "auditorium",
+                sort: "rating_desc",
+              }}
+            />
+            <div className="grid min-w-0 gap-md lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+              <div className="grid min-w-0 gap-md sm:grid-cols-2 lg:grid-cols-1">
+                <FacilityCard facility={facilityDetails[0]} />
+                <FacilityCard facility={facilityDetails[2]} />
+              </div>
+              <div className="min-w-0 overflow-hidden rounded-lg border border-outline-variant bg-surface-container-lowest p-md shadow-control">
+                <FacilityGallery facilityName={facilityDetails[0].name} images={facilityDetails[0].images} />
+              </div>
+            </div>
           </div>
         </section>
 
