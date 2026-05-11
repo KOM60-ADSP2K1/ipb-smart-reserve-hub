@@ -2,6 +2,8 @@ import {
   ConfirmationDialog,
   FileUploadPanel,
   PaymentInstructions,
+  RatingInput,
+  ReservationCard,
   ReservationDocumentHub,
   ReservationStatusBadge,
   ReservationStepper,
@@ -14,6 +16,7 @@ const selectedReceipt = new File(["receipt"], "receipt-final.png", { type: "imag
 
 export function ReservationWorkflowPreview() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [rating, setRating] = useState(4);
 
   return (
     <main className="min-h-screen bg-background px-md py-lg text-on-surface sm:px-xl">
@@ -29,6 +32,69 @@ export function ReservationWorkflowPreview() {
         <section className="grid gap-md">
           <ReservationStepper completedSteps={[1]} currentStep={2} />
           <ReservationStepper completedSteps={[1, 2, 3]} currentStep={3} isComplete />
+        </section>
+
+        <section className="grid gap-md">
+          <div>
+            <p className="text-label-bold uppercase text-secondary">Kartu Reservasi</p>
+            <h2 className="mt-xs text-h3 text-primary-container">Status dan aksi mahasiswa</h2>
+          </div>
+          <ReservationCard
+            actions={[
+              { href: "/student/reservations/rsv-0042/verification", label: "Detail Reservasi", variant: "primary" },
+              { label: "Batalkan", onClick: () => undefined, variant: "destructive" },
+            ]}
+            code="RSV-2026-0042"
+            dateTimeLabel="Rabu, 20 Mei 2026, 09.00-11.00 WIB"
+            eventTitle="Seminar Teknologi Pangan dan Inovasi Kampus"
+            facilityImage="fixture:auditorium"
+            facilityName="Auditorium CCR"
+            id="reservation-card-ongoing"
+            location="Gedung CCR Lantai 1, Kampus IPB Dramaga"
+            status="pending_document_review"
+          />
+          <ReservationCard
+            actions={[
+              { href: "/student/reservations/rsv-0043", label: "Detail Reservasi", variant: "primary" },
+              { label: "Ajukan Pembatalan", onClick: () => undefined, variant: "outline" },
+            ]}
+            code="RSV-2026-0043"
+            dateTimeLabel="Jumat, 22 Mei 2026, 13.00-17.00 WIB"
+            eventTitle="Rapat koordinasi lintas organisasi mahasiswa dengan judul panjang yang tetap harus membungkus rapi"
+            facilityImage="fixture:classroom"
+            facilityName="Ruang Diskusi Kolaboratif Fakultas Teknologi Pertanian"
+            id="reservation-card-approved"
+            location="Kampus IPB Dramaga, Bogor, Jawa Barat"
+            status="approved"
+          />
+          <ReservationCard
+            actions={[
+              { href: "/student/reservations/rsv-0044", label: "Detail Reservasi", variant: "primary" },
+              { label: "Batalkan", onClick: () => undefined, variant: "destructive" },
+            ]}
+            code="RSV-2026-0044"
+            dateTimeLabel="Senin, 18 Mei 2026, 08.00-10.00 WIB"
+            eventTitle="Evaluasi kegiatan organisasi"
+            facilityName="Aula Fakultas Kehutanan dan Lingkungan"
+            id="reservation-card-terminal"
+            location="Fakultas Kehutanan dan Lingkungan"
+            status="cancelled"
+          />
+        </section>
+
+        <section className="grid gap-md rounded-lg border border-outline-variant bg-surface-container-lowest p-lg shadow-control">
+          <div>
+            <p className="text-label-bold uppercase text-secondary">Rating</p>
+            <h2 className="mt-xs text-h3 text-primary-container">Input ulasan fasilitas</h2>
+          </div>
+          <div className="grid gap-lg md:grid-cols-3">
+            <RatingInput label="Nilai fasilitas" onChange={setRating} required value={rating} />
+            <RatingInput errorMessage="Pilih rating sebelum mengirim ulasan." label="Rating wajib" required value={null} />
+            <div className="grid content-start gap-sm">
+              <p className="text-label-bold text-on-surface">Tampilan terkirim</p>
+              <RatingInput label="Rating terkirim" readOnly value={5} />
+            </div>
+          </div>
         </section>
 
         <section className="grid gap-lg lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">

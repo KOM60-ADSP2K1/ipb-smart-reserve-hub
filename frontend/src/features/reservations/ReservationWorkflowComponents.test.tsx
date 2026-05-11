@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ConfirmationDialog,
   FileUploadPanel,
+  RatingInput,
+  ReservationCard,
   ReservationDocumentHub,
   ReservationStatusBadge,
   getReservationStatusLabel,
@@ -75,6 +77,90 @@ describe("FileUploadPanel", () => {
     await user.click(screen.getByRole("button", { name: "Hapus receipt.png" }));
 
     expect(onFileRemoved).toHaveBeenCalledOnce();
+  });
+});
+
+describe("ReservationCard", () => {
+  it("renders reservation facts and available ongoing actions", () => {
+    const onCancel = vi.fn();
+
+    render(
+      <ReservationCard
+        actions={[
+          { href: "/student/reservations/rsv-0042", label: "Detail Reservasi" },
+          { label: "Batalkan", onClick: onCancel, variant: "destructive" },
+        ]}
+        code="RSV-2026-0042"
+        dateTimeLabel="20 Mei 2026, 09.00-11.00 WIB"
+        eventTitle="Seminar Teknologi Pangan dan Inovasi Kampus"
+        facilityName="Auditorium CCR"
+        id="rsv-0042"
+        location="Gedung CCR Lantai 1"
+        status="pending_document_review"
+      />,
+    );
+
+    expect(screen.getByRole("article", { name: "Auditorium CCR" })).toBeVisible();
+    expect(screen.getByText("RSV-2026-0042")).toBeVisible();
+    expect(screen.getByText("Seminar Teknologi Pangan dan Inovasi Kampus")).toBeVisible();
+    expect(screen.getByText("Menunggu Verifikasi Dokumen")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Detail Reservasi" })).toHaveAttribute("href", "/student/reservations/rsv-0042");
+    expect(screen.getByRole("button", { name: "Batalkan" })).toBeVisible();
+  });
+
+  it("filters cancellation actions from terminal reservation cards", () => {
+    render(
+      <ReservationCard
+        actions={[
+          { href: "/student/reservations/rsv-0044", label: "Detail Reservasi" },
+          { label: "Batalkan", onClick: () => undefined, variant: "destructive" },
+        ]}
+        code="RSV-2026-0044"
+        dateTimeLabel="18 Mei 2026, 08.00-10.00 WIB"
+        eventTitle="Evaluasi kegiatan organisasi"
+        facilityName="Aula Fakultas Kehutanan"
+        id="rsv-0044"
+        location="Fakultas Kehutanan"
+        status="cancelled"
+      />,
+    );
+
+    expect(screen.getByText("Dibatalkan")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Detail Reservasi" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Batalkan" })).not.toBeInTheDocument();
+  });
+});
+
+describe("RatingInput", () => {
+  it("supports keyboard selection with clear radio labels", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+
+    render(<RatingInput label="Nilai fasilitas" onChange={onChange} value={null} />);
+
+    await user.tab();
+    await user.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}");
+
+    expect(screen.getByRole("radio", { name: "4 dari 5" })).toHaveFocus();
+    expect(onChange).toHaveBeenLastCalledWith(4);
+  });
+
+  it("associates errors with every editable rating option", () => {
+    render(<RatingInput errorMessage="Pilih rating sebelum mengirim ulasan." label="Rating wajib" required value={null} />);
+
+    const firstOption = screen.getByRole("radio", { name: "1 dari 5" });
+    const error = screen.getByRole("alert");
+
+    expect(error).toHaveTextContent("Pilih rating sebelum mengirim ulasan.");
+    expect(firstOption).toHaveAttribute("aria-invalid", "true");
+    expect(firstOption.getAttribute("aria-describedby")).toContain(error.id);
+  });
+
+  it("renders a read-only rating without editable radio controls", () => {
+    render(<RatingInput label="Rating terkirim" readOnly value={5} />);
+
+    expect(screen.getByRole("img", { name: "Rating terkirim: 5 dari 5" })).toBeVisible();
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
   });
 });
 

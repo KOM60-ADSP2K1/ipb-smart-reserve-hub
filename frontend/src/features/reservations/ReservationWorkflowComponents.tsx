@@ -1,17 +1,21 @@
 import {
   AlertCircle,
+  CalendarDays,
   Check,
   Clock3,
   Download,
   FileCheck2,
   FileText,
+  MapPin,
   LoaderCircle,
   ReceiptText,
+  Star,
   Trash2,
   UploadCloud,
 } from "lucide-react";
 import { ChangeEvent, DragEvent, KeyboardEvent, ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Button } from "../../components/ui/Button";
+import { FacilityImage } from "../facilities/FacilityImage";
 
 export type ReservationBackendStatus =
   | "pending_document_upload"
@@ -61,6 +65,236 @@ export function ReservationStatusBadge({ status }: { status: string }) {
       {label}
     </span>
   );
+}
+
+export type ReservationCardAction = {
+  "aria-label"?: string;
+  href?: string;
+  isPending?: boolean;
+  label: string;
+  onClick?: () => void;
+  variant?: "primary" | "secondary" | "outline" | "destructive";
+};
+
+type ReservationCardProps = {
+  actions?: ReservationCardAction[];
+  code?: string | null;
+  dateTimeLabel: string;
+  eventTitle: string;
+  facilityImage?: string | null;
+  facilityName: string;
+  id: string;
+  location: string;
+  status: ReservationBackendStatus | string;
+};
+
+const terminalReservationStatuses = new Set(["cancelled", "completed", "expired", "rejected"]);
+
+export function ReservationCard({
+  actions = [],
+  code,
+  dateTimeLabel,
+  eventTitle,
+  facilityImage,
+  facilityName,
+  id,
+  location,
+  status,
+}: ReservationCardProps) {
+  const visibleActions = terminalReservationStatuses.has(status) ? actions.filter((action) => !isCancelAction(action)) : actions;
+
+  return (
+    <article
+      aria-labelledby={`${id}-title`}
+      className="grid min-h-[220px] overflow-hidden rounded-lg border border-outline-variant bg-surface-container-lowest shadow-control md:grid-cols-[220px_minmax(0,1fr)_minmax(180px,auto)]"
+    >
+      <FacilityImage
+        alt={`Foto ${facilityName}`}
+        className="h-full min-h-48 w-full min-w-0 rounded-none md:aspect-auto md:min-h-full"
+        facilityName={facilityName}
+        src={facilityImage}
+      />
+      <div className="grid min-w-0 content-start gap-md p-lg">
+        <div className="flex min-w-0 flex-wrap items-start justify-between gap-sm">
+          <div className="min-w-0">
+            {code ? <p className="break-words text-label-sm uppercase text-on-surface-variant">{code}</p> : null}
+            <h3 className="mt-xs break-words text-h3 text-primary-container" id={`${id}-title`}>
+              {facilityName}
+            </h3>
+          </div>
+          <ReservationStatusBadge status={status} />
+        </div>
+        <div className="grid gap-sm">
+          <p className="break-words text-body-md font-bold text-on-surface">{eventTitle}</p>
+          <p className="flex min-w-0 items-start gap-sm text-body-md text-on-surface-variant">
+            <MapPin aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-secondary" />
+            <span className="break-words">{location}</span>
+          </p>
+          <p className="flex min-w-0 items-start gap-sm text-body-md text-on-surface-variant">
+            <CalendarDays aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-secondary" />
+            <span className="break-words">{dateTimeLabel}</span>
+          </p>
+        </div>
+      </div>
+      <div className="grid content-end gap-sm border-t border-outline-variant bg-surface-container-low p-lg md:border-l md:border-t-0">
+        {visibleActions.length ? (
+          visibleActions.map((action) => <ReservationCardActionControl action={action} key={`${id}-${action.label}`} />)
+        ) : (
+          <p className="rounded bg-surface-container px-md py-sm text-label-bold text-on-surface-variant">Tidak ada aksi tersedia</p>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function ReservationCardActionControl({ action }: { action: ReservationCardAction }) {
+  const commonClassName = "w-full";
+  const label = action.isPending ? "Memproses" : action.label;
+  const ariaLabel = action["aria-label"] ?? action.label;
+
+  if (action.href) {
+    return (
+      <a
+        aria-label={ariaLabel}
+        className={[
+          "inline-flex min-h-11 w-full items-center justify-center gap-sm rounded px-md text-center text-label-bold transition-colors",
+          "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary",
+          action.variant === "outline"
+            ? "border border-primary-container text-primary-container hover:bg-primary-fixed"
+            : "bg-secondary text-secondary-on hover:bg-secondary-on-container",
+        ].join(" ")}
+        href={action.href}
+      >
+        {label}
+      </a>
+    );
+  }
+
+  return (
+    <Button
+      aria-label={ariaLabel}
+      className={commonClassName}
+      isLoading={action.isPending}
+      onClick={action.onClick}
+      variant={action.variant ?? "primary"}
+    >
+      {label}
+    </Button>
+  );
+}
+
+function isCancelAction(action: ReservationCardAction) {
+  const normalized = `${action.label} ${action["aria-label"] ?? ""}`.toLowerCase();
+  return normalized.includes("batal") || normalized.includes("cancel");
+}
+
+type RatingInputProps = {
+  describedBy?: string;
+  errorMessage?: string;
+  label?: string;
+  name?: string;
+  onChange?: (rating: number) => void;
+  readOnly?: boolean;
+  required?: boolean;
+  value?: number | null;
+};
+
+const ratingValues = [1, 2, 3, 4, 5] as const;
+
+export function RatingInput({
+  describedBy,
+  errorMessage,
+  label = "Rating",
+  name,
+  onChange,
+  readOnly = false,
+  required = false,
+  value = null,
+}: RatingInputProps) {
+  const generatedName = useId();
+  const groupName = name ?? generatedName;
+  const errorId = useId();
+  const descriptionIds = [describedBy, errorMessage ? errorId : null].filter(Boolean).join(" ") || undefined;
+  const selectedValue = normalizeRating(value);
+
+  if (readOnly) {
+    return (
+      <div aria-label={`${label}: ${selectedValue ? `${selectedValue} dari 5` : "belum ada rating"}`} className="inline-flex items-center gap-sm" role="img">
+        <span className="flex gap-xs" aria-hidden="true">
+          {ratingValues.map((rating) => (
+            <Star
+              className={["h-5 w-5", selectedValue >= rating ? "fill-tertiary-container text-tertiary" : "text-outline"].join(" ")}
+              key={rating}
+            />
+          ))}
+        </span>
+        <span className="text-label-bold text-on-surface-variant">{selectedValue ? `${selectedValue}/5` : "Belum dinilai"}</span>
+      </div>
+    );
+  }
+
+  function selectRating(nextRating: number) {
+    onChange?.(nextRating);
+  }
+
+  return (
+    <fieldset aria-describedby={descriptionIds} className="grid gap-sm">
+      <legend className="text-label-bold text-on-surface">
+        {label}
+        {required ? <span className="text-error"> *</span> : null}
+      </legend>
+      <div className="flex flex-wrap gap-sm" role="radiogroup" aria-label={label}>
+        {ratingValues.map((rating) => {
+          const inputId = `${groupName}-${rating}`;
+          const isChecked = selectedValue === rating;
+          return (
+            <label
+              className={[
+                "group grid h-12 w-12 cursor-pointer place-items-center rounded border border-outline-variant bg-surface-container-lowest text-outline transition-colors",
+                "hover:border-tertiary hover:bg-tertiary-fixed focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-secondary",
+                selectedValue >= rating ? "border-tertiary bg-tertiary-fixed text-tertiary" : "",
+                errorMessage ? "border-error" : "",
+              ].join(" ")}
+              htmlFor={inputId}
+              key={rating}
+              title={`${rating} dari 5`}
+            >
+              <input
+                aria-describedby={descriptionIds}
+                aria-invalid={Boolean(errorMessage) || undefined}
+                checked={isChecked}
+                className="sr-only"
+                id={inputId}
+                name={groupName}
+                onChange={() => selectRating(rating)}
+                required={required}
+                type="radio"
+                value={rating}
+              />
+              <Star
+                aria-hidden="true"
+                className={["h-6 w-6", selectedValue >= rating ? "fill-tertiary-container" : "group-hover:fill-tertiary-container/40"].join(" ")}
+              />
+              <span className="sr-only">{rating} dari 5</span>
+            </label>
+          );
+        })}
+      </div>
+      {errorMessage ? (
+        <p className="flex items-start gap-sm text-body-md text-error" id={errorId} role="alert">
+          <AlertCircle aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
+          {errorMessage}
+        </p>
+      ) : null}
+    </fieldset>
+  );
+}
+
+function normalizeRating(value?: number | null) {
+  if (!value || Number.isNaN(value)) {
+    return 0;
+  }
+  return Math.min(5, Math.max(1, Math.round(value)));
 }
 
 type ReservationStepperProps = {
