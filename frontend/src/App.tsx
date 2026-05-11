@@ -7,6 +7,7 @@ import { FacilityDetailsPage } from "./features/facilities/FacilityDetailsPage";
 import { ReservationWorkflowPreview } from "./features/reservations/ReservationWorkflowPreview";
 import { LoginPage } from "./features/auth/LoginPage";
 import { RegisterPage } from "./features/auth/RegisterPage";
+import { StudentHomePage } from "./features/student-home/StudentHomePage";
 
 export function App() {
   return (
@@ -22,7 +23,7 @@ export function App() {
           </Route>
           <Route element={<RequireStudent />}>
             <Route element={<StudentShellRoute />}>
-              <Route element={<StudentHomePlaceholder />} path="/student" />
+              <Route element={<StudentHomePage />} path="/student" />
               <Route element={<FacilityCatalogPage />} path="/student/facilities" />
               <Route element={<FacilityDetailsPage />} path="/student/facilities/:facilityId" />
               <Route element={<ReservationWorkflowPlaceholder title="Pilih Waktu Reservasi" />} path="/student/facilities/:facilityId/reserve/time" />
@@ -54,36 +55,6 @@ function StudentShellRoute() {
     return null;
   }
   return <StudentAppShell currentUser={currentUser} logout={logout} notificationCount={2} />;
-}
-
-function StudentHomePlaceholder() {
-  return (
-    <section className="grid gap-xl">
-      <div className="grid gap-md rounded-lg bg-primary-container p-lg text-primary-on shadow-ambient md:grid-cols-[1.3fr_0.7fr] md:p-xl">
-        <div className="grid gap-md">
-          <p className="text-label-bold uppercase text-secondary-fixed">Beranda Mahasiswa</p>
-          <h1 className="max-w-2xl text-h2 md:text-h1">Beranda Mahasiswa</h1>
-          <p className="max-w-2xl text-body-lg text-primary-on/82">
-            Temukan fasilitas kampus, cek jadwal publik, dan lanjutkan reservasi dari satu ruang kerja mahasiswa.
-          </p>
-        </div>
-        <div className="grid content-end gap-sm rounded-lg bg-primary-on/8 p-lg">
-          <p className="text-label-sm text-primary-on/70">Reservasi aktif</p>
-          <p className="text-h2">3</p>
-          <p className="text-body-md text-primary-on/78">Termasuk satu pembayaran yang perlu diselesaikan minggu ini.</p>
-        </div>
-      </div>
-      <div className="grid gap-md md:grid-cols-3">
-        {["Auditorium CCR", "Ruang Seminar FMIPA", "Gedung Graha Widya"].map((facility) => (
-          <article className="rounded-lg border border-outline-variant bg-surface-container-lowest p-lg shadow-control" key={facility}>
-            <p className="text-label-sm text-secondary">Fasilitas unggulan</p>
-            <h2 className="mt-sm text-h3 text-primary-container">{facility}</h2>
-            <p className="mt-sm text-body-md text-on-surface-variant">Tersedia untuk kegiatan mahasiswa dengan kapasitas dan jadwal yang dapat dibandingkan.</p>
-          </article>
-        ))}
-      </div>
-    </section>
-  );
 }
 
 function StudentReservationsPlaceholder() {

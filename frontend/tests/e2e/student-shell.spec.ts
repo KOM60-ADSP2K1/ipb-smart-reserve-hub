@@ -24,6 +24,26 @@ test.beforeEach(async ({ page }) => {
       status: 200,
     });
   });
+  await page.route("http://localhost:8000/facility-categories", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: [{ facility_count: 8, icon_hint: "auditorium", id: "cat-auditorium", name: "Auditorium", slug: "auditorium" }],
+      status: 200,
+    });
+  });
+  await page.route("http://localhost:8000/facilities?**", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      json: {
+        items: [],
+        page: 1,
+        page_size: 8,
+        total_items: 0,
+        total_pages: 1,
+      },
+      status: 200,
+    });
+  });
   await page.addInitScript(() => {
     window.sessionStorage.setItem("ipb-srh-session-token", "playwright-token");
   });
@@ -32,7 +52,7 @@ test.beforeEach(async ({ page }) => {
 test("student shell content route matches desktop and mobile layout", async ({ page }) => {
   await page.goto("/student");
 
-  await expect(page.getByRole("heading", { name: "Beranda Mahasiswa" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "IPB Smart Reserve Hub" })).toBeVisible();
   await expect(page.getByRole("searchbox", { name: "Cari fasilitas" })).toBeVisible();
   await expect(page).toHaveScreenshot("student-shell-home.png", {
     maxDiffPixelRatio: 0.02,
@@ -54,7 +74,7 @@ test("student shell search routes to catalog query results", async ({ page }) =>
   await page.goto("/student");
 
   await page.getByRole("searchbox", { name: "Cari fasilitas" }).fill("Auditorium CCR");
-  await page.getByRole("button", { name: "Cari" }).click();
+  await page.getByRole("button", { exact: true, name: "Cari" }).click();
 
   await expect(page).toHaveURL("/student/facilities?q=Auditorium+CCR");
   await expect(page.getByRole("heading", { name: "Katalog Fasilitas" })).toBeVisible();
