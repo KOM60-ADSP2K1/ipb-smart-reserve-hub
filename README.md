@@ -64,7 +64,10 @@ The development seed creates these local accounts:
 | Role | Email | Password |
 | --- | --- | --- |
 | Student | `demo.student@apps.ipb.ac.id` | `demo12345` |
-| Staff | `demo.staff@ipb.ac.id` | `demo12345` |
+| Student with seeded reservations | `demo.student.06@apps.ipb.ac.id` | `demo12345` |
+| Staff operations | `demo.staff.operations@ipb.ac.id` | `demo12345` |
+| Staff facilities | `demo.staff.facilities@ipb.ac.id` | `demo12345` |
+| Staff finance | `demo.staff.finance@ipb.ac.id` | `demo12345` |
 | Super Admin | `demo.admin@ipb.ac.id` | `demo12345` |
 
 The default local database is `ipb_smart_reserve_hub.db`. If your local database is old and the seed fails with a missing-column error, use a fresh database path:
@@ -73,6 +76,22 @@ The default local database is `ipb_smart_reserve_hub.db`. If your local database
 IPB_DATABASE_URL=sqlite+pysqlite:///./ipb_smart_reserve_hub_fresh.db uv run python -m app.dev.seed
 IPB_DATABASE_URL=sqlite+pysqlite:///./ipb_smart_reserve_hub_fresh.db uv run uvicorn app.main:create_app --factory --reload
 ```
+
+## Reservation File Metadata
+
+Student reservation responses expose generated approval letters, signed approval letters, and payment receipts with a stable metadata shape. The fields are `filename`, `content_type`, `size_bytes`, `generated_at`, and `uploaded_at`.
+
+```json
+{
+  "filename": "DEV-SEED-DOCUMENT-REVIEW-signed.pdf",
+  "content_type": "application/pdf",
+  "size_bytes": 37,
+  "generated_at": null,
+  "uploaded_at": "2026-05-20T02:00:00Z"
+}
+```
+
+Generated approval letters use `generated_at`; uploaded signed letters and payment receipts use `uploaded_at`.
 
 ## Repository Layout
 

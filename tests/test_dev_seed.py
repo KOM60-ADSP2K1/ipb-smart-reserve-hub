@@ -1,25 +1,38 @@
 from collections import Counter
+from datetime import UTC, datetime
 
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select, text
 import pytest
 
 from app.core.database import Base, build_session_factory
 from app.core.settings import SettingsModule
 from app.dev.seed import DEMO_PASSWORD, ProductionSeedRefused, seed_development_data
+from app.main import create_app
 from app.models import (
     Facility,
     FacilityCategory,
+    FacilityReview,
     FacilityImage,
     FacilityOpenHour,
     FacilityStaffAssignment,
     OrganizationUnit,
     Reservation,
+    ReservationPaymentReceipt,
+    ReservationRejectionSource,
+    ReservationSignedApprovalLetter,
     ReservationStatus,
     User,
     UserRole,
 )
 from app.repositories.user_repository import SqlAlchemyUserRepository
 from app.services.accounts import AllowedStudentEmailDomains, LoginCredentials, UserAccountModule
+
+
+async def _login(client: AsyncClient, *, email: str) -> str:
+    login = await client.post("/auth/login", json={"email": email, "password": DEMO_PASSWORD})
+    assert login.status_code == 200
+    return login.json()["access_token"]
 
 
 def test_dev_seed_creates_fixed_demo_accounts_with_login_credentials(tmp_path):
@@ -124,6 +137,88 @@ def test_dev_seed_creates_frontend_reservation_tracer_data(tmp_path):
     }
 
 
+@pytest.mark.anyio
+async def test_dev_seed_supports_blackbox_student_staff_and_admin_workflows(tmp_path):
+    settings = SettingsModule(database_url=f"sqlite+pysqlite:///{tmp_path / 'seed.db'}", secret_key="test-secret")
+    seed_development_data(settings=settings)
+    app = create_app(settings=settings, clock=lambda: datetime(2026, 5, 1, tzinfo=UTC))
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        student_token = await _login(client, email="demo.student.06@apps.ipb.ac.id")
+        operations_staff_token = await _login(client, email="demo.staff.operations@ipb.ac.id")
+        finance_staff_token = await _login(client, email="demo.staff.finance@ipb.ac.id")
+        admin_token = await _login(client, email="demo.admin@ipb.ac.id")
+
+        student_reservations = await client.get(
+            "/student/reservations",
+            headers={"Authorization": f"Bearer {student_token}"},
+        )
+        operations_queue = await client.get(
+            "/staff/reservations/verification-queue",
+            headers={"Authorization": f"Bearer {operations_staff_token}"},
+        )
+        finance_queue = await client.get(
+            "/staff/reservations/verification-queue",
+            headers={"Authorization": f"Bearer {finance_staff_token}"},
+        )
+        report = await client.get(
+            "/admin/reports/aggregate",
+            params={"start": "2026-05-01T00:00:00+00:00", "end": "2026-07-31T23:59:59+00:00"},
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+
+        reservations_by_code = {reservation["reservation_code"]: reservation for reservation in student_reservations.json()}
+        document_review_id = reservations_by_code["DEV-SEED-DOCUMENT-REVIEW"]["id"]
+        payment_review_id = reservations_by_code["DEV-SEED-PAYMENT-REVIEW"]["id"]
+        signed_download = await client.get(
+            f"/staff/reservations/{document_review_id}/signed-approval-letter/download",
+            headers={"Authorization": f"Bearer {operations_staff_token}"},
+        )
+        receipt_download = await client.get(
+            f"/staff/reservations/{payment_review_id}/payment-receipt/download",
+            headers={"Authorization": f"Bearer {finance_staff_token}"},
+        )
+
+    assert student_reservations.status_code == 200
+    assert set(reservations_by_code) == {
+        "DEV-SEED-APPROVED",
+        "DEV-SEED-CANCELLATION",
+        "DEV-SEED-COMPLETED",
+        "DEV-SEED-DOCUMENT-REJECTED",
+        "DEV-SEED-DOCUMENT-REVIEW",
+        "DEV-SEED-PAYMENT-PENDING",
+        "DEV-SEED-PAYMENT-REJECTED",
+        "DEV-SEED-PAYMENT-REVIEW",
+        "DEV-SEED-PENDING",
+    }
+    assert reservations_by_code["DEV-SEED-PENDING"]["document"]["review_status"] == "upload_needed"
+    assert reservations_by_code["DEV-SEED-DOCUMENT-REVIEW"]["document"]["review_status"] == "waiting_review"
+    assert reservations_by_code["DEV-SEED-PAYMENT-PENDING"]["payment"]["review_status"] == "upload_needed"
+    assert reservations_by_code["DEV-SEED-PAYMENT-REVIEW"]["payment"]["review_status"] == "waiting_review"
+    assert reservations_by_code["DEV-SEED-DOCUMENT-REJECTED"]["rejection"] == {
+        "source": "document",
+        "reason": "Surat belum ditandatangani pembina.",
+    }
+    assert reservations_by_code["DEV-SEED-PAYMENT-REJECTED"]["rejection"] == {
+        "source": "payment",
+        "reason": "Nominal transfer tidak sesuai.",
+    }
+    assert reservations_by_code["DEV-SEED-COMPLETED"]["review"] is not None
+
+    assert operations_queue.status_code == 200
+    assert {item["workflow_type"] for item in operations_queue.json()} >= {
+        "document_review",
+        "cancellation_review",
+    }
+    assert finance_queue.status_code == 200
+    assert {item["workflow_type"] for item in finance_queue.json()} >= {"payment_review"}
+    assert signed_download.status_code == 200
+    assert receipt_download.status_code == 200
+    assert report.status_code == 200
+    assert report.json()["kpis"]["total_reservations"] == 9
+
+
 def test_dev_seed_updates_stale_local_sqlite_schema_before_upserting(tmp_path):
     settings = SettingsModule(database_url=f"sqlite+pysqlite:///{tmp_path / 'seed.db'}", secret_key="test-secret")
     session_factory = build_session_factory(settings.database_url)
@@ -172,7 +267,7 @@ def test_dev_seed_updates_stale_local_sqlite_schema_before_upserting(tmp_path):
         ("Olahraga", "olahraga", "dumbbell"),
         ("Ruang Kelas", "ruang-kelas", "school"),
     ]
-    assert {reservation.reservation_code for reservation in reservations} == {
+    assert {reservation.reservation_code for reservation in reservations} >= {
         "DEV-SEED-APPROVED",
         "DEV-SEED-PENDING",
     }
@@ -192,4 +287,7 @@ def test_dev_seed_is_idempotent_for_seeded_database_rows(tmp_path):
         assert session.scalar(select(func.count()).select_from(FacilityStaffAssignment)) == 3
         assert session.scalar(select(func.count()).select_from(FacilityImage)) == 6
         assert session.scalar(select(func.count()).select_from(FacilityOpenHour)) == 15
-        assert session.scalar(select(func.count()).select_from(Reservation)) == 2
+        assert session.scalar(select(func.count()).select_from(Reservation)) == 9
+        assert session.scalar(select(func.count()).select_from(ReservationSignedApprovalLetter)) == 5
+        assert session.scalar(select(func.count()).select_from(ReservationPaymentReceipt)) == 3
+        assert session.scalar(select(func.count()).select_from(FacilityReview)) == 1

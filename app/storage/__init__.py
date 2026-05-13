@@ -17,4 +17,14 @@ class InMemoryPrivateStorage:
         self._objects[key] = content
 
     def get(self, key: str) -> bytes:
-        return self._objects[key]
+        if key in self._objects:
+            return self._objects[key]
+        if key.startswith("dev-seed/"):
+            return _dev_seed_placeholder_content(key)
+        raise KeyError(key)
+
+
+def _dev_seed_placeholder_content(key: str) -> bytes:
+    if key.endswith(".png"):
+        return b"\x89PNG\r\n\x1a\nipb-smart-reserve-hub-dev-seed"
+    return b"%PDF-1.4\nipb-smart-reserve-hub-dev-seed\n%%EOF"

@@ -7,13 +7,20 @@ from app.core.database import Base, build_session_factory
 from app.core.security import hash_password
 from app.core.settings import SettingsModule
 from app.models import (
+    AuditLog,
     Facility,
     FacilityCategory,
     FacilityImage,
     FacilityOpenHour,
+    FacilityReview,
     FacilityStaffAssignment,
+    Notification,
     OrganizationUnit,
     Reservation,
+    ReservationApprovalLetter,
+    ReservationPaymentReceipt,
+    ReservationRejectionSource,
+    ReservationSignedApprovalLetter,
     ReservationStatus,
     User,
     UserRole,
@@ -215,30 +222,135 @@ def seed_development_data(*, settings: SettingsModule | None = None, environment
         now = datetime.now(UTC)
         first_start = (now + timedelta(days=7)).replace(hour=2, minute=0, second=0, microsecond=0)
         second_start = (now + timedelta(days=8)).replace(hour=3, minute=0, second=0, microsecond=0)
-        _ensure_reservation(
-            session,
-            code="DEV-SEED-APPROVED",
-            facility=facilities[0],
-            student=reservation_student,
-            organization_unit=bem,
-            status=ReservationStatus.approved,
-            activity_title="Seminar Karier",
-            starts_at=first_start,
-            ends_at=first_start + timedelta(hours=2),
-        )
-        _ensure_reservation(
-            session,
-            code="DEV-SEED-PENDING",
-            facility=facilities[1],
-            student=reservation_student,
-            organization_unit=himalkom,
-            status=ReservationStatus.pending_document_upload,
-            activity_title="Workshop Kewirausahaan",
-            starts_at=second_start,
-            ends_at=second_start + timedelta(hours=2),
-        )
+        completed_start = first_start - timedelta(days=14)
+        seeded_reservations = [
+            _ensure_reservation(
+                session,
+                code="DEV-SEED-APPROVED",
+                facility=facilities[0],
+                student=reservation_student,
+                organization_unit=bem,
+                status=ReservationStatus.approved,
+                activity_title="Seminar Karier",
+                starts_at=first_start,
+                ends_at=first_start + timedelta(hours=2),
+            ),
+            _ensure_reservation(
+                session,
+                code="DEV-SEED-PENDING",
+                facility=facilities[1],
+                student=reservation_student,
+                organization_unit=himalkom,
+                status=ReservationStatus.pending_document_upload,
+                activity_title="Workshop Kewirausahaan",
+                starts_at=second_start,
+                ends_at=second_start + timedelta(hours=2),
+                document_upload_due_at=now + timedelta(days=1),
+            ),
+            _ensure_reservation(
+                session,
+                code="DEV-SEED-DOCUMENT-REVIEW",
+                facility=facilities[0],
+                student=reservation_student,
+                organization_unit=bem,
+                status=ReservationStatus.pending_document_review,
+                activity_title="Review Surat UKM",
+                starts_at=first_start + timedelta(days=2),
+                ends_at=first_start + timedelta(days=2, hours=2),
+                document_verification_due_at=now + timedelta(days=2),
+                signed_letter=True,
+            ),
+            _ensure_reservation(
+                session,
+                code="DEV-SEED-PAYMENT-PENDING",
+                facility=facilities[1],
+                student=reservation_student,
+                organization_unit=himalkom,
+                status=ReservationStatus.pending_payment,
+                activity_title="Forum Berbayar Menunggu Upload",
+                starts_at=first_start + timedelta(days=3),
+                ends_at=first_start + timedelta(days=3, hours=2),
+                payment_upload_due_at=now + timedelta(days=3),
+                signed_letter=True,
+            ),
+            _ensure_reservation(
+                session,
+                code="DEV-SEED-PAYMENT-REVIEW",
+                facility=facilities[2],
+                student=reservation_student,
+                organization_unit=bem,
+                status=ReservationStatus.pending_payment,
+                activity_title="Turnamen Basket Menunggu Review",
+                starts_at=first_start + timedelta(days=4),
+                ends_at=first_start + timedelta(days=4, hours=2),
+                payment_verification_due_at=now + timedelta(days=4),
+                signed_letter=True,
+                payment_receipt=True,
+            ),
+            _ensure_reservation(
+                session,
+                code="DEV-SEED-CANCELLATION",
+                facility=facilities[0],
+                student=reservation_student,
+                organization_unit=bem,
+                status=ReservationStatus.cancellation_requested,
+                activity_title="Kegiatan Menunggu Pembatalan",
+                starts_at=first_start + timedelta(days=5),
+                ends_at=first_start + timedelta(days=5, hours=2),
+                cancellation_reason="Jadwal kegiatan dipindahkan oleh organisasi.",
+            ),
+            _ensure_reservation(
+                session,
+                code="DEV-SEED-COMPLETED",
+                facility=facilities[2],
+                student=reservation_student,
+                organization_unit=himalkom,
+                status=ReservationStatus.completed,
+                activity_title="Kegiatan Selesai Dengan Ulasan",
+                starts_at=completed_start,
+                ends_at=completed_start + timedelta(hours=2),
+                payment_receipt=True,
+                review=True,
+            ),
+            _ensure_reservation(
+                session,
+                code="DEV-SEED-DOCUMENT-REJECTED",
+                facility=facilities[0],
+                student=reservation_student,
+                organization_unit=bem,
+                status=ReservationStatus.rejected,
+                activity_title="Surat Ditolak",
+                starts_at=first_start + timedelta(days=6),
+                ends_at=first_start + timedelta(days=6, hours=2),
+                rejection_reason="Surat belum ditandatangani pembina.",
+                rejection_source=ReservationRejectionSource.document,
+                signed_letter=True,
+            ),
+            _ensure_reservation(
+                session,
+                code="DEV-SEED-PAYMENT-REJECTED",
+                facility=facilities[2],
+                student=reservation_student,
+                organization_unit=himalkom,
+                status=ReservationStatus.rejected,
+                activity_title="Pembayaran Ditolak",
+                starts_at=first_start + timedelta(days=7),
+                ends_at=first_start + timedelta(days=7, hours=2),
+                rejection_reason="Nominal transfer tidak sesuai.",
+                rejection_source=ReservationRejectionSource.payment,
+                signed_letter=True,
+                payment_receipt=True,
+            ),
+        ]
 
         _remove_demo_student_reservations(session, demo_student)
+        _remove_unlisted_seed_reservations(
+            session,
+            {reservation.reservation_code for reservation in seeded_reservations},
+        )
+        session.flush()
+        _ensure_seed_notifications(session, reservation_student, seeded_reservations[:3], now=now)
+        _ensure_seed_audit_logs(session, operations_staff, seeded_reservations[:3], now=now)
         session.commit()
 
 
@@ -455,6 +567,16 @@ def _ensure_reservation(
     activity_title: str,
     starts_at: datetime,
     ends_at: datetime,
+    document_upload_due_at: datetime | None = None,
+    document_verification_due_at: datetime | None = None,
+    payment_upload_due_at: datetime | None = None,
+    payment_verification_due_at: datetime | None = None,
+    rejection_reason: str | None = None,
+    rejection_source: ReservationRejectionSource | None = None,
+    cancellation_reason: str | None = None,
+    signed_letter: bool = False,
+    payment_receipt: bool = False,
+    review: bool = False,
 ) -> Reservation:
     reservation = session.scalar(select(Reservation).where(Reservation.reservation_code == code))
     if reservation is None:
@@ -476,13 +598,189 @@ def _ensure_reservation(
     reservation.extra_requirement_notes = None
     reservation.starts_at = starts_at
     reservation.ends_at = ends_at
+    reservation.document_upload_due_at = document_upload_due_at
+    reservation.document_verification_due_at = document_verification_due_at
+    reservation.payment_upload_due_at = payment_upload_due_at
+    reservation.payment_verification_due_at = payment_verification_due_at
     reservation.status = status
+    reservation.rejection_reason = rejection_reason
+    reservation.rejection_source = rejection_source
+    reservation.cancellation_reason = cancellation_reason
+    reservation.cancellation_rejection_reason = None
+    if signed_letter:
+        _ensure_approval_letter(reservation, generated_at=starts_at - timedelta(days=3))
+        _ensure_signed_letter(reservation, uploaded_at=starts_at - timedelta(days=2))
+        session.add(reservation.approval_letter)
+        session.add(reservation.signed_approval_letter)
+    else:
+        reservation.approval_letter = None
+        reservation.signed_approval_letter = None
+    if payment_receipt:
+        _ensure_payment_receipt(reservation, uploaded_at=starts_at - timedelta(days=1))
+        session.add(reservation.payment_receipt)
+    else:
+        reservation.payment_receipt = None
+    if review:
+        _ensure_review(reservation, created_at=ends_at + timedelta(hours=4))
+        session.add(reservation.review)
+    else:
+        reservation.review = None
     return reservation
 
 
 def _remove_demo_student_reservations(session, demo_student: User) -> None:
     for reservation in session.scalars(select(Reservation).where(Reservation.student == demo_student)):
         session.delete(reservation)
+
+
+def _remove_unlisted_seed_reservations(session, current_codes: set[str]) -> None:
+    for reservation in session.scalars(
+        select(Reservation).where(
+            Reservation.reservation_code.like("DEV-SEED-%"),
+            Reservation.reservation_code.not_in(current_codes),
+        )
+    ):
+        session.delete(reservation)
+
+
+def _ensure_approval_letter(reservation: Reservation, *, generated_at: datetime) -> ReservationApprovalLetter:
+    storage_key = f"dev-seed/approval-letters/{reservation.reservation_code}.pdf"
+    if reservation.approval_letter is None:
+        reservation.approval_letter = ReservationApprovalLetter(
+            reservation=reservation,
+            storage_key=storage_key,
+            filename=f"{reservation.reservation_code}-surat-persetujuan.pdf",
+            content_type="application/pdf",
+            size_bytes=33,
+            generated_at=generated_at,
+        )
+    reservation.approval_letter.storage_key = storage_key
+    reservation.approval_letter.filename = f"{reservation.reservation_code}-surat-persetujuan.pdf"
+    reservation.approval_letter.content_type = "application/pdf"
+    reservation.approval_letter.size_bytes = 33
+    reservation.approval_letter.generated_at = generated_at
+    return reservation.approval_letter
+
+
+def _ensure_signed_letter(reservation: Reservation, *, uploaded_at: datetime) -> ReservationSignedApprovalLetter:
+    storage_key = f"dev-seed/signed-approval-letters/{reservation.reservation_code}.pdf"
+    if reservation.signed_approval_letter is None:
+        reservation.signed_approval_letter = ReservationSignedApprovalLetter(
+            reservation=reservation,
+            storage_key=storage_key,
+            filename=f"{reservation.reservation_code}-signed.pdf",
+            content_type="application/pdf",
+            size_bytes=37,
+            uploaded_at=uploaded_at,
+        )
+    reservation.signed_approval_letter.storage_key = storage_key
+    reservation.signed_approval_letter.filename = f"{reservation.reservation_code}-signed.pdf"
+    reservation.signed_approval_letter.content_type = "application/pdf"
+    reservation.signed_approval_letter.size_bytes = 37
+    reservation.signed_approval_letter.uploaded_at = uploaded_at
+    return reservation.signed_approval_letter
+
+
+def _ensure_payment_receipt(reservation: Reservation, *, uploaded_at: datetime) -> ReservationPaymentReceipt:
+    storage_key = f"dev-seed/payment-receipts/{reservation.reservation_code}.png"
+    if reservation.payment_receipt is None:
+        reservation.payment_receipt = ReservationPaymentReceipt(
+            reservation=reservation,
+            storage_key=storage_key,
+            filename=f"{reservation.reservation_code}-receipt.png",
+            content_type="image/png",
+            size_bytes=35,
+            uploaded_at=uploaded_at,
+        )
+    reservation.payment_receipt.storage_key = storage_key
+    reservation.payment_receipt.filename = f"{reservation.reservation_code}-receipt.png"
+    reservation.payment_receipt.content_type = "image/png"
+    reservation.payment_receipt.size_bytes = 35
+    reservation.payment_receipt.uploaded_at = uploaded_at
+    return reservation.payment_receipt
+
+
+def _ensure_review(reservation: Reservation, *, created_at: datetime) -> FacilityReview:
+    if reservation.review is None:
+        reservation.review = FacilityReview(
+            reservation=reservation,
+            facility=reservation.facility,
+            student=reservation.student,
+            rating=5,
+            comment="Fasilitas siap pakai dan proses peminjaman jelas.",
+            is_deleted=False,
+            created_at=created_at,
+        )
+    reservation.review.facility = reservation.facility
+    reservation.review.student = reservation.student
+    reservation.review.rating = 5
+    reservation.review.comment = "Fasilitas siap pakai dan proses peminjaman jelas."
+    reservation.review.is_deleted = False
+    reservation.review.deleted_by = None
+    reservation.review.deleted_at = None
+    reservation.review.admin_removal_reason = None
+    reservation.review.created_at = created_at
+    return reservation.review
+
+
+def _ensure_seed_notifications(
+    session,
+    student: User,
+    reservations: list[Reservation],
+    *,
+    now: datetime,
+) -> None:
+    existing = {
+        notification.title
+        for notification in session.scalars(select(Notification).where(Notification.recipient == student))
+    }
+    for index, reservation in enumerate(reservations, start=1):
+        title = f"Demo seed: {reservation.activity_title}"
+        if title in existing:
+            continue
+        session.add(
+            Notification(
+                recipient=student,
+                reservation=reservation,
+                title=title,
+                message=f"Data demo untuk testing {reservation.reservation_code}.",
+                created_at=now - timedelta(minutes=index),
+            )
+        )
+
+
+def _ensure_seed_audit_logs(
+    session,
+    actor: User,
+    reservations: list[Reservation],
+    *,
+    now: datetime,
+) -> None:
+    existing = {
+        audit_log.target_id
+        for audit_log in session.scalars(
+            select(AuditLog).where(
+                AuditLog.actor == actor,
+                AuditLog.action_type == "dev_seed.loaded",
+            )
+        )
+    }
+    for index, reservation in enumerate(reservations, start=1):
+        if reservation.id in existing:
+            continue
+        session.add(
+            AuditLog(
+                actor=actor,
+                actor_email=actor.email,
+                action_type="dev_seed.loaded",
+                target_type="reservation",
+                target_id=reservation.id,
+                facility=reservation.facility,
+                student=reservation.student,
+                reservation=reservation,
+                created_at=now - timedelta(minutes=index),
+            )
+        )
 
 
 def main() -> int:
