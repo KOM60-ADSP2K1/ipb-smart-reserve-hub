@@ -1,5 +1,6 @@
 import { screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Route, Routes } from "react-router-dom";
 import { renderWithProviders } from "../../test/render";
 import { StudentFacilityDetailPage } from "./StudentFacilityDetailPage";
@@ -52,6 +53,14 @@ const calendarResponse = [
   },
 ];
 
+const julyCalendarResponse = [
+  {
+    ends_at: "2026-07-15T06:00:00Z",
+    starts_at: "2026-07-15T03:00:00Z",
+    status: "reserved",
+  },
+];
+
 function jsonResponse(body: unknown, status = 200) {
   return Promise.resolve(
     new Response(JSON.stringify(body), {
@@ -87,6 +96,9 @@ function mockDetailFetch({
     }
 
     if (url.startsWith("http://localhost:8000/facilities/facility-uuid-1/calendar?")) {
+      if (url.includes("start=2026-07-01T00%3A00%3A00.000Z")) {
+        return jsonResponse(julyCalendarResponse);
+      }
       return jsonResponse(calendar);
     }
 
@@ -95,12 +107,19 @@ function mockDetailFetch({
 }
 
 describe("StudentFacilityDetailPage", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-06-12T00:00:00.000Z"));
+  });
+
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
     sessionStorage.clear();
   });
 
   it("loads facility detail and privacy-safe calendar blocks from backend APIs", async () => {
+    const user = userEvent.setup();
     const fetchMock = mockDetailFetch();
 
     renderDetail();
@@ -115,7 +134,11 @@ describe("StudentFacilityDetailPage", () => {
     expect(screen.getAllByText("0251-8620000")[0]).toBeVisible();
     expect(screen.getByText("Rp100.000")).toBeVisible();
     expect(screen.getByText("Ruangannya luas dan tata suara jelas.")).toBeVisible();
+    expect(await screen.findByText("Belum ada jadwal terblokir pada tanggal ini.")).toBeVisible();
+    expect(screen.getByLabelText("Kalender publik Juni 2026")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Pilih 1 Juni 2026" }));
     expect(await screen.findByText("02:00 - 04:00")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Pilih 1 Juni 2026" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("Waktu sudah dipesan")).toBeVisible();
     expect(screen.queryByText("BEM KM IPB")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Reservasi Sekarang" })).toHaveAttribute(
@@ -127,6 +150,29 @@ describe("StudentFacilityDetailPage", () => {
       expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/facilities/facility-uuid-1", expect.any(Object));
       expect(fetchMock).toHaveBeenCalledWith(
         expect.stringMatching(/^http:\/\/localhost:8000\/facilities\/facility-uuid-1\/calendar\?/),
+        expect.any(Object),
+      );
+    });
+  });
+
+  it("changes calendar month and refetches visible month blocks", async () => {
+    const user = userEvent.setup();
+    const fetchMock = mockDetailFetch();
+
+    renderDetail();
+
+    expect(await screen.findByText("Belum ada jadwal terblokir pada tanggal ini.")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Bulan berikutnya" }));
+
+    expect(await screen.findByText("Juli 2026")).toBeVisible();
+    expect(screen.getByLabelText("Kalender publik Juli 2026")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Pilih 15 Juli 2026" }));
+    expect(await screen.findByText("03:00 - 06:00")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Pilih 15 Juli 2026" })).toHaveAttribute("aria-pressed", "true");
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        expect.stringContaining("start=2026-07-01T00%3A00%3A00.000Z"),
         expect.any(Object),
       );
     });
@@ -148,7 +194,7 @@ describe("StudentFacilityDetailPage", () => {
     expect(await screen.findByRole("heading", { name: "Auditorium Backend" })).toBeVisible();
     expect(screen.getAllByRole("img", { name: "Media fallback Auditorium Backend" })[0]).toBeVisible();
     expect(screen.getByText("Belum ada ulasan")).toBeVisible();
-    expect(await screen.findByText("Belum ada jadwal terblokir pada periode ini.")).toBeVisible();
+    expect(await screen.findByText("Belum ada jadwal terblokir pada tanggal ini.")).toBeVisible();
   });
 
   it("renders a page-level error for not found facilities", async () => {

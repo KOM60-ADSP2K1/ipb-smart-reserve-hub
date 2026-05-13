@@ -22,12 +22,12 @@ function jsonResponse(body: unknown, status = 200) {
   );
 }
 
-function renderTimePage() {
+function renderTimePage(initialEntry = "/student/facilities/facility-uuid-1/reserve/time") {
   return renderWithProviders(
     <Routes>
       <Route element={<StudentReservationTimePage />} path="/student/facilities/:facilityId/reserve/time" />
     </Routes>,
-    { initialEntries: ["/student/facilities/facility-uuid-1/reserve/time"] },
+    { initialEntries: [initialEntry] },
   );
 }
 
@@ -118,6 +118,30 @@ describe("StudentReservationTimePage", () => {
       );
     });
   });
+
+  it("uses the date selected from facility detail calendar", async () => {
+    const user = userEvent.setup();
+    const fetchMock = mockTimeSelectionFetch();
+
+    renderTimePage("/student/facilities/facility-uuid-1/reserve/time?date=2026-06-15");
+
+    expect(await screen.findByText("Jadwal pada 15 Juni 2026")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Cek Ketersediaan" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://localhost:8000/facilities/facility-uuid-1/reservation-time-selection",
+        expect.objectContaining({
+          body: JSON.stringify({
+            ends_at: "2026-06-15T13:00:00+07:00",
+            starts_at: "2026-06-15T09:00:00+07:00",
+          }),
+          method: "POST",
+        }),
+      );
+    });
+  });
+
 
   it("disables continue and renders backend reasons when unavailable", async () => {
     const user = userEvent.setup();

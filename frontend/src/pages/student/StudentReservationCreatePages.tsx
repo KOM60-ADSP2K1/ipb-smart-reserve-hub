@@ -91,6 +91,14 @@ function parseDateKey(value: string) {
   };
 }
 
+function validDateKey(value: string | null) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const { day, monthIndex, year } = parseDateKey(value);
+  const date = new Date(Date.UTC(year, monthIndex, day));
+  const normalized = dateKey(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  return normalized === value ? value : null;
+}
+
 function calendarPath(facilityId: string, year: number, monthIndex: number) {
   const start = `${dateKey(year, monthIndex, 1)}T00:00:00${jakartaOffset}`;
   const nextMonth = monthIndex === 11
@@ -783,8 +791,10 @@ function PageFrame({
 
 export function StudentReservationTimePage() {
   const { facilityId = reservationCreateFixture.facilityId } = useParams();
-  const initialSelectedDate = parseDateKey(defaultSelectedDateKey);
-  const [selectedDateKey, setSelectedDateKey] = useState<string>(defaultSelectedDateKey);
+  const [searchParams] = useSearchParams();
+  const initialDateKey = validDateKey(searchParams.get("date")) ?? defaultSelectedDateKey;
+  const initialSelectedDate = parseDateKey(initialDateKey);
+  const [selectedDateKey, setSelectedDateKey] = useState<string>(initialDateKey);
   const [visibleMonth, setVisibleMonth] = useState({
     monthIndex: initialSelectedDate.monthIndex,
     year: initialSelectedDate.year,

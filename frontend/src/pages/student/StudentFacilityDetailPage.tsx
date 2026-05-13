@@ -1,6 +1,7 @@
 import { Building2, CalendarDays, Clock, Mail, MapPin, Menu, Phone, Search, Star, Users } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { apiRequest } from "../../api/http";
 import { NotificationSurface } from "../../components/NotificationSurface";
@@ -63,46 +64,7 @@ const navItems = [
 ];
 
 const dayNames = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
-const calendarDays = [
-  { day: 29, muted: true },
-  { day: 30, muted: true },
-  { day: 1 },
-  { day: 2 },
-  { day: 3 },
-  { day: 4, dots: ["reserved"] },
-  { day: 5 },
-  { day: 6 },
-  { day: 7 },
-  { day: 8 },
-  { day: 9 },
-  { day: 10, dots: ["blocked"] },
-  { day: 11, dots: ["reserved"] },
-  { day: 12 },
-  { day: 13 },
-  { day: 14 },
-  { day: 15 },
-  { day: 16, dots: ["reserved", "reserved"] },
-  { day: 17 },
-  { day: 18 },
-  { day: 19 },
-  { day: 20 },
-  { day: 21 },
-  { day: 22 },
-  { day: 23, dots: ["reserved"] },
-  { day: 24, selected: true, dots: ["reserved", "reserved", "blocked"] },
-  { day: 25 },
-  { day: 26, dots: ["blocked"] },
-  { day: 27 },
-  { day: 28 },
-  { day: 29 },
-  { day: 30 },
-  { day: 31, dots: ["reserved"] },
-  { day: 1, muted: true },
-  { day: 2, muted: true },
-] as const;
-
 const dotClass = {
-  blocked: "bg-[#ef4444]",
   reserved: "bg-[#10b981]",
 };
 
@@ -114,11 +76,19 @@ const statusClass: Record<PublicCalendarEntryResponse["status"], string> = {
   reserved: "bg-[#d1fae5] text-[#065f46]",
 };
 
-const calendarStart = "2026-06-01T00:00:00.000Z";
-const calendarEnd = "2026-07-01T00:00:00.000Z";
+type CalendarDot = keyof typeof dotClass;
 
-function calendarPath(facilityId: string) {
-  const params = new URLSearchParams({ end: calendarEnd, start: calendarStart });
+type CalendarDay = {
+  date: Date;
+  day: number;
+  dots: CalendarDot[];
+  key: string;
+  muted: boolean;
+};
+
+function calendarPath(facilityId: string, month: Date) {
+  const { end, start } = calendarRange(month);
+  const params = new URLSearchParams({ end, start });
   return `/facilities/${facilityId}/calendar?${params.toString()}`;
 }
 
@@ -126,8 +96,69 @@ async function fetchFacilityDetail(facilityId: string) {
   return apiRequest<FacilityDetailResponse>(`/facilities/${facilityId}`);
 }
 
-async function fetchPublicCalendar(facilityId: string) {
-  return apiRequest<PublicCalendarEntryResponse[]>(calendarPath(facilityId));
+async function fetchPublicCalendar(facilityId: string, month: Date) {
+  return apiRequest<PublicCalendarEntryResponse[]>(calendarPath(facilityId, month));
+}
+
+function startOfUtcMonth(value: Date) {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), 1));
+}
+
+function addUtcMonths(value: Date, amount: number) {
+  return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth() + amount, 1));
+}
+
+function calendarRange(month: Date) {
+  return {
+    end: addUtcMonths(month, 1).toISOString(),
+    start: startOfUtcMonth(month).toISOString(),
+  };
+}
+
+function monthLabel(month: Date) {
+  return new Intl.DateTimeFormat("id-ID", {
+    month: "long",
+    timeZone: "UTC",
+    year: "numeric",
+  }).format(month);
+}
+
+function fullDateLabel(date: Date) {
+  return new Intl.DateTimeFormat("id-ID", {
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+    year: "numeric",
+  }).format(date);
+}
+
+function dateKey(value: Date | string) {
+  const date = typeof value === "string" ? new Date(value) : value;
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(date.getUTCDate()).padStart(2, "0")}`;
+}
+
+function calendarDaysForMonth(month: Date, entries: PublicCalendarEntryResponse[]) {
+  const firstDay = startOfUtcMonth(month);
+  const gridStart = new Date(firstDay);
+  gridStart.setUTCDate(firstDay.getUTCDate() - firstDay.getUTCDay());
+  const entryCounts = entries.reduce<Record<string, number>>((counts, entry) => {
+    const key = dateKey(entry.starts_at);
+    counts[key] = (counts[key] ?? 0) + 1;
+    return counts;
+  }, {});
+
+  return Array.from({ length: 35 }, (_, index): CalendarDay => {
+    const date = new Date(gridStart);
+    date.setUTCDate(gridStart.getUTCDate() + index);
+    const count = Math.min(entryCounts[dateKey(date)] ?? 0, 3);
+    return {
+      date,
+      day: date.getUTCDate(),
+      dots: Array.from({ length: count }, (): CalendarDot => "reserved"),
+      key: dateKey(date),
+      muted: date.getUTCMonth() !== firstDay.getUTCMonth(),
+    };
+  });
 }
 
 function formatCapacity(value: number) {
@@ -383,11 +414,25 @@ function PublicCalendar({
   entries,
   isError,
   isLoading,
+  month,
+  onMonthChange,
+  onSelectDate,
+  selectedDateKey,
 }: {
   entries: PublicCalendarEntryResponse[];
   isError: boolean;
   isLoading: boolean;
+  month: Date;
+  onMonthChange: (month: Date) => void;
+  onSelectDate: (dateKey: string) => void;
+  selectedDateKey: string;
 }) {
+  const days = useMemo(() => calendarDaysForMonth(month, entries), [entries, month]);
+  const selectedDateEntries = entries.filter((entry) => dateKey(entry.starts_at) === selectedDateKey);
+  const selectedDate = new Date(`${selectedDateKey}T00:00:00.000Z`);
+  const selectedDateLabel = fullDateLabel(selectedDate);
+  const visibleMonthLabel = monthLabel(month);
+
   return (
     <section className="mt-10 rounded-2xl border border-[#e5e7eb] bg-white p-6 max-md:rounded-[14px] max-md:p-4">
       <div className="mb-5 flex items-start justify-between gap-4">
@@ -398,42 +443,66 @@ function PublicCalendar({
           <h2 className="m-0 text-xl font-semibold">Kalender Publik</h2>
         </div>
         <div className="flex items-center gap-2 text-sm font-semibold text-[#6b7280]">
-          <CalendarDays aria-hidden="true" size={17} />
-          Juni 2026
+          <button
+            aria-label="Bulan sebelumnya"
+            className="h-9 w-9 rounded-lg border border-[#e5e7eb] bg-white text-[#111827]"
+            onClick={() => onMonthChange(addUtcMonths(month, -1))}
+            type="button"
+          >
+            ‹
+          </button>
+          <span className="inline-flex min-w-[128px] items-center justify-center gap-2">
+            <CalendarDays aria-hidden="true" size={17} />
+            {visibleMonthLabel}
+          </span>
+          <button
+            aria-label="Bulan berikutnya"
+            className="h-9 w-9 rounded-lg border border-[#e5e7eb] bg-white text-[#111827]"
+            onClick={() => onMonthChange(addUtcMonths(month, 1))}
+            type="button"
+          >
+            ›
+          </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-2 max-md:gap-1.5" aria-label="Kalender publik Juni 2026">
+      <div className="grid grid-cols-7 gap-2 max-md:gap-1.5" aria-label={`Kalender publik ${visibleMonthLabel}`}>
         {dayNames.map((day) => (
           <div className="pb-1 text-center text-[11px] font-bold uppercase text-[#6b7280] max-md:text-[10px]" key={day}>
             {day}
           </div>
         ))}
-        {calendarDays.map((day, index) => (
-          <div
-            className={`flex aspect-square min-w-0 flex-col gap-1.5 rounded-lg border p-2 max-md:rounded-md max-md:p-1.5 ${
-              "muted" in day && day.muted
-                ? "border-[#f3f4f6] bg-[#f9fafb]"
-                : "border-[#e5e7eb] bg-white"
-            } ${
-              "selected" in day && day.selected
+        {days.map((day) => (
+          <button
+            aria-label={`Pilih ${fullDateLabel(day.date)}`}
+            aria-pressed={day.key === selectedDateKey}
+            className={`flex aspect-square min-w-0 flex-col gap-1.5 rounded-lg border p-2 text-left max-md:rounded-md max-md:p-1.5 ${
+              day.key === selectedDateKey
                 ? "border-[#0f9d58] shadow-[0_0_0_2px_rgba(15,157,88,0.14)]"
-                : ""
+                : day.muted
+                  ? "border-[#f3f4f6] bg-[#f9fafb]"
+                  : "border-[#e5e7eb] bg-white"
+            } ${
+              day.muted
+                ? "bg-[#f9fafb]"
+                : "bg-white"
             }`}
-            key={`${day.day}-${index}`}
+            key={day.key}
+            onClick={() => onSelectDate(day.key)}
+            type="button"
           >
             <span
               className={`text-[13px] font-bold leading-none max-md:text-xs ${
-                "muted" in day && day.muted ? "text-slate-300" : "text-[#111827]"
-              } ${
-                "selected" in day && day.selected
+                day.key === selectedDateKey
                   ? "flex h-6 w-6 items-center justify-center rounded-md bg-[#0f9d58] text-white"
-                  : ""
+                  : day.muted
+                    ? "text-slate-300"
+                    : "text-[#111827]"
               }`}
             >
               {day.day}
             </span>
-            {"dots" in day ? (
+            {day.dots.length > 0 ? (
               <div className="mt-auto flex flex-wrap gap-1">
                 {day.dots.map((dot, dotIndex) => (
                   <span
@@ -443,13 +512,13 @@ function PublicCalendar({
                 ))}
               </div>
             ) : null}
-          </div>
+          </button>
         ))}
       </div>
 
       <div className="mt-4 border-t border-[#e5e7eb] pt-4">
         <p className="m-0 mb-3 text-sm font-bold">
-          Jadwal terblokir
+          Jadwal pada {selectedDateLabel}
         </p>
         {isLoading ? (
           <div className="rounded-lg border border-[#e5e7eb] bg-[#f8fafc] p-4 text-sm text-[#6b7280]">
@@ -461,12 +530,12 @@ function PublicCalendar({
             Kalender belum dapat dimuat.
           </div>
         ) : null}
-        {!isLoading && !isError && entries.length === 0 ? (
+        {!isLoading && !isError && selectedDateEntries.length === 0 ? (
           <div className="rounded-lg border border-[#e5e7eb] bg-[#f8fafc] p-4 text-sm text-[#6b7280]">
-            Belum ada jadwal terblokir pada periode ini.
+            Belum ada jadwal terblokir pada tanggal ini.
           </div>
         ) : null}
-        {!isLoading && !isError ? entries.map((entry) => (
+        {!isLoading && !isError ? selectedDateEntries.map((entry) => (
           <div
             className="grid grid-cols-[96px_1fr_auto] items-start gap-3 border-t border-dashed border-[#e5e7eb] py-3 first:border-t-0 first:pt-0 max-md:grid-cols-1"
             key={`${entry.starts_at}-${entry.ends_at}`}
@@ -517,6 +586,8 @@ function StudentFooter() {
 
 export function StudentFacilityDetailPage() {
   const { facilityId = "" } = useParams();
+  const [calendarMonth, setCalendarMonth] = useState(() => startOfUtcMonth(new Date()));
+  const [selectedDateKey, setSelectedDateKey] = useState(() => dateKey(new Date()));
   const detailQuery = useQuery({
     enabled: facilityId.length > 0,
     queryFn: () => fetchFacilityDetail(facilityId),
@@ -524,8 +595,8 @@ export function StudentFacilityDetailPage() {
   });
   const calendarQuery = useQuery({
     enabled: facilityId.length > 0 && detailQuery.isSuccess,
-    queryFn: () => fetchPublicCalendar(facilityId),
-    queryKey: ["facility-calendar", facilityId],
+    queryFn: () => fetchPublicCalendar(facilityId, calendarMonth),
+    queryKey: ["facility-calendar", facilityId, calendarMonth.toISOString()],
   });
 
   if (detailQuery.isLoading) {
@@ -566,6 +637,12 @@ export function StudentFacilityDetailPage() {
 
   const detail = detailQuery.data;
   const calendarEntries = calendarQuery.data ?? [];
+
+  function handleMonthChange(nextMonth: Date) {
+    const normalizedMonth = startOfUtcMonth(nextMonth);
+    setCalendarMonth(normalizedMonth);
+    setSelectedDateKey(dateKey(normalizedMonth));
+  }
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-white text-[#111827]">
@@ -622,6 +699,10 @@ export function StudentFacilityDetailPage() {
               entries={calendarEntries}
               isError={calendarQuery.isError}
               isLoading={calendarQuery.isLoading}
+              month={calendarMonth}
+              onMonthChange={handleMonthChange}
+              onSelectDate={setSelectedDateKey}
+              selectedDateKey={selectedDateKey}
             />
           </div>
 
