@@ -186,6 +186,41 @@ def test_dev_seed_creates_richer_facility_catalog_demo_data(tmp_path):
             )
 
 
+def test_dev_seed_creates_production_like_reservation_and_review_mix(tmp_path):
+    settings = SettingsModule(database_url=f"sqlite+pysqlite:///{tmp_path / 'seed.db'}", secret_key="test-secret")
+
+    seed_development_data(settings=settings)
+
+    session_factory = build_session_factory(settings.database_url)
+    with session_factory() as session:
+        reservations = session.scalars(select(Reservation)).all()
+        status_counts = Counter(reservation.status for reservation in reservations)
+        seeded_student_ids = {
+            reservation.student_id
+            for reservation in reservations
+            if reservation.reservation_code.startswith("DEV-SEED-")
+        }
+        visible_reviews = session.scalars(
+            select(FacilityReview).where(FacilityReview.is_deleted.is_(False))
+        ).all()
+
+        assert len(reservations) >= 24
+        assert status_counts[ReservationStatus.pending_document_upload] >= 4
+        assert status_counts[ReservationStatus.pending_document_review] >= 3
+        assert status_counts[ReservationStatus.pending_payment] >= 4
+        assert status_counts[ReservationStatus.approved] >= 4
+        assert status_counts[ReservationStatus.completed] >= 6
+        assert status_counts[ReservationStatus.rejected] >= 3
+        assert status_counts[ReservationStatus.cancelled] >= 2
+        assert len(seeded_student_ids) >= 5
+        assert len(visible_reviews) >= 10
+        assert len({review.facility_id for review in visible_reviews}) >= 5
+        assert {review.rating for review in visible_reviews} >= {3, 4, 5}
+        assert session.scalar(
+            select(func.count()).select_from(FacilityReview).where(FacilityReview.is_deleted.is_(True))
+        ) >= 1
+
+
 @pytest.mark.anyio
 async def test_dev_seed_supports_blackbox_student_staff_and_admin_workflows(tmp_path):
     settings = SettingsModule(database_url=f"sqlite+pysqlite:///{tmp_path / 'seed.db'}", secret_key="test-secret")
@@ -263,7 +298,7 @@ async def test_dev_seed_supports_blackbox_student_staff_and_admin_workflows(tmp_
     assert signed_download.status_code == 200
     assert receipt_download.status_code == 200
     assert report.status_code == 200
-    assert report.json()["kpis"]["total_reservations"] == 9
+    assert report.json()["kpis"]["total_reservations"] == 35
 
 
 def test_dev_seed_updates_stale_local_sqlite_schema_before_upserting(tmp_path):
@@ -336,7 +371,7 @@ def test_dev_seed_is_idempotent_for_seeded_database_rows(tmp_path):
         assert session.scalar(select(func.count()).select_from(FacilityStaffAssignment)) == 13
         assert session.scalar(select(func.count()).select_from(FacilityImage)) == 26
         assert session.scalar(select(func.count()).select_from(FacilityOpenHour)) == 65
-        assert session.scalar(select(func.count()).select_from(Reservation)) == 9
-        assert session.scalar(select(func.count()).select_from(ReservationSignedApprovalLetter)) == 5
-        assert session.scalar(select(func.count()).select_from(ReservationPaymentReceipt)) == 3
-        assert session.scalar(select(func.count()).select_from(FacilityReview)) == 1
+        assert session.scalar(select(func.count()).select_from(Reservation)) == 35
+        assert session.scalar(select(func.count()).select_from(ReservationSignedApprovalLetter)) == 26
+        assert session.scalar(select(func.count()).select_from(ReservationPaymentReceipt)) == 10
+        assert session.scalar(select(func.count()).select_from(FacilityReview)) == 11

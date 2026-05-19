@@ -85,6 +85,8 @@ The development seed creates these local accounts:
 | Staff finance | `demo.staff.finance@ipb.ac.id` | `demo12345` |
 | Super Admin | `demo.admin@ipb.ac.id` | `demo12345` |
 
+The seed includes 35 demo reservations across pending, review, approved, cancelled, rejected, expired, and completed states, plus 10 visible facility reviews and one hidden review for moderation demos.
+
 The default local database is `ipb_smart_reserve_hub.db`. If your local database is old and the seed fails with a missing-column error, use a fresh database path:
 
 ```sh

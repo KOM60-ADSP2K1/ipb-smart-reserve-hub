@@ -115,6 +115,10 @@ def seed_development_data(*, settings: SettingsModule | None = None, environment
         users_by_email = {user.email: user for user in (_ensure_user(session, **user_data) for user_data in DEMO_USERS)}
         demo_student = users_by_email["demo.student@apps.ipb.ac.id"]
         reservation_student = users_by_email["demo.student.06@apps.ipb.ac.id"]
+        student_02 = users_by_email["demo.student.02@apps.ipb.ac.id"]
+        student_03 = users_by_email["demo.student.03@apps.ipb.ac.id"]
+        student_04 = users_by_email["demo.student.04@apps.ipb.ac.id"]
+        student_05 = users_by_email["demo.student.05@apps.ipb.ac.id"]
         operations_staff = users_by_email["demo.staff.operations@ipb.ac.id"]
         facilities_staff = users_by_email["demo.staff.facilities@ipb.ac.id"]
         finance_staff = users_by_email["demo.staff.finance@ipb.ac.id"]
@@ -356,19 +360,19 @@ def seed_development_data(*, settings: SettingsModule | None = None, environment
             unit_type="student_organization",
             code="HIMALKOM",
         )
-        _ensure_organization_unit(
+        agria_swara = _ensure_organization_unit(
             session,
             name="Paduan Suara Mahasiswa Agria Swara",
             unit_type="student_activity_unit",
             code="AGRIASWARA",
         )
-        _ensure_organization_unit(
+        pramuka = _ensure_organization_unit(
             session,
             name="UKM Pramuka IPB",
             unit_type="student_activity_unit",
             code="PRAMUKA",
         )
-        _ensure_organization_unit(
+        himagron = _ensure_organization_unit(
             session,
             name="Himpunan Mahasiswa Agronomi",
             unit_type="student_organization",
@@ -502,6 +506,16 @@ def seed_development_data(*, settings: SettingsModule | None = None, environment
                 payment_receipt=True,
             ),
         ]
+        seeded_reservations.extend(
+            _ensure_production_like_reservations(
+                session,
+                facilities=facilities,
+                students=[student_02, student_03, student_04, student_05],
+                organization_units=[bem, himalkom, agria_swara, pramuka, himagron],
+                now=now,
+                first_start=first_start,
+            )
+        )
 
         _remove_demo_student_reservations(session, demo_student)
         _remove_unlisted_seed_reservations(
@@ -734,9 +748,22 @@ def _ensure_reservation(
     rejection_reason: str | None = None,
     rejection_source: ReservationRejectionSource | None = None,
     cancellation_reason: str | None = None,
+    cancellation_rejection_reason: str | None = None,
     signed_letter: bool = False,
     payment_receipt: bool = False,
     review: bool = False,
+    review_rating: int = 5,
+    review_comment: str = "Fasilitas siap pakai dan proses peminjaman jelas.",
+    review_is_deleted: bool = False,
+    review_admin_removal_reason: str | None = None,
+    event_description: str = "Seeded public calendar reservation for local frontend development.",
+    participant_count: int | None = None,
+    contact_phone: str = "081234599999",
+    extra_requirement_av_support: bool = False,
+    extra_requirement_logistics_coordination: bool = False,
+    extra_requirement_extra_cleaning: bool = False,
+    extra_requirement_security_personnel: bool = False,
+    extra_requirement_notes: str | None = None,
 ) -> Reservation:
     reservation = session.scalar(select(Reservation).where(Reservation.reservation_code == code))
     if reservation is None:
@@ -746,16 +773,16 @@ def _ensure_reservation(
     reservation.student = student
     reservation.organization_unit = organization_unit
     reservation.activity_title = activity_title
-    reservation.event_description = "Seeded public calendar reservation for local frontend development."
-    reservation.participant_count = min(facility.capacity, 80)
-    reservation.contact_phone = "081234599999"
+    reservation.event_description = event_description
+    reservation.participant_count = participant_count if participant_count is not None else min(facility.capacity, 80)
+    reservation.contact_phone = contact_phone
     reservation.price_rupiah = facility.price_rupiah
     reservation.organization_unit_name = organization_unit.name
-    reservation.extra_requirement_av_support = False
-    reservation.extra_requirement_logistics_coordination = False
-    reservation.extra_requirement_extra_cleaning = False
-    reservation.extra_requirement_security_personnel = False
-    reservation.extra_requirement_notes = None
+    reservation.extra_requirement_av_support = extra_requirement_av_support
+    reservation.extra_requirement_logistics_coordination = extra_requirement_logistics_coordination
+    reservation.extra_requirement_extra_cleaning = extra_requirement_extra_cleaning
+    reservation.extra_requirement_security_personnel = extra_requirement_security_personnel
+    reservation.extra_requirement_notes = extra_requirement_notes
     reservation.starts_at = starts_at
     reservation.ends_at = ends_at
     reservation.document_upload_due_at = document_upload_due_at
@@ -766,7 +793,7 @@ def _ensure_reservation(
     reservation.rejection_reason = rejection_reason
     reservation.rejection_source = rejection_source
     reservation.cancellation_reason = cancellation_reason
-    reservation.cancellation_rejection_reason = None
+    reservation.cancellation_rejection_reason = cancellation_rejection_reason
     if signed_letter:
         _ensure_approval_letter(reservation, generated_at=starts_at - timedelta(days=3))
         _ensure_signed_letter(reservation, uploaded_at=starts_at - timedelta(days=2))
@@ -781,11 +808,441 @@ def _ensure_reservation(
     else:
         reservation.payment_receipt = None
     if review:
-        _ensure_review(reservation, created_at=ends_at + timedelta(hours=4))
+        _ensure_review(
+            reservation,
+            created_at=ends_at + timedelta(hours=4),
+            rating=review_rating,
+            comment=review_comment,
+            is_deleted=review_is_deleted,
+            admin_removal_reason=review_admin_removal_reason,
+        )
         session.add(reservation.review)
     else:
         reservation.review = None
     return reservation
+
+
+def _ensure_production_like_reservations(
+    session,
+    *,
+    facilities: list[Facility],
+    students: list[User],
+    organization_units: list[OrganizationUnit],
+    now: datetime,
+    first_start: datetime,
+) -> list[Reservation]:
+    specs = [
+        {
+            "code": "DEV-SEED-PENDING-ORIENTATION",
+            "facility_index": 4,
+            "student_index": 0,
+            "organization_index": 2,
+            "status": ReservationStatus.pending_document_upload,
+            "activity_title": "Briefing Kepanitiaan Masa Orientasi",
+            "start_offset_days": 1,
+            "duration_hours": 3,
+            "document_upload_due_at": now + timedelta(hours=18),
+            "participants": 180,
+            "av": True,
+            "notes": "Butuh mikrofon wireless dan satu operator proyektor.",
+        },
+        {
+            "code": "DEV-SEED-PENDING-TRAINING",
+            "facility_index": 5,
+            "student_index": 1,
+            "organization_index": 1,
+            "status": ReservationStatus.pending_document_upload,
+            "activity_title": "Kelas Tambahan Data Science",
+            "start_offset_days": 2,
+            "duration_hours": 2,
+            "document_upload_due_at": now + timedelta(days=1, hours=6),
+            "participants": 45,
+        },
+        {
+            "code": "DEV-SEED-PENDING-FESTIVAL",
+            "facility_index": 10,
+            "student_index": 2,
+            "organization_index": 0,
+            "status": ReservationStatus.pending_document_upload,
+            "activity_title": "Persiapan Festival Kampus",
+            "start_offset_days": 9,
+            "duration_hours": 5,
+            "document_upload_due_at": now + timedelta(days=2),
+            "participants": 320,
+            "logistics": True,
+            "cleaning": True,
+            "notes": "Butuh koordinasi kebersihan setelah acara.",
+        },
+        {
+            "code": "DEV-SEED-DOCUMENT-REVIEW-AGRIA",
+            "facility_index": 3,
+            "student_index": 2,
+            "organization_index": 2,
+            "status": ReservationStatus.pending_document_review,
+            "activity_title": "Gladi Bersih Konser Agria Swara",
+            "start_offset_days": 10,
+            "duration_hours": 4,
+            "document_verification_due_at": now + timedelta(hours=12),
+            "signed_letter": True,
+            "participants": 210,
+            "av": True,
+        },
+        {
+            "code": "DEV-SEED-DOCUMENT-REVIEW-PRAMUKA",
+            "facility_index": 11,
+            "student_index": 3,
+            "organization_index": 3,
+            "status": ReservationStatus.pending_document_review,
+            "activity_title": "Rapat Besar Gugus Depan",
+            "start_offset_days": 11,
+            "duration_hours": 3,
+            "document_verification_due_at": now + timedelta(days=1),
+            "signed_letter": True,
+            "participants": 95,
+        },
+        {
+            "code": "DEV-SEED-OVERDUE-DOCUMENT",
+            "facility_index": 8,
+            "student_index": 1,
+            "organization_index": 1,
+            "status": ReservationStatus.overdue_verification,
+            "activity_title": "Praktikum Tambahan Menunggu Verifikasi",
+            "start_offset_days": 12,
+            "duration_hours": 3,
+            "document_verification_due_at": now - timedelta(hours=6),
+            "signed_letter": True,
+            "participants": 36,
+        },
+        {
+            "code": "DEV-SEED-PAYMENT-PENDING-FUTSAL",
+            "facility_index": 7,
+            "student_index": 0,
+            "organization_index": 0,
+            "status": ReservationStatus.pending_payment,
+            "activity_title": "Liga Futsal Antar Fakultas",
+            "start_offset_days": 13,
+            "duration_hours": 4,
+            "payment_upload_due_at": now + timedelta(days=2),
+            "signed_letter": True,
+            "participants": 70,
+        },
+        {
+            "code": "DEV-SEED-PAYMENT-REVIEW-TENNIS",
+            "facility_index": 12,
+            "student_index": 3,
+            "organization_index": 4,
+            "status": ReservationStatus.pending_payment,
+            "activity_title": "Klinik Tenis Mahasiswa",
+            "start_offset_days": 14,
+            "duration_hours": 2,
+            "payment_verification_due_at": now + timedelta(days=1, hours=4),
+            "signed_letter": True,
+            "payment_receipt": True,
+            "participants": 32,
+        },
+        {
+            "code": "DEV-SEED-PAYMENT-REVIEW-LANGUAGE",
+            "facility_index": 9,
+            "student_index": 2,
+            "organization_index": 2,
+            "status": ReservationStatus.pending_payment,
+            "activity_title": "TOEFL Preparation Camp",
+            "start_offset_days": 15,
+            "duration_hours": 3,
+            "payment_verification_due_at": now + timedelta(days=2, hours=5),
+            "signed_letter": True,
+            "payment_receipt": True,
+            "participants": 34,
+        },
+        {
+            "code": "DEV-SEED-APPROVED-EXPO",
+            "facility_index": 10,
+            "student_index": 0,
+            "organization_index": 0,
+            "status": ReservationStatus.approved,
+            "activity_title": "Expo Karya Mahasiswa",
+            "start_offset_days": 16,
+            "duration_hours": 6,
+            "signed_letter": True,
+            "participants": 420,
+            "logistics": True,
+            "security": True,
+        },
+        {
+            "code": "DEV-SEED-APPROVED-SEMINAR-FEM",
+            "facility_index": 3,
+            "student_index": 1,
+            "organization_index": 4,
+            "status": ReservationStatus.approved,
+            "activity_title": "Seminar Agribisnis Berkelanjutan",
+            "start_offset_days": 17,
+            "duration_hours": 3,
+            "signed_letter": True,
+            "payment_receipt": True,
+            "participants": 230,
+            "av": True,
+        },
+        {
+            "code": "DEV-SEED-APPROVED-LIBRARY",
+            "facility_index": 6,
+            "student_index": 3,
+            "organization_index": 1,
+            "status": ReservationStatus.approved,
+            "activity_title": "Diskusi Riset Mahasiswa",
+            "start_offset_days": 18,
+            "duration_hours": 2,
+            "signed_letter": True,
+            "participants": 22,
+        },
+        {
+            "code": "DEV-SEED-CANCELLATION-REQUESTED",
+            "facility_index": 1,
+            "student_index": 0,
+            "organization_index": 1,
+            "status": ReservationStatus.cancellation_requested,
+            "activity_title": "Forum Kepemimpinan Mahasiswa",
+            "start_offset_days": 19,
+            "duration_hours": 2,
+            "signed_letter": True,
+            "cancellation_reason": "Narasumber utama berhalangan hadir.",
+            "participants": 72,
+        },
+        {
+            "code": "DEV-SEED-CANCELLED-RAIN",
+            "facility_index": 11,
+            "student_index": 2,
+            "organization_index": 3,
+            "status": ReservationStatus.cancelled,
+            "activity_title": "Latihan Lapangan Terbuka",
+            "start_offset_days": 20,
+            "duration_hours": 3,
+            "cancellation_reason": "Kegiatan luar ruang dipindah karena cuaca.",
+            "participants": 80,
+        },
+        {
+            "code": "DEV-SEED-EXPIRED-UPLOAD",
+            "facility_index": 5,
+            "student_index": 1,
+            "organization_index": 4,
+            "status": ReservationStatus.expired,
+            "activity_title": "Kelas Tamu Yang Tidak Dilanjutkan",
+            "start_offset_days": -2,
+            "duration_hours": 2,
+            "document_upload_due_at": now - timedelta(days=1),
+            "participants": 55,
+        },
+        {
+            "code": "DEV-SEED-REJECTED-CAPACITY",
+            "facility_index": 6,
+            "student_index": 3,
+            "organization_index": 0,
+            "status": ReservationStatus.rejected,
+            "activity_title": "Diskusi Besar Melebihi Kapasitas",
+            "start_offset_days": 21,
+            "duration_hours": 2,
+            "rejection_reason": "Jumlah peserta melebihi kapasitas ruang diskusi.",
+            "rejection_source": ReservationRejectionSource.document,
+            "signed_letter": True,
+            "participants": 75,
+        },
+        {
+            "code": "DEV-SEED-COMPLETED-AGRIA-CONCERT",
+            "facility_index": 0,
+            "student_index": 2,
+            "organization_index": 2,
+            "status": ReservationStatus.completed,
+            "activity_title": "Konser Mini Agria Swara",
+            "start_offset_days": -18,
+            "duration_hours": 3,
+            "signed_letter": True,
+            "review": True,
+            "rating": 5,
+            "comment": "Akustik auditorium bagus dan staf sigap membantu persiapan panggung.",
+            "participants": 300,
+        },
+        {
+            "code": "DEV-SEED-COMPLETED-FUTSAL",
+            "facility_index": 7,
+            "student_index": 0,
+            "organization_index": 0,
+            "status": ReservationStatus.completed,
+            "activity_title": "Final Liga Futsal Fakultas",
+            "start_offset_days": -16,
+            "duration_hours": 4,
+            "signed_letter": True,
+            "payment_receipt": True,
+            "review": True,
+            "rating": 4,
+            "comment": "Lapangan sesuai kebutuhan, hanya area tunggu cukup padat saat pergantian sesi.",
+            "participants": 75,
+        },
+        {
+            "code": "DEV-SEED-COMPLETED-LAB",
+            "facility_index": 8,
+            "student_index": 1,
+            "organization_index": 1,
+            "status": ReservationStatus.completed,
+            "activity_title": "Bootcamp Python Dasar",
+            "start_offset_days": -14,
+            "duration_hours": 5,
+            "signed_letter": True,
+            "review": True,
+            "rating": 5,
+            "comment": "Komputer siap digunakan dan jaringan stabil selama pelatihan.",
+            "participants": 38,
+        },
+        {
+            "code": "DEV-SEED-COMPLETED-PLAZA",
+            "facility_index": 10,
+            "student_index": 0,
+            "organization_index": 0,
+            "status": ReservationStatus.completed,
+            "activity_title": "Pameran Komunitas Hijau",
+            "start_offset_days": -12,
+            "duration_hours": 6,
+            "signed_letter": True,
+            "review": True,
+            "rating": 4,
+            "comment": "Area luas dan mudah diakses, koordinasi listrik perlu dibuat lebih awal.",
+            "participants": 360,
+        },
+        {
+            "code": "DEV-SEED-COMPLETED-CLASS",
+            "facility_index": 5,
+            "student_index": 3,
+            "organization_index": 4,
+            "status": ReservationStatus.completed,
+            "activity_title": "Workshop Penulisan Proposal",
+            "start_offset_days": -10,
+            "duration_hours": 3,
+            "signed_letter": True,
+            "review": True,
+            "rating": 4,
+            "comment": "Ruang kelas nyaman untuk diskusi kelompok kecil.",
+            "participants": 52,
+        },
+        {
+            "code": "DEV-SEED-COMPLETED-LANGUAGE",
+            "facility_index": 9,
+            "student_index": 2,
+            "organization_index": 2,
+            "status": ReservationStatus.completed,
+            "activity_title": "Latihan Debat Bahasa Inggris",
+            "start_offset_days": -8,
+            "duration_hours": 2,
+            "signed_letter": True,
+            "payment_receipt": True,
+            "review": True,
+            "rating": 3,
+            "comment": "Perangkat audio cukup membantu, beberapa headset perlu pengecekan ulang.",
+            "participants": 32,
+        },
+        {
+            "code": "DEV-SEED-COMPLETED-TENNIS",
+            "facility_index": 12,
+            "student_index": 1,
+            "organization_index": 3,
+            "status": ReservationStatus.completed,
+            "activity_title": "Latihan Gabungan Tenis",
+            "start_offset_days": -6,
+            "duration_hours": 2,
+            "signed_letter": True,
+            "payment_receipt": True,
+            "review": True,
+            "rating": 4,
+            "comment": "Jadwal lapangan jelas dan proses check-in cepat.",
+            "participants": 28,
+        },
+        {
+            "code": "DEV-SEED-COMPLETED-LIBRARY-DELETED-REVIEW",
+            "facility_index": 6,
+            "student_index": 0,
+            "organization_index": 1,
+            "status": ReservationStatus.completed,
+            "activity_title": "Kelompok Baca Riset",
+            "start_offset_days": -4,
+            "duration_hours": 2,
+            "signed_letter": True,
+            "review": True,
+            "rating": 2,
+            "comment": "Komentar ini disembunyikan untuk demo moderasi ulasan.",
+            "review_is_deleted": True,
+            "admin_removal_reason": "Komentar tidak relevan dengan penggunaan fasilitas.",
+            "participants": 20,
+        },
+        {
+            "code": "DEV-SEED-COMPLETED-BASKET",
+            "facility_index": 2,
+            "student_index": 3,
+            "organization_index": 0,
+            "status": ReservationStatus.completed,
+            "activity_title": "Sparring Basket Mahasiswa",
+            "start_offset_days": -3,
+            "duration_hours": 3,
+            "signed_letter": True,
+            "payment_receipt": True,
+            "review": True,
+            "rating": 5,
+            "comment": "Lapangan bersih, pencahayaan baik, dan staf membuka venue tepat waktu.",
+            "participants": 90,
+        },
+        {
+            "code": "DEV-SEED-COMPLETED-GKB",
+            "facility_index": 4,
+            "student_index": 1,
+            "organization_index": 4,
+            "status": ReservationStatus.completed,
+            "activity_title": "Kuliah Tamu Kewirausahaan Sosial",
+            "start_offset_days": -2,
+            "duration_hours": 3,
+            "signed_letter": True,
+            "review": True,
+            "rating": 5,
+            "comment": "Kapasitas auditorium pas untuk kuliah tamu dan layar utama mudah terlihat.",
+            "participants": 260,
+        },
+    ]
+
+    reservations: list[Reservation] = []
+    for spec in specs:
+        starts_at = first_start + timedelta(days=spec["start_offset_days"])
+        starts_at = starts_at.replace(hour=9 + (len(reservations) % 6), minute=0, second=0, microsecond=0)
+        facility = facilities[spec["facility_index"]]
+        reservations.append(
+            _ensure_reservation(
+                session,
+                code=spec["code"],
+                facility=facility,
+                student=students[spec["student_index"]],
+                organization_unit=organization_units[spec["organization_index"]],
+                status=spec["status"],
+                activity_title=spec["activity_title"],
+                starts_at=starts_at,
+                ends_at=starts_at + timedelta(hours=spec["duration_hours"]),
+                document_upload_due_at=spec.get("document_upload_due_at"),
+                document_verification_due_at=spec.get("document_verification_due_at"),
+                payment_upload_due_at=spec.get("payment_upload_due_at"),
+                payment_verification_due_at=spec.get("payment_verification_due_at"),
+                rejection_reason=spec.get("rejection_reason"),
+                rejection_source=spec.get("rejection_source"),
+                cancellation_reason=spec.get("cancellation_reason"),
+                signed_letter=spec.get("signed_letter", False),
+                payment_receipt=spec.get("payment_receipt", False),
+                review=spec.get("review", False),
+                review_rating=spec.get("rating", 5),
+                review_comment=spec.get("comment", "Fasilitas siap pakai dan proses peminjaman jelas."),
+                review_is_deleted=spec.get("review_is_deleted", False),
+                review_admin_removal_reason=spec.get("admin_removal_reason"),
+                participant_count=min(facility.capacity, spec["participants"]),
+                extra_requirement_av_support=spec.get("av", False),
+                extra_requirement_logistics_coordination=spec.get("logistics", False),
+                extra_requirement_extra_cleaning=spec.get("cleaning", False),
+                extra_requirement_security_personnel=spec.get("security", False),
+                extra_requirement_notes=spec.get("notes"),
+                event_description=f"Data demo realistis untuk {spec['activity_title']} oleh {organization_units[spec['organization_index']].name}.",
+            )
+        )
+    return reservations
 
 
 def _remove_demo_student_reservations(session, demo_student: User) -> None:
@@ -860,25 +1317,33 @@ def _ensure_payment_receipt(reservation: Reservation, *, uploaded_at: datetime) 
     return reservation.payment_receipt
 
 
-def _ensure_review(reservation: Reservation, *, created_at: datetime) -> FacilityReview:
+def _ensure_review(
+    reservation: Reservation,
+    *,
+    created_at: datetime,
+    rating: int,
+    comment: str,
+    is_deleted: bool,
+    admin_removal_reason: str | None,
+) -> FacilityReview:
     if reservation.review is None:
         reservation.review = FacilityReview(
             reservation=reservation,
             facility=reservation.facility,
             student=reservation.student,
-            rating=5,
-            comment="Fasilitas siap pakai dan proses peminjaman jelas.",
-            is_deleted=False,
+            rating=rating,
+            comment=comment,
+            is_deleted=is_deleted,
             created_at=created_at,
         )
     reservation.review.facility = reservation.facility
     reservation.review.student = reservation.student
-    reservation.review.rating = 5
-    reservation.review.comment = "Fasilitas siap pakai dan proses peminjaman jelas."
-    reservation.review.is_deleted = False
-    reservation.review.deleted_by = None
-    reservation.review.deleted_at = None
-    reservation.review.admin_removal_reason = None
+    reservation.review.rating = rating
+    reservation.review.comment = comment
+    reservation.review.is_deleted = is_deleted
+    reservation.review.deleted_by = "super_admin" if is_deleted else None
+    reservation.review.deleted_at = created_at + timedelta(hours=1) if is_deleted else None
+    reservation.review.admin_removal_reason = admin_removal_reason if is_deleted else None
     reservation.review.created_at = created_at
     return reservation.review
 

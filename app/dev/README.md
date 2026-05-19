@@ -89,7 +89,7 @@ Total organization unit seed: 5.
 
 ## Reservasi Demo
 
-Total reservasi seed: 9. Semuanya dimiliki oleh `demo.student.06@apps.ipb.ac.id`.
+Total reservasi seed: 35. Akun `demo.student.06@apps.ipb.ac.id` tetap memiliki 9 reservasi tracer utama untuk semua state detail student, sementara akun student tambahan memiliki variasi data produksi untuk demo kalender, antrean staff, laporan Super Admin, dan ulasan fasilitas.
 
 | Kode | Status | Fasilitas | Organisasi | Aktivitas | Kegunaan testing |
 | --- | --- | --- | --- | --- | --- |
@@ -104,6 +104,16 @@ Total reservasi seed: 9. Semuanya dimiliki oleh `demo.student.06@apps.ipb.ac.id`
 | `DEV-SEED-PAYMENT-REJECTED` | `rejected` | Lapangan Basket Indoor | Himpunan Mahasiswa Ilmu Komputer | Pembayaran Ditolak | Tampilan penolakan pembayaran. |
 
 Reservasi yang memiliki metadata surat atau bukti bayar memakai key `dev-seed/...`. Runtime development menyediakan isi placeholder kecil untuk key tersebut, sehingga endpoint download bisa dipakai untuk blackbox testing tanpa upload manual lebih dulu.
+
+Ringkasan variasi tambahan:
+
+- 4 reservasi `pending_document_upload` untuk demo upload surat dan deadline dokumen.
+- 3 reservasi `pending_document_review` dan 1 `overdue_verification` untuk antrean review dokumen staff.
+- 5 reservasi `pending_payment` dengan kombinasi menunggu upload dan menunggu review bukti bayar.
+- 4 reservasi `approved` untuk kalender publik dan jadwal staff.
+- 11 reservasi `completed`, termasuk 10 ulasan terlihat yang tersebar di beberapa fasilitas dengan rating 3 sampai 5.
+- 1 ulasan tersembunyi untuk demo moderasi review Super Admin.
+- Variasi `cancelled`, `cancellation_requested`, `expired`, dan `rejected` untuk daftar/filter/status laporan.
 
 ## Rekomendasi Akun Testing
 
