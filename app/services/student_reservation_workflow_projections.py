@@ -39,6 +39,7 @@ class ReservationDocumentMetadata:
     filename: str
     content_type: str
     size_bytes: int
+    letter_number: str | None = None
     generated_at: datetime | None = None
     uploaded_at: datetime | None = None
 
@@ -171,6 +172,7 @@ def _approval_letter_metadata(reservation: Reservation) -> ReservationDocumentMe
         filename=reservation.approval_letter.filename,
         content_type=reservation.approval_letter.content_type,
         size_bytes=reservation.approval_letter.size_bytes,
+        letter_number=reservation.approval_letter.letter_number,
         generated_at=_as_utc(reservation.approval_letter.generated_at),
     )
 
@@ -218,7 +220,7 @@ def _payment_review_status(reservation: Reservation) -> str:
     if reservation.price_rupiah <= 0:
         return "not_required"
     if reservation.status == ReservationStatus.pending_payment:
-        if reservation.payment_receipt is None:
+        if reservation.payment_receipt is None or reservation.payment_verification_due_at is None:
             return "upload_needed"
         return "waiting_review"
     if reservation.status == ReservationStatus.rejected and reservation.rejection_source == ReservationRejectionSource.payment:

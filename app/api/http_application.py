@@ -1,7 +1,9 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Protocol
+from urllib.parse import unquote
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,7 +44,7 @@ from app.core.module_factories import (
     UserAccountModuleFactory,
 )
 from app.core.settings import SettingsModule
-from app.storage import InMemoryPrivateStorage
+from app.storage import InMemoryPrivateStorage, LocalPrivateStorage, PrivateStorage
 
 
 @dataclass(frozen=True)
@@ -203,7 +205,7 @@ class HttpRuntimeModule:
         self._default_booking_settings = BookingSettings.defaults(
             allowed_student_email_domains=self._settings.allowed_student_email_domains
         )
-        self._private_storage = InMemoryPrivateStorage()
+        self._private_storage = _build_private_storage(self._settings)
         self._user_account_factory = UserAccountModuleFactory(
             settings=self._settings,
             default_booking_settings=self._default_booking_settings,
@@ -512,6 +514,7 @@ class HttpApplicationModule:
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
+            expose_headers=["Content-Disposition"],
         )
         runtime = self._runtime_dependency_registry or HttpRuntimeModule(settings=self._settings, clock=self._clock)
         runtime.create_schema()
@@ -611,3 +614,17 @@ class HttpApplicationModule:
 
         app.state.session_factory = runtime.session_factory
         return app
+
+
+def _build_private_storage(settings: SettingsModule) -> PrivateStorage:
+    if settings.private_storage_path:
+        return LocalPrivateStorage(settings.private_storage_path)
+
+    if settings.database_url.startswith("sqlite") and ":memory:" in settings.database_url:
+        return InMemoryPrivateStorage()
+
+    if settings.database_url.startswith("sqlite+pysqlite:///"):
+        database_path = unquote(settings.database_url.removeprefix("sqlite+pysqlite:///"))
+        return LocalPrivateStorage(Path(database_path).resolve().parent / "private-storage")
+
+    return LocalPrivateStorage("private-storage")

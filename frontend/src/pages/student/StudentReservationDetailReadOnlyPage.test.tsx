@@ -161,6 +161,29 @@ describe("StudentReservationDetailReadOnlyPage", () => {
     });
   });
 
+  it("offers payment continuation when a paid reservation document is accepted but payment is still due", async () => {
+    mockReservationFetch(reservation({
+      payment: {
+        receipt: null,
+        required: true,
+        review_status: "upload_needed",
+      },
+      status: "approved",
+    }));
+
+    renderDetail();
+
+    expect(await screen.findByRole("heading", { name: "Grand Auditorium" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Lanjut ke Pembayaran" })).toHaveAttribute(
+      "href",
+      "/student/reservations/reservation-1/payment",
+    );
+    expect(screen.getByRole("link", { name: "Ajukan Pembatalan" })).toHaveAttribute(
+      "href",
+      "/student/reservations/reservation-1/cancellation",
+    );
+  });
+
   it("omits document rows when backend metadata is null", async () => {
     mockReservationFetch(reservation({
       document: { approval_letter: null, signed_approval_letter: null },

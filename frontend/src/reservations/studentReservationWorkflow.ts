@@ -67,6 +67,7 @@ type ReservationDocumentMetadata = {
   content_type: string;
   filename: string;
   generated_at?: string | null;
+  letter_number?: string | null;
   size_bytes: number;
   uploaded_at?: string | null;
 };

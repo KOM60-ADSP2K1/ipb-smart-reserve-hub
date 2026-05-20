@@ -40,7 +40,7 @@ Gap statuses:
 | --- | --- | --- | --- |
 | [BG-STUDENT-03-01](per-page-brief/student-03-reservation-time-form.md#bg-student-03-01-reservation-time-validation) | `student-03-reservation-time-form.md` | resolved | Reservation time validation |
 | [BG-STUDENT-04-01](per-page-brief/student-04-reservation-detail-form.md#bg-student-04-01-reservation-submission-extra-requirements) | `student-04-reservation-detail-form.md` | resolved | Reservation submission and extra requirements |
-| [BG-STUDENT-05-01](per-page-brief/student-05-reservation-letter.md#bg-student-05-01-approval-letter-generation-and-upload) | `student-05-reservation-letter.md` | resolved | Approval letter generation and upload |
+| [BG-STUDENT-05-01](per-page-brief/student-05-reservation-letter.md#bg-student-05-01-approval-letter-generation-and-upload) | `student-05-reservation-letter.md` | resolved | Approval letter issuance, PDF-only upload, and explicit verification submit |
 | [BG-STUDENT-06-WAITING-01](per-page-brief/student-06-reservation-verification-waiting.md#bg-student-06-waiting-01-document-waiting-projection) | `student-06-reservation-verification-waiting.md` | resolved | Document waiting projection |
 | [BG-STUDENT-06-DECLINED-01](per-page-brief/student-06-reservation-verification-declined.md#bg-student-06-declined-01-document-declined-projection) | `student-06-reservation-verification-declined.md` | resolved | Document declined projection |
 | [BG-STUDENT-08-01](per-page-brief/student-08-reservation-accepted.md#bg-student-08-01-accepted-reservation-projection) | `student-08-reservation-accepted.md` | resolved | Accepted reservation projection |
@@ -53,7 +53,7 @@ Gap statuses:
 
 | Gap ID | Page Brief | Status | Label |
 | --- | --- | --- | --- |
-| [BG-STUDENT-07-01](per-page-brief/student-07-payment.md#bg-student-07-01-payment-instructions-and-receipt-upload) | `student-07-payment.md` | resolved | Payment instructions and receipt upload |
+| [BG-STUDENT-07-01](per-page-brief/student-07-payment.md#bg-student-07-01-payment-instructions-and-receipt-upload) | `student-07-payment.md` | resolved | Payment instructions, receipt upload, and explicit verification submit |
 | [BG-STUDENT-07-WAITING-01](per-page-brief/student-07-payment-waiting.md#bg-student-07-waiting-01-payment-waiting-projection) | `student-07-payment-waiting.md` | resolved | Payment waiting projection |
 | [BG-STUDENT-07-DECLINED-01](per-page-brief/student-07-payment-declined.md#bg-student-07-declined-01-payment-declined-projection) | `student-07-payment-declined.md` | resolved | Payment declined projection |
 

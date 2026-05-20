@@ -8,6 +8,7 @@ from app.schemas.reservation_schemas import (
     StaffDocumentRejectionRequest,
     StaffDocumentReviewResponse,
     StudentApprovalLetterResponse,
+    StudentSignedApprovalLetterSubmissionResponse,
     StudentSignedApprovalLetterResponse,
 )
 from app.services.accounts import UserAccount
@@ -16,8 +17,11 @@ from app.services.approval_letters import (
     ApprovalLetterNotGenerated,
     DocumentRejectionReasonRequired,
     InvalidSignedApprovalLetterFile,
+    SignedApprovalLetterSubmissionUnavailable,
     SignedApprovalLetterFileTooLarge,
     SignedApprovalLetterUpload,
+    SignedApprovalLetterUploadUnavailable,
+    StaffDocumentReviewUnavailable,
     StaffDocumentReviewAccessDenied,
 )
 from app.services.reservations import ReservationNotFound
@@ -86,12 +90,41 @@ def register_approval_letter_routes(
         except InvalidSignedApprovalLetterFile:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Unggah surat bertanda tangan harus berupa PDF, JPG, JPEG, atau PNG.",
+                detail="Unggah surat bertanda tangan harus berupa PDF.",
             )
         except SignedApprovalLetterFileTooLarge:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Ukuran surat bertanda tangan maksimal 5 MB.",
+            )
+        except SignedApprovalLetterUploadUnavailable:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Surat bertanda tangan hanya dapat diunggah sebelum review dokumen selesai.",
+            )
+
+    @app.post(
+        "/student/reservations/{reservation_id}/signed-approval-letter/submit",
+        response_model=StudentSignedApprovalLetterSubmissionResponse,
+    )
+    async def submit_student_signed_approval_letter(
+        reservation_id: str,
+        approval_letters: ApprovalLetterModule = Depends(get_approval_letters),
+        current_user: UserAccount = Depends(require_access(AccessPolicyAction.enter_student_shell)),
+    ):
+        try:
+            return approval_letters.submit_student_signed_approval_letter(current_user, reservation_id)
+        except ReservationNotFound:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservasi tidak ditemukan.")
+        except ApprovalLetterNotGenerated:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Surat bertanda tangan belum diunggah.",
+            )
+        except SignedApprovalLetterSubmissionUnavailable:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Surat bertanda tangan tidak dapat dikirim untuk verifikasi pada status reservasi saat ini.",
             )
 
     @app.get("/student/reservations/{reservation_id}/signed-approval-letter/download")
@@ -134,6 +167,11 @@ def register_approval_letter_routes(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Surat bertanda tangan belum diunggah.",
             )
+        except StaffDocumentReviewUnavailable:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Surat bertanda tangan belum dikirim untuk verifikasi.",
+            )
 
     @app.get("/staff/reservations/{reservation_id}/signed-approval-letter/download")
     async def download_staff_signed_approval_letter(
@@ -154,6 +192,11 @@ def register_approval_letter_routes(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Surat bertanda tangan belum diunggah.",
+            )
+        except StaffDocumentReviewUnavailable:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Surat bertanda tangan belum dikirim untuk verifikasi.",
             )
         return attachment_response(download)
 
@@ -186,4 +229,9 @@ def register_approval_letter_routes(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Surat bertanda tangan belum diunggah.",
+            )
+        except StaffDocumentReviewUnavailable:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Surat bertanda tangan belum dikirim untuk verifikasi.",
             )

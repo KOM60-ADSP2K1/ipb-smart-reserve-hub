@@ -12,13 +12,13 @@
 - Proposed route: `/student/reservations/:reservationId`
 - Auth/role: `student`
 - Unauthorized behavior: redirect to login.
-- Redirect behavior: `Ajukan Pembatalan` opens cancellation request flow; document links download private files.
+- Redirect behavior: `Lanjut ke Pembayaran` opens payment upload when a paid reservation still requires payment; `Ajukan Pembatalan` opens cancellation request flow; document links download private files.
 
 ## Purpose
 
 - User job: inspect an approved reservation, reopen documents/receipts, and request cancellation if allowed.
 - Entry points: reservation list, accepted page.
-- Exit points: cancellation request, file downloads, list.
+- Exit points: payment upload, cancellation request, file downloads, list.
 
 ## Design Contract
 
@@ -30,7 +30,7 @@
 
 ## UX Behavior
 
-- Primary actions: request cancellation from the lower content action area.
+- Primary actions: continue to payment when payment is still due; request cancellation from the lower content action area.
 - Secondary actions: download/view documents and receipt.
 - Loading state: detail skeleton with stable gallery/card dimensions.
 - Empty state: missing optional files are omitted rather than faked.

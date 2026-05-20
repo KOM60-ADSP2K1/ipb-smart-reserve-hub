@@ -62,6 +62,7 @@ class StaffReservationFileMetadata:
     filename: str
     content_type: str
     size_bytes: int
+    letter_number: str | None = None
     generated_at: datetime | None = None
     uploaded_at: datetime | None = None
 
@@ -327,6 +328,7 @@ def _approval_letter_metadata(reservation: Reservation) -> StaffReservationFileM
         filename=reservation.approval_letter.filename,
         content_type=reservation.approval_letter.content_type,
         size_bytes=reservation.approval_letter.size_bytes,
+        letter_number=reservation.approval_letter.letter_number,
         generated_at=_optional_utc(reservation.approval_letter.generated_at),
     )
 

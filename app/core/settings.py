@@ -14,6 +14,7 @@ class SettingsModule:
     database_url: str = DEFAULT_DATABASE_URL
     secret_key: str = DEFAULT_SECRET_KEY
     allowed_student_email_domains: tuple[str, ...] = DEFAULT_ALLOWED_STUDENT_EMAIL_DOMAINS
+    private_storage_path: str | None = None
 
     @classmethod
     def from_environment(cls, environ: Mapping[str, str] | None = None) -> "SettingsModule":
@@ -24,6 +25,7 @@ class SettingsModule:
             allowed_student_email_domains=cls._parse_allowed_domains(
                 source.get("IPB_ALLOWED_STUDENT_EMAIL_DOMAINS")
             ),
+            private_storage_path=source.get("IPB_PRIVATE_STORAGE_PATH"),
         )
         if source.get("IPB_ENVIRONMENT") == PRODUCTION_ENVIRONMENT:
             settings._validate_production(source)
@@ -35,6 +37,7 @@ class SettingsModule:
         database_url: str | None = None,
         secret_key: str | None = None,
         allowed_student_email_domains: tuple[str, ...] | None = None,
+        private_storage_path: str | None = None,
     ) -> "SettingsModule":
         return SettingsModule(
             database_url=database_url or self.database_url,
@@ -42,6 +45,7 @@ class SettingsModule:
             allowed_student_email_domains=self._normalize_allowed_domains(
                 allowed_student_email_domains or self.allowed_student_email_domains
             ),
+            private_storage_path=private_storage_path or self.private_storage_path,
         )
 
     @staticmethod

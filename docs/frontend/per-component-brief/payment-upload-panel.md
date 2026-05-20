@@ -47,7 +47,7 @@ Display payment instructions, receipt upload, and payment review state.
 ## Data Contract
 
 - Props/data fields: amount, instructions, required, receipt metadata, review status, rejection reason.
-- Events: receipt selected/submitted.
+- Events: receipt selected, receipt uploaded, and uploaded receipt submitted for verification.
 
 ## Design Rules
 

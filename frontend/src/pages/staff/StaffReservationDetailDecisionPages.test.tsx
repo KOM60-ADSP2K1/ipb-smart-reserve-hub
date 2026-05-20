@@ -54,10 +54,16 @@ const detailResponse = {
   participant_count: 80,
   payment: {
     due_at: null,
-    receipt: null,
+    receipt: {
+      content_type: "image/png",
+      filename: "bukti-pembayaran.png",
+      generated_at: null,
+      size_bytes: 1024,
+      uploaded_at: "2026-05-02T00:00:00Z",
+    },
     rejection_reason: null,
     required: false,
-    review_status: "not_required",
+    review_status: "pending_review",
   },
   price_rupiah: 0,
   reservation_code: "RSV-SEMINAR-DETAIL",
@@ -124,6 +130,18 @@ describe("StaffReservationDetailDecisionPages", () => {
         );
       }
 
+      if (url === "http://localhost:8000/staff/reservations/reservation-1/payment-receipt/download") {
+        return Promise.resolve(
+          new Response("image-bytes", {
+            headers: {
+              "Content-Disposition": 'attachment; filename="bukti-pembayaran.png"',
+              "Content-Type": "image/png",
+            },
+            status: 200,
+          }),
+        );
+      }
+
       return jsonResponse({ detail: `Unhandled ${url}` }, 404);
     });
 
@@ -135,13 +153,18 @@ describe("StaffReservationDetailDecisionPages", () => {
     expect(screen.getByText("Seminar Detail")).toBeVisible();
     expect(screen.getByText("Dukungan AV, Catatan: Butuh dua mikrofon.")).toBeVisible();
     expect(screen.getByText("surat-persetujuan.pdf")).toBeVisible();
-    expect(screen.queryByText("Bukti pembayaran belum tersedia.")).not.toBeInTheDocument();
+    expect(screen.getByText("bukti-pembayaran.png")).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Unduh Dokumen surat-persetujuan.pdf" }));
+    await user.click(screen.getByRole("button", { name: "Unduh Dokumen bukti-pembayaran.png" }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
         "http://localhost:8000/staff/reservations/reservation-1/signed-approval-letter/download",
+        expect.any(Object),
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://localhost:8000/staff/reservations/reservation-1/payment-receipt/download",
         expect.any(Object),
       );
     });

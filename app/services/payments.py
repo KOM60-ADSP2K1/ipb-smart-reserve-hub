@@ -49,6 +49,13 @@ class StudentPaymentReceipt:
 
 
 @dataclass(frozen=True)
+class StudentPaymentReceiptSubmission:
+    reservation_id: str
+    status: ReservationStatus
+    payment_verification_due_at: datetime
+
+
+@dataclass(frozen=True)
 class StudentPaymentReceiptDownload:
     filename: str
     content_type: str
@@ -74,6 +81,10 @@ class ReservationPaymentUnavailable(Exception):
 
 
 class PaymentReceiptNotUploaded(Exception):
+    pass
+
+
+class PaymentReceiptNotSubmitted(Exception):
     pass
 
 
@@ -173,19 +184,47 @@ class PaymentModule:
             size_bytes=file_metadata.size_bytes,
             uploaded_at=file_metadata.uploaded_at,
         )
-        self._reservation_lifecycle.record_payment_receipt_uploaded(reservation)
+        reservation.payment_verification_due_at = None
         if self._notifications is not None:
             self._notifications.student_action_recorded(
                 reservation,
                 title="Bukti pembayaran berhasil diunggah",
-                message=f"Bukti pembayaran {reservation.activity_title} sedang menunggu review.",
-            )
-            self._notifications.staff_action_needed(
-                reservation,
-                title="Bukti pembayaran menunggu review",
-                message=f"Bukti pembayaran {reservation.activity_title} menunggu verifikasi.",
+                message=f"Bukti pembayaran {reservation.activity_title} berhasil disimpan.",
             )
         return _to_student_payment_receipt(reservation.payment_receipt)
+
+    def submit_student_payment_receipt(
+        self,
+        student: UserAccount,
+        reservation_id: str,
+    ) -> StudentPaymentReceiptSubmission:
+        reservation = self._reservation_repository.get_for_student(reservation_id, student.id)
+        if reservation is None:
+            raise ReservationNotFound
+        if reservation.status != ReservationStatus.pending_payment or reservation.price_rupiah <= 0:
+            raise ReservationPaymentUnavailable
+        if reservation.payment_receipt is None:
+            raise PaymentReceiptNotUploaded
+        if reservation.payment_verification_due_at is None:
+            self._reservation_lifecycle.record_payment_receipt_uploaded(reservation)
+            if self._notifications is not None:
+                self._notifications.student_action_recorded(
+                    reservation,
+                    title="Bukti pembayaran dikirim untuk verifikasi",
+                    message=f"Bukti pembayaran {reservation.activity_title} sedang menunggu review.",
+                )
+                self._notifications.staff_action_needed(
+                    reservation,
+                    title="Bukti pembayaran menunggu review",
+                    message=f"Bukti pembayaran {reservation.activity_title} menunggu verifikasi.",
+                )
+        if reservation.payment_verification_due_at is None:
+            raise ReservationPaymentUnavailable
+        return StudentPaymentReceiptSubmission(
+            reservation_id=reservation.id,
+            status=reservation.status,
+            payment_verification_due_at=reservation.payment_verification_due_at,
+        )
 
     def download_student_payment_receipt(
         self,
@@ -208,6 +247,8 @@ class PaymentModule:
         reservation = self._get_staff_payment_review_reservation(staff, reservation_id)
         if reservation.payment_receipt is None:
             raise PaymentReceiptNotUploaded
+        if reservation.payment_verification_due_at is None:
+            raise PaymentReceiptNotSubmitted
         download = self._private_files.download(reservation.payment_receipt)
         return StaffPaymentReceiptDownload(
             filename=download.filename,
@@ -219,6 +260,8 @@ class PaymentModule:
         reservation = self._get_staff_payment_review_reservation(staff, reservation_id)
         if reservation.payment_receipt is None:
             raise PaymentReceiptNotUploaded
+        if reservation.payment_verification_due_at is None:
+            raise PaymentReceiptNotSubmitted
         self._reservation_lifecycle.approve_payment(reservation)
         if self._notifications is not None:
             self._notifications.student_action_recorded(
@@ -244,6 +287,8 @@ class PaymentModule:
         reservation = self._get_staff_payment_review_reservation(staff, reservation_id)
         if reservation.payment_receipt is None:
             raise PaymentReceiptNotUploaded
+        if reservation.payment_verification_due_at is None:
+            raise PaymentReceiptNotSubmitted
         self._reservation_lifecycle.reject_payment(reservation, reason=reason)
         if self._notifications is not None:
             self._notifications.student_action_recorded(

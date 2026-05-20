@@ -75,6 +75,10 @@ async def _move_paid_reservation_to_pending_payment(
         files={"file": ("signed-letter.pdf", b"%PDF-1.4 signed letter", "application/pdf")},
     )
     await client.post(
+        f"/student/reservations/{reservation['id']}/signed-approval-letter/submit",
+        headers={"Authorization": f"Bearer {student_token}"},
+    )
+    await client.post(
         f"/staff/reservations/{reservation['id']}/document-review/approve",
         headers={"Authorization": f"Bearer {staff_token}"},
     )
@@ -128,6 +132,10 @@ async def test_student_sees_payment_instructions_only_after_paid_reservation_rea
             files={"file": ("signed-letter.pdf", b"%PDF-1.4 signed letter", "application/pdf")},
         )
         await client.post(
+            f"/student/reservations/{reservation['id']}/signed-approval-letter/submit",
+            headers={"Authorization": f"Bearer {student_token}"},
+        )
+        await client.post(
             f"/staff/reservations/{reservation['id']}/document-review/approve",
             headers={"Authorization": f"Bearer {staff_token}"},
         )
@@ -148,7 +156,7 @@ async def test_student_sees_payment_instructions_only_after_paid_reservation_rea
 
 
 @pytest.mark.anyio
-async def test_student_uploads_payment_receipt_for_pending_paid_reservation():
+async def test_student_uploads_payment_receipt_without_submitting_for_verification():
     app = create_app(
         database_url="sqlite+pysqlite:///:memory:",
         clock=lambda: datetime(2026, 5, 1, 3, 0, tzinfo=UTC),
@@ -202,7 +210,7 @@ async def test_student_uploads_payment_receipt_for_pending_paid_reservation():
         "uploaded_at": "2026-05-01T03:00:00Z",
     }
     assert updated.json()["status"] == "pending_payment"
-    assert updated.json()["payment_verification_due_at"] == "2026-05-02T03:00:00Z"
+    assert updated.json()["payment_verification_due_at"] is None
     assert updated.json()["payment"] == {
         "required": True,
         "receipt": {
@@ -212,10 +220,67 @@ async def test_student_uploads_payment_receipt_for_pending_paid_reservation():
             "generated_at": None,
             "uploaded_at": "2026-05-01T03:00:00Z",
         },
-        "review_status": "waiting_review",
+        "review_status": "upload_needed",
         "rejection_reason": None,
     }
     assert reservation_list.json()[0]["payment"] == updated.json()["payment"]
+
+
+@pytest.mark.anyio
+async def test_student_submits_uploaded_payment_receipt_for_verification():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime(2026, 5, 1, 3, 0, tzinfo=UTC),
+    )
+    test_data = DataBuilder(app)
+    test_data.create_user(email="admin@ipb.ac.id", role=UserRole.super_admin)
+    staff_id = test_data.create_user(email="staff@ipb.ac.id", role=UserRole.staff)
+    facility_id = test_data.create_facility(
+        name="Auditorium Andi Hakim Nasoetion",
+        price_rupiah=250000,
+        payment_instructions="Transfer ke BNI 123456789 a.n. IPB",
+    )
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    organization_unit_id = test_data.create_organization_unit(name="BEM KM IPB")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        admin_token = await _login(client, email="admin@ipb.ac.id")
+        staff_token = await _login(client, email="staff@ipb.ac.id")
+        student_token = await _register_and_login(client, email="budi@apps.ipb.ac.id")
+        reservation = await _move_paid_reservation_to_pending_payment(
+            client,
+            admin_token=admin_token,
+            staff_token=staff_token,
+            student_token=student_token,
+            facility_id=facility_id,
+            staff_id=staff_id,
+            organization_unit_id=organization_unit_id,
+        )
+        await client.post(
+            f"/student/reservations/{reservation['id']}/payment-receipt",
+            headers={"Authorization": f"Bearer {student_token}"},
+            files={"file": ("receipt.jpg", b"\xff\xd8 payment receipt", "image/jpeg")},
+        )
+
+        submit = await client.post(
+            f"/student/reservations/{reservation['id']}/payment-receipt/submit",
+            headers={"Authorization": f"Bearer {student_token}"},
+        )
+        updated = await client.get(
+            f"/student/reservations/{reservation['id']}",
+            headers={"Authorization": f"Bearer {student_token}"},
+        )
+
+    assert submit.status_code == 200
+    assert submit.json() == {
+        "reservation_id": reservation["id"],
+        "status": "pending_payment",
+        "payment_verification_due_at": "2026-05-02T03:00:00Z",
+    }
+    assert updated.json()["status"] == "pending_payment"
+    assert updated.json()["payment_verification_due_at"] == "2026-05-02T03:00:00Z"
+    assert updated.json()["payment"]["review_status"] == "waiting_review"
 
 
 @pytest.mark.anyio
@@ -253,6 +318,10 @@ async def test_student_downloads_uploaded_payment_receipt():
             f"/student/reservations/{reservation['id']}/payment-receipt",
             headers={"Authorization": f"Bearer {student_token}"},
             files={"file": ("receipt.png", b"payment receipt image", "image/png")},
+        )
+        await client.post(
+            f"/student/reservations/{reservation['id']}/payment-receipt/submit",
+            headers={"Authorization": f"Bearer {student_token}"},
         )
 
         download = await client.get(
@@ -448,6 +517,10 @@ async def test_assigned_staff_downloads_and_approves_payment_receipt():
             headers={"Authorization": f"Bearer {student_token}"},
             files={"file": ("receipt.png", b"payment receipt image", "image/png")},
         )
+        await client.post(
+            f"/student/reservations/{reservation['id']}/payment-receipt/submit",
+            headers={"Authorization": f"Bearer {student_token}"},
+        )
 
         download = await client.get(
             f"/staff/reservations/{reservation['id']}/payment-receipt/download",
@@ -473,6 +546,117 @@ async def test_assigned_staff_downloads_and_approves_payment_receipt():
         "rejection_reason": None,
     }
     assert updated.json()["status"] == "approved"
+
+
+@pytest.mark.anyio
+async def test_assigned_staff_cannot_review_uploaded_payment_receipt_before_student_submits_it():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime(2026, 5, 1, 3, 0, tzinfo=UTC),
+    )
+    test_data = DataBuilder(app)
+    test_data.create_user(email="admin@ipb.ac.id", role=UserRole.super_admin)
+    staff_id = test_data.create_user(email="staff@ipb.ac.id", role=UserRole.staff)
+    facility_id = test_data.create_facility(
+        name="Auditorium Andi Hakim Nasoetion",
+        price_rupiah=250000,
+        payment_instructions="Transfer ke BNI 123456789 a.n. IPB",
+    )
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    organization_unit_id = test_data.create_organization_unit(name="BEM KM IPB")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        admin_token = await _login(client, email="admin@ipb.ac.id")
+        staff_token = await _login(client, email="staff@ipb.ac.id")
+        student_token = await _register_and_login(client, email="budi@apps.ipb.ac.id")
+        reservation = await _move_paid_reservation_to_pending_payment(
+            client,
+            admin_token=admin_token,
+            staff_token=staff_token,
+            student_token=student_token,
+            facility_id=facility_id,
+            staff_id=staff_id,
+            organization_unit_id=organization_unit_id,
+        )
+        await client.post(
+            f"/student/reservations/{reservation['id']}/payment-receipt",
+            headers={"Authorization": f"Bearer {student_token}"},
+            files={"file": ("receipt.png", b"payment receipt image", "image/png")},
+        )
+
+        download = await client.get(
+            f"/staff/reservations/{reservation['id']}/payment-receipt/download",
+            headers={"Authorization": f"Bearer {staff_token}"},
+        )
+        review = await client.post(
+            f"/staff/reservations/{reservation['id']}/payment-review/approve",
+            headers={"Authorization": f"Bearer {staff_token}"},
+        )
+
+    assert download.status_code == 409
+    assert download.json()["detail"] == "Bukti pembayaran belum dikirim untuk verifikasi."
+    assert review.status_code == 409
+    assert review.json()["detail"] == "Bukti pembayaran belum dikirim untuk verifikasi."
+
+
+@pytest.mark.anyio
+async def test_assigned_staff_downloads_uploaded_payment_receipt_after_app_restart(tmp_path):
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'payment-files.db'}"
+    clock = lambda: datetime(2026, 5, 1, 3, 0, tzinfo=UTC)
+    app = create_app(database_url=database_url, clock=clock)
+    test_data = DataBuilder(app)
+    test_data.create_user(email="admin@ipb.ac.id", role=UserRole.super_admin)
+    staff_id = test_data.create_user(email="staff@ipb.ac.id", role=UserRole.staff)
+    facility_id = test_data.create_facility(
+        name="Auditorium Andi Hakim Nasoetion",
+        price_rupiah=250000,
+        payment_instructions="Transfer ke BNI 123456789 a.n. IPB",
+    )
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    organization_unit_id = test_data.create_organization_unit(name="BEM KM IPB")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        admin_token = await _login(client, email="admin@ipb.ac.id")
+        staff_token = await _login(client, email="staff@ipb.ac.id")
+        student_token = await _register_and_login(client, email="budi@apps.ipb.ac.id")
+        reservation = await _move_paid_reservation_to_pending_payment(
+            client,
+            admin_token=admin_token,
+            staff_token=staff_token,
+            student_token=student_token,
+            facility_id=facility_id,
+            staff_id=staff_id,
+            organization_unit_id=organization_unit_id,
+        )
+        await client.post(
+            f"/student/reservations/{reservation['id']}/payment-receipt",
+            headers={"Authorization": f"Bearer {student_token}"},
+            files={"file": ("receipt.png", b"\x89PNG\r\n\x1a\npayment receipt image", "image/png")},
+        )
+        await client.post(
+            f"/student/reservations/{reservation['id']}/payment-receipt/submit",
+            headers={"Authorization": f"Bearer {student_token}"},
+        )
+
+    restarted_app = create_app(database_url=database_url, clock=clock)
+    async with AsyncClient(transport=ASGITransport(app=restarted_app), base_url="http://test") as client:
+        restarted_staff_token = await _login(client, email="staff@ipb.ac.id")
+        detail = await client.get(
+            f"/staff/reservations/{reservation['id']}",
+            headers={"Authorization": f"Bearer {restarted_staff_token}"},
+        )
+        download = await client.get(
+            detail.json()["review_actions"]["payment"]["download_url"],
+            headers={"Authorization": f"Bearer {restarted_staff_token}"},
+        )
+
+    assert detail.status_code == 200
+    assert detail.json()["payment"]["receipt"]["filename"] == "receipt.png"
+    assert download.status_code == 200
+    assert download.headers["content-type"] == "image/png"
+    assert download.headers["content-disposition"] == 'attachment; filename="receipt.png"'
+    assert download.content == b"\x89PNG\r\n\x1a\npayment receipt image"
 
 
 @pytest.mark.anyio
@@ -510,6 +694,10 @@ async def test_assigned_staff_payment_rejection_requires_reason_and_rejects_rese
             f"/student/reservations/{reservation['id']}/payment-receipt",
             headers={"Authorization": f"Bearer {student_token}"},
             files={"file": ("receipt.png", b"payment receipt image", "image/png")},
+        )
+        await client.post(
+            f"/student/reservations/{reservation['id']}/payment-receipt/submit",
+            headers={"Authorization": f"Bearer {student_token}"},
         )
 
         missing_reason = await client.post(

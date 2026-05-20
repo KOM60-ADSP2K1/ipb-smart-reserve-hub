@@ -56,8 +56,12 @@ class ReservationDocumentMetadataResponse(BaseModel):
     uploaded_at: datetime | None = None
 
 
+class ApprovalLetterDocumentMetadataResponse(ReservationDocumentMetadataResponse):
+    letter_number: str
+
+
 class StudentReservationDocumentProjectionResponse(BaseModel):
-    approval_letter: ReservationDocumentMetadataResponse | None
+    approval_letter: ApprovalLetterDocumentMetadataResponse | None
     signed_approval_letter: ReservationDocumentMetadataResponse | None
     review_status: str
     rejection_reason: str | None = None
@@ -112,6 +116,7 @@ class StudentCancellationRequestResponse(StudentReservationResponse):
 class StudentApprovalLetterResponse(BaseModel):
     reservation_id: str
     reservation_code: str
+    letter_number: str
     filename: str
     content_type: str
     size_bytes: int
@@ -133,12 +138,24 @@ class StudentPaymentReceiptResponse(BaseModel):
     uploaded_at: datetime
 
 
+class StudentPaymentReceiptSubmissionResponse(BaseModel):
+    reservation_id: str
+    status: str
+    payment_verification_due_at: datetime
+
+
 class StudentSignedApprovalLetterResponse(BaseModel):
     reservation_id: str
     filename: str
     content_type: str
     size_bytes: int
     uploaded_at: datetime
+
+
+class StudentSignedApprovalLetterSubmissionResponse(BaseModel):
+    reservation_id: str
+    status: str
+    document_verification_due_at: datetime
 
 
 class StaffDocumentReviewResponse(BaseModel):
@@ -209,8 +226,12 @@ class StaffReservationFileMetadataResponse(BaseModel):
     uploaded_at: datetime | None = None
 
 
+class StaffApprovalLetterFileMetadataResponse(StaffReservationFileMetadataResponse):
+    letter_number: str
+
+
 class StaffReservationDetailDocumentResponse(BaseModel):
-    approval_letter: StaffReservationFileMetadataResponse | None
+    approval_letter: StaffApprovalLetterFileMetadataResponse | None
     signed_approval_letter: StaffReservationFileMetadataResponse | None
     review_status: str
     rejection_reason: str | None = None

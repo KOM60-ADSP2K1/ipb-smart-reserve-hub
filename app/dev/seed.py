@@ -16,6 +16,7 @@ from app.models import (
     FacilityStaffAssignment,
     Notification,
     OrganizationUnit,
+    ApprovalLetterNumberSequence,
     Reservation,
     ReservationApprovalLetter,
     ReservationPaymentReceipt,
@@ -28,6 +29,7 @@ from app.models import (
 
 
 DEMO_PASSWORD = "demo12345"
+_seed_letter_serials: dict[tuple[int, str], int] = {}
 
 DEMO_USERS = [
     {
@@ -110,6 +112,7 @@ def seed_development_data(*, settings: SettingsModule | None = None, environment
     engine = session_factory.kw["bind"]
     Base.metadata.create_all(bind=engine)
     _ensure_seed_compatible_schema(engine)
+    _reset_seed_letter_serials()
 
     with session_factory() as session:
         users_by_email = {user.email: user for user in (_ensure_user(session, **user_data) for user_data in DEMO_USERS)}
@@ -523,6 +526,7 @@ def seed_development_data(*, settings: SettingsModule | None = None, environment
             {reservation.reservation_code for reservation in seeded_reservations},
         )
         session.flush()
+        _ensure_approval_letter_number_sequences(session)
         _ensure_seed_notifications(session, reservation_student, seeded_reservations[:3], now=now)
         _ensure_seed_audit_logs(session, operations_staff, seeded_reservations[:3], now=now)
         session.commit()
@@ -575,9 +579,37 @@ def _ensure_seed_compatible_schema(engine) -> None:
             if "rejection_source" not in columns:
                 connection.execute(text("ALTER TABLE reservations ADD COLUMN rejection_source VARCHAR(32)"))
 
+        if "reservation_approval_letters" in tables:
+            columns = _column_names(inspector, "reservation_approval_letters")
+            if "letter_number" not in columns:
+                connection.execute(
+                    text(
+                        "ALTER TABLE reservation_approval_letters "
+                        "ADD COLUMN letter_number VARCHAR(64) NOT NULL DEFAULT 'RSV/IPBSRH/2026/000000'"
+                    )
+                )
+
 
 def _column_names(inspector, table_name: str) -> set[str]:
     return {column["name"] for column in inspector.get_columns(table_name)}
+
+
+def _reset_seed_letter_serials() -> None:
+    _seed_letter_serials.clear()
+
+
+def _ensure_approval_letter_number_sequences(session) -> None:
+    next_serial_by_year: dict[int, int] = {}
+    for year, _reservation_code in _seed_letter_serials:
+        next_serial_by_year[year] = max(next_serial_by_year.get(year, 1), _seed_letter_serials[(year, _reservation_code)] + 1)
+
+    for year, next_serial in next_serial_by_year.items():
+        sequence = session.get(ApprovalLetterNumberSequence, year)
+        if sequence is None:
+            sequence = ApprovalLetterNumberSequence(year=year, next_serial=next_serial)
+            session.add(sequence)
+        else:
+            sequence.next_serial = max(sequence.next_serial, next_serial)
 
 
 def _ensure_user(
@@ -794,13 +826,12 @@ def _ensure_reservation(
     reservation.rejection_source = rejection_source
     reservation.cancellation_reason = cancellation_reason
     reservation.cancellation_rejection_reason = cancellation_rejection_reason
+    _ensure_approval_letter(reservation, generated_at=starts_at - timedelta(days=3))
+    session.add(reservation.approval_letter)
     if signed_letter:
-        _ensure_approval_letter(reservation, generated_at=starts_at - timedelta(days=3))
         _ensure_signed_letter(reservation, uploaded_at=starts_at - timedelta(days=2))
-        session.add(reservation.approval_letter)
         session.add(reservation.signed_approval_letter)
     else:
-        reservation.approval_letter = None
         reservation.signed_approval_letter = None
     if payment_receipt:
         _ensure_payment_receipt(reservation, uploaded_at=starts_at - timedelta(days=1))
@@ -1262,21 +1293,32 @@ def _remove_unlisted_seed_reservations(session, current_codes: set[str]) -> None
 
 def _ensure_approval_letter(reservation: Reservation, *, generated_at: datetime) -> ReservationApprovalLetter:
     storage_key = f"dev-seed/approval-letters/{reservation.reservation_code}.pdf"
+    letter_number = _seed_letter_number(reservation.reservation_code, generated_at=generated_at)
     if reservation.approval_letter is None:
         reservation.approval_letter = ReservationApprovalLetter(
             reservation=reservation,
             storage_key=storage_key,
+            letter_number=letter_number,
             filename=f"{reservation.reservation_code}-surat-persetujuan.pdf",
             content_type="application/pdf",
             size_bytes=33,
             generated_at=generated_at,
         )
     reservation.approval_letter.storage_key = storage_key
+    reservation.approval_letter.letter_number = letter_number
     reservation.approval_letter.filename = f"{reservation.reservation_code}-surat-persetujuan.pdf"
     reservation.approval_letter.content_type = "application/pdf"
     reservation.approval_letter.size_bytes = 33
     reservation.approval_letter.generated_at = generated_at
     return reservation.approval_letter
+
+
+def _seed_letter_number(reservation_code: str, *, generated_at: datetime) -> str:
+    year = generated_at.year
+    key = (year, reservation_code)
+    if key not in _seed_letter_serials:
+        _seed_letter_serials[key] = len([existing for existing in _seed_letter_serials if existing[0] == year]) + 1
+    return f"RSV/IPBSRH/{year}/{_seed_letter_serials[key]:06d}"
 
 
 def _ensure_signed_letter(reservation: Reservation, *, uploaded_at: datetime) -> ReservationSignedApprovalLetter:

@@ -12,7 +12,7 @@
 - Proposed route: `/student/reservations/:reservationId/payment`
 - Auth/role: `student`
 - Unauthorized behavior: redirect to login.
-- Redirect behavior: after receipt upload, route to payment waiting page.
+- Redirect behavior: after receipt upload, stay on the payment page and show the stored receipt; after `Kirim`, route to payment waiting page.
 
 ## Purpose
 
@@ -30,12 +30,12 @@
 
 ## UX Behavior
 
-- Primary actions: upload receipt, then submit/continue to waiting review.
+- Primary actions: upload receipt, then submit/continue to waiting review with `Kirim`.
 - Secondary actions: view reservation detail/back.
 - Loading state: upload pending keeps file visible.
 - Empty state: not applicable for paid pending-payment route.
 - Error state: file validation and upload failures.
-- Disabled state: submit disabled until valid receipt file selected.
+- Disabled state: upload disabled while uploading; submit shows an error until an uploaded receipt exists.
 
 ## Accessibility
 
@@ -52,7 +52,7 @@
 
 ## Backend Integration And Gaps
 
-- Endpoints consumed: `GET /student/reservations/:reservationId/payment`, `POST /student/reservations/:reservationId/payment-receipt`, `GET /student/reservations/:reservationId`.
+- Endpoints consumed: `GET /student/reservations/:reservationId/payment`, `POST /student/reservations/:reservationId/payment-receipt`, `POST /student/reservations/:reservationId/payment-receipt/submit`, `GET /student/reservations/:reservationId`.
 - Page-needed fields: `amount_rupiah`, `payment_instructions`, `payment.required`, `payment.review_status`, `payment.receipt`; receipt upload accepts JPG/JPEG/PNG images only.
 - Auth/session assumptions: student-owned reservation only.
 - Source files: `app/api/routes/payment_routes.py`, `app/schemas/reservation_schemas.py`.
@@ -62,8 +62,8 @@
 - Status: `resolved`
 - Domain area: Payment
 - Affected UI: payment instruction card and receipt upload panel.
-- Contract needed: retrieve payment instructions and upload receipt metadata.
-- Evidence: payment instruction and receipt upload routes exist in `app/api/routes/payment_routes.py`; payment schemas exist in `app/schemas/reservation_schemas.py`.
+- Contract needed: retrieve payment instructions, upload receipt metadata without entering review, and explicitly submit the uploaded receipt for payment verification.
+- Evidence: payment instruction, receipt upload, and receipt submit routes exist in `app/api/routes/payment_routes.py`; payment schemas exist in `app/schemas/reservation_schemas.py`.
 - Source issue/PRD: `docs/issues/ISSUE-0010-paid-facility-receipt-upload-and-payment-review.md`.
 
 ## Shared Components
@@ -75,7 +75,7 @@
 ## Acceptance Checks
 
 - Desktop and mobile screenshots match references.
-- Integration checks: successful upload routes to waiting state.
+- Integration checks: successful upload stays on the payment page and shows the stored receipt; `Kirim` submits for verification and routes to waiting state.
 
 ## Open Questions
 

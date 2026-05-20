@@ -90,4 +90,34 @@ describe("apiDownload", () => {
       filename: "approval.pdf",
     });
   });
+
+  it("triggers a browser file save for downloaded blobs", async () => {
+    const click = vi.fn();
+    const revokeObjectURL = vi.fn();
+    const createObjectURL = vi.fn(() => "blob:http://localhost/approval");
+    const appendChild = vi.spyOn(document.body, "appendChild");
+    const removeChild = vi.spyOn(document.body, "removeChild");
+    vi.spyOn(URL, "createObjectURL").mockImplementation(createObjectURL);
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(revokeObjectURL);
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(click);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("binary", {
+        headers: {
+          "Content-Disposition": 'attachment; filename="approval.pdf"',
+          "Content-Type": "application/pdf",
+        },
+        status: 200,
+      }),
+    );
+
+    await apiDownload("/files/approval");
+
+    expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+    expect(click).toHaveBeenCalledTimes(1);
+    const anchor = appendChild.mock.calls[0]?.[0] as HTMLAnchorElement;
+    expect(anchor.download).toBe("approval.pdf");
+    expect(anchor.href).toBe("blob:http://localhost/approval");
+    expect(removeChild).toHaveBeenCalledWith(anchor);
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:http://localhost/approval");
+  });
 });

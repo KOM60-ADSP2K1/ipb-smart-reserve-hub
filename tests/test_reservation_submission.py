@@ -135,11 +135,19 @@ async def test_student_submits_reservation_details_and_views_held_reservation():
     assert created_body["participant_count"] == 80
     assert created_body["document_upload_due_at"] == "2026-05-04T00:00:00Z"
     assert created_body["document"] == {
-        "approval_letter": None,
+        "approval_letter": {
+            "filename": f"{created_body['reservation_code']}-surat-persetujuan.pdf",
+            "content_type": "application/pdf",
+            "size_bytes": created_body["document"]["approval_letter"]["size_bytes"],
+            "generated_at": "2026-05-01T00:00:00Z",
+            "uploaded_at": None,
+            "letter_number": "RSV/IPBSRH/2026/000001",
+        },
         "signed_approval_letter": None,
         "review_status": "upload_needed",
         "rejection_reason": None,
     }
+    assert created_body["document"]["approval_letter"]["size_bytes"] > 0
     assert created_body["payment"] == {
         "required": True,
         "receipt": None,
@@ -449,3 +457,5 @@ async def test_student_reservation_submission_creates_unique_human_readable_code
     assert first.json()["reservation_code"].startswith("RSV-")
     assert second.json()["reservation_code"].startswith("RSV-")
     assert first.json()["reservation_code"] != second.json()["reservation_code"]
+    assert first.json()["document"]["approval_letter"]["letter_number"] == "RSV/IPBSRH/2026/000001"
+    assert second.json()["document"]["approval_letter"]["letter_number"] == "RSV/IPBSRH/2026/000002"

@@ -4,8 +4,9 @@ from datetime import datetime
 from sqlalchemy.orm import Session
 
 from app.pdf import ApprovalLetterPdfGenerator
-from app.services.approval_letters import ApprovalLetterModule
+from app.services.approval_letters import ApprovalLetterIssuer, ApprovalLetterModule
 from app.services.accounts import UserAccountModule
+from app.repositories.approval_letter_number_repository import SqlAlchemyApprovalLetterNumberRepository
 from app.repositories.audit_log_repository import SqlAlchemyAuditLogRepository
 from app.services.assigned_facility_access import AssignedFacilityAccessModule
 from app.services.audit_logs import AuditLogModule
@@ -170,6 +171,12 @@ class FacilityReservationWorkflowAssembly:
             audit_log_repository=SqlAlchemyAuditLogRepository(session),
             clock=clock,
         )
+        self.approval_letter_issuer = ApprovalLetterIssuer(
+            number_repository=SqlAlchemyApprovalLetterNumberRepository(session),
+            storage=self._private_storage,
+            pdf_generator=self._approval_letter_pdf_generator,
+            clock=clock,
+        )
 
     def build_reservations(self) -> ReservationModule:
         return ReservationModule(
@@ -187,6 +194,7 @@ class FacilityReservationWorkflowAssembly:
             booking_settings=self.booking_settings,
             clock=self._clock,
             reservation_lifecycle=self.reservation_lifecycle,
+            approval_letter_issuer=self.approval_letter_issuer,
             staff_review_access=self.staff_review_access,
             notifications=self.notifications,
             audit_logs=self.audit_logs,
@@ -205,6 +213,7 @@ class FacilityReservationWorkflowAssembly:
             reservation_repository=self.reservation_repository,
             storage=self._private_storage,
             pdf_generator=self._approval_letter_pdf_generator,
+            approval_letter_issuer=self.approval_letter_issuer,
             booking_settings=self.booking_settings,
             clock=self._clock,
             reservation_lifecycle=self.reservation_lifecycle,

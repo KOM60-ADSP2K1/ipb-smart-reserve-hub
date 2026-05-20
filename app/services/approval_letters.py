@@ -5,6 +5,7 @@ import uuid
 
 from app.models import ReservationApprovalLetter, ReservationSignedApprovalLetter, ReservationStatus
 from app.pdf import ApprovalLetterInput, ApprovalLetterPdfGenerator
+from app.repositories.approval_letter_number_repository import ApprovalLetterNumberRepository
 from app.repositories.reservation_repository import ReservationRepository
 from app.services.accounts import UserAccount
 from app.services.audit_logs import AuditLogModule, AuditLogRecorder
@@ -30,6 +31,7 @@ from app.storage import PrivateStorage
 class StudentApprovalLetter:
     reservation_id: str
     reservation_code: str
+    letter_number: str
     filename: str
     content_type: str
     size_bytes: int
@@ -74,6 +76,13 @@ class StudentSignedApprovalLetter:
 
 
 @dataclass(frozen=True)
+class StudentSignedApprovalLetterSubmission:
+    reservation_id: str
+    status: ReservationStatus
+    document_verification_due_at: datetime
+
+
+@dataclass(frozen=True)
 class StaffDocumentReview:
     reservation_id: str
     status: ReservationStatus
@@ -92,12 +101,78 @@ class SignedApprovalLetterFileTooLarge(Exception):
     pass
 
 
+class SignedApprovalLetterUploadUnavailable(Exception):
+    pass
+
+
+class SignedApprovalLetterSubmissionUnavailable(Exception):
+    pass
+
+
 class StaffDocumentReviewAccessDenied(Exception):
+    pass
+
+
+class StaffDocumentReviewUnavailable(Exception):
     pass
 
 
 class DocumentRejectionReasonRequired(Exception):
     pass
+
+
+class ApprovalLetterAlreadyIssued(Exception):
+    pass
+
+
+class ApprovalLetterIssuer:
+    def __init__(
+        self,
+        *,
+        number_repository: ApprovalLetterNumberRepository,
+        storage: PrivateStorage,
+        pdf_generator: ApprovalLetterPdfGenerator,
+        clock: Callable[[], datetime],
+    ) -> None:
+        self._number_repository = number_repository
+        self._storage = storage
+        self._pdf_generator = pdf_generator
+        self._clock = clock
+
+    def issue_for_new_reservation(self, reservation) -> ReservationApprovalLetter:
+        if reservation.approval_letter is not None:
+            raise ApprovalLetterAlreadyIssued
+        return self._issue(reservation)
+
+    def ensure_issued(self, reservation) -> ReservationApprovalLetter:
+        if reservation.approval_letter is not None:
+            return reservation.approval_letter
+        return self._issue(reservation)
+
+    def _issue(self, reservation) -> ReservationApprovalLetter:
+        generated_at = _as_utc(self._clock())
+        serial = self._number_repository.next_serial_for_year(generated_at.year)
+        letter_number = f"RSV/IPBSRH/{generated_at.year}/{serial:06d}"
+        pdf = self._pdf_generator.generate(
+            ApprovalLetterInput(
+                reservation=reservation,
+                generated_at=generated_at,
+                letter_number=letter_number,
+            )
+        )
+        filename = f"{reservation.reservation_code}-surat-persetujuan.pdf"
+        storage_key = f"approval-letters/{reservation.id}/{uuid.uuid4().hex}.pdf"
+        self._storage.put(storage_key, pdf, content_type="application/pdf")
+        reservation.approval_letter = ReservationApprovalLetter(
+            reservation_id=reservation.id,
+            storage_key=storage_key,
+            letter_number=letter_number,
+            filename=filename,
+            content_type="application/pdf",
+            size_bytes=len(pdf),
+            generated_at=generated_at,
+        )
+        return reservation.approval_letter
 
 
 class ApprovalLetterModule:
@@ -107,6 +182,7 @@ class ApprovalLetterModule:
         reservation_repository: ReservationRepository,
         storage: PrivateStorage,
         pdf_generator: ApprovalLetterPdfGenerator,
+        approval_letter_issuer: ApprovalLetterIssuer,
         booking_settings: BookingSettings,
         clock: Callable[[], datetime],
         reservation_lifecycle: FacilityReservationLifecycleModule | None = None,
@@ -117,6 +193,7 @@ class ApprovalLetterModule:
         self._reservation_repository = reservation_repository
         self._storage = storage
         self._pdf_generator = pdf_generator
+        self._approval_letter_issuer = approval_letter_issuer
         self._clock = clock
         self._reservation_lifecycle = reservation_lifecycle or FacilityReservationLifecycleModule(
             booking_settings=booking_settings,
@@ -156,6 +233,15 @@ class ApprovalLetterModule:
             raise ReservationNotFound
         if reservation.approval_letter is None:
             raise ApprovalLetterNotGenerated
+        if reservation.status not in {
+            ReservationStatus.pending_document_upload,
+            ReservationStatus.pending_document_review,
+        }:
+            raise SignedApprovalLetterUploadUnavailable
+        if len(upload.content) > 5 * 1024 * 1024:
+            raise SignedApprovalLetterFileTooLarge
+        if not upload.content.startswith(b"%PDF-"):
+            raise InvalidSignedApprovalLetterFile
 
         try:
             file_metadata = self._private_files.store_upload(
@@ -166,8 +252,8 @@ class ApprovalLetterModule:
                     content_type=upload.content_type,
                     content=upload.content,
                 ),
-                allowed_content_types={"application/pdf", "image/jpeg", "image/png"},
-                allowed_extensions=(".pdf", ".jpg", ".jpeg", ".png"),
+                allowed_content_types={"application/pdf"},
+                allowed_extensions=(".pdf",),
                 max_size_bytes=5 * 1024 * 1024,
             )
         except UnsupportedPrivateFileType:
@@ -175,19 +261,57 @@ class ApprovalLetterModule:
         except PrivateFileTooLarge:
             raise SignedApprovalLetterFileTooLarge
 
-        reservation.signed_approval_letter = ReservationSignedApprovalLetter(
-            reservation_id=reservation.id,
-            storage_key=file_metadata.storage_key,
-            filename=file_metadata.filename,
-            content_type=file_metadata.content_type,
-            size_bytes=file_metadata.size_bytes,
-            uploaded_at=file_metadata.uploaded_at,
-        )
-        self._reservation_lifecycle.record_signed_document_uploaded(reservation)
+        if reservation.signed_approval_letter is None:
+            reservation.signed_approval_letter = ReservationSignedApprovalLetter(
+                reservation_id=reservation.id,
+                storage_key=file_metadata.storage_key,
+                filename=file_metadata.filename,
+                content_type=file_metadata.content_type,
+                size_bytes=file_metadata.size_bytes,
+                uploaded_at=file_metadata.uploaded_at,
+            )
+        else:
+            reservation.signed_approval_letter.storage_key = file_metadata.storage_key
+            reservation.signed_approval_letter.filename = file_metadata.filename
+            reservation.signed_approval_letter.content_type = file_metadata.content_type
+            reservation.signed_approval_letter.size_bytes = file_metadata.size_bytes
+            reservation.signed_approval_letter.uploaded_at = file_metadata.uploaded_at
         if self._notifications is not None:
             self._notifications.student_action_recorded(
                 reservation,
                 title="Surat berhasil diunggah",
+                message=f"Surat persetujuan {reservation.activity_title} berhasil disimpan.",
+            )
+        return _to_student_signed_approval_letter(reservation.signed_approval_letter)
+
+    def submit_student_signed_approval_letter(
+        self,
+        student: UserAccount,
+        reservation_id: str,
+    ) -> StudentSignedApprovalLetterSubmission:
+        reservation = self._reservation_repository.get_for_student(reservation_id, student.id)
+        if reservation is None:
+            raise ReservationNotFound
+        if reservation.signed_approval_letter is None:
+            raise ApprovalLetterNotGenerated
+        if reservation.status == ReservationStatus.pending_document_review:
+            if reservation.document_verification_due_at is None:
+                raise SignedApprovalLetterSubmissionUnavailable
+            return StudentSignedApprovalLetterSubmission(
+                reservation_id=reservation.id,
+                status=reservation.status,
+                document_verification_due_at=_as_utc(reservation.document_verification_due_at),
+            )
+        if reservation.status != ReservationStatus.pending_document_upload:
+            raise SignedApprovalLetterSubmissionUnavailable
+
+        self._reservation_lifecycle.record_signed_document_uploaded(reservation)
+        if reservation.document_verification_due_at is None:
+            raise SignedApprovalLetterSubmissionUnavailable
+        if self._notifications is not None:
+            self._notifications.student_action_recorded(
+                reservation,
+                title="Surat dikirim untuk verifikasi",
                 message=f"Surat persetujuan {reservation.activity_title} sedang menunggu review.",
             )
             self._notifications.staff_action_needed(
@@ -195,7 +319,11 @@ class ApprovalLetterModule:
                 title="Surat menunggu review",
                 message=f"Surat persetujuan {reservation.activity_title} menunggu verifikasi.",
             )
-        return _to_student_signed_approval_letter(reservation.signed_approval_letter)
+        return StudentSignedApprovalLetterSubmission(
+            reservation_id=reservation.id,
+            status=reservation.status,
+            document_verification_due_at=_as_utc(reservation.document_verification_due_at),
+        )
 
     def download_student_signed_approval_letter(
         self,
@@ -218,6 +346,7 @@ class ApprovalLetterModule:
         reservation = self._get_staff_review_reservation(staff, reservation_id)
         if reservation.signed_approval_letter is None:
             raise ApprovalLetterNotGenerated
+        self._ensure_document_submitted_for_review(reservation)
 
         self._reservation_lifecycle.approve_document(reservation)
         if reservation.status == ReservationStatus.approved:
@@ -247,6 +376,7 @@ class ApprovalLetterModule:
         reservation = self._get_staff_review_reservation(staff, reservation_id)
         if reservation.signed_approval_letter is None:
             raise ApprovalLetterNotGenerated
+        self._ensure_document_submitted_for_review(reservation)
         download = self._private_files.download(reservation.signed_approval_letter)
         return StaffSignedApprovalLetterDownload(
             filename=download.filename,
@@ -268,6 +398,7 @@ class ApprovalLetterModule:
         reservation = self._get_staff_review_reservation(staff, reservation_id)
         if reservation.signed_approval_letter is None:
             raise ApprovalLetterNotGenerated
+        self._ensure_document_submitted_for_review(reservation)
 
         self._reservation_lifecycle.reject_document(reservation, reason=reason)
         if self._notifications is not None:
@@ -299,6 +430,10 @@ class ApprovalLetterModule:
         except StaffReservationReviewReservationNotFound:
             raise ReservationNotFound
 
+    def _ensure_document_submitted_for_review(self, reservation) -> None:
+        if reservation.status != ReservationStatus.pending_document_review:
+            raise StaffDocumentReviewUnavailable
+
     def _get_or_create_student_approval_letter(
         self,
         student: UserAccount,
@@ -307,32 +442,14 @@ class ApprovalLetterModule:
         reservation = self._reservation_repository.get_for_student(reservation_id, student.id)
         if reservation is None:
             raise ReservationNotFound
-        if reservation.approval_letter is None:
-            generated_at = _as_utc(self._clock())
-            pdf = self._pdf_generator.generate(
-                ApprovalLetterInput(
-                    reservation=reservation,
-                    generated_at=generated_at,
-                )
-            )
-            filename = f"{reservation.reservation_code}-surat-persetujuan.pdf"
-            storage_key = f"approval-letters/{reservation.id}/{uuid.uuid4().hex}.pdf"
-            self._storage.put(storage_key, pdf, content_type="application/pdf")
-            reservation.approval_letter = ReservationApprovalLetter(
-                reservation_id=reservation.id,
-                storage_key=storage_key,
-                filename=filename,
-                content_type="application/pdf",
-                size_bytes=len(pdf),
-                generated_at=generated_at,
-            )
-        return reservation.approval_letter
+        return self._approval_letter_issuer.ensure_issued(reservation)
 
 
 def _to_student_approval_letter(letter: ReservationApprovalLetter) -> StudentApprovalLetter:
     return StudentApprovalLetter(
         reservation_id=letter.reservation_id,
         reservation_code=letter.reservation.reservation_code,
+        letter_number=letter.letter_number,
         filename=letter.filename,
         content_type=letter.content_type,
         size_bytes=letter.size_bytes,

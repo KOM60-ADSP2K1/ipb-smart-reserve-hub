@@ -18,6 +18,7 @@ from app.models import (
     FacilityStaffAssignment,
     OrganizationUnit,
     Reservation,
+    ReservationApprovalLetter,
     ReservationPaymentReceipt,
     ReservationRejectionSource,
     ReservationSignedApprovalLetter,
@@ -372,6 +373,7 @@ def test_dev_seed_is_idempotent_for_seeded_database_rows(tmp_path):
         assert session.scalar(select(func.count()).select_from(FacilityImage)) == 26
         assert session.scalar(select(func.count()).select_from(FacilityOpenHour)) == 65
         assert session.scalar(select(func.count()).select_from(Reservation)) == 35
+        assert session.scalar(select(func.count()).select_from(ReservationApprovalLetter)) == 35
         assert session.scalar(select(func.count()).select_from(ReservationSignedApprovalLetter)) == 26
         assert session.scalar(select(func.count()).select_from(ReservationPaymentReceipt)) == 10
         assert session.scalar(select(func.count()).select_from(FacilityReview)) == 11

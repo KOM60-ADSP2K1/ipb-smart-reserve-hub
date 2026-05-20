@@ -74,6 +74,11 @@ class ReservationSubmissionConflictReader(Protocol):
         raise NotImplementedError
 
 
+class ReservationApprovalLetterIssuer(Protocol):
+    def issue_for_new_reservation(self, reservation: Reservation):
+        raise NotImplementedError
+
+
 class ReservationSubmissionConflictGuard:
     def __init__(self, *, conflict_reader: ReservationSubmissionConflictReader) -> None:
         self._conflict_reader = conflict_reader
@@ -116,6 +121,7 @@ class ReservationModule:
         booking_settings: BookingSettings,
         clock: Callable[[], datetime],
         reservation_lifecycle: FacilityReservationLifecycleModule | None = None,
+        approval_letter_issuer: ReservationApprovalLetterIssuer | None = None,
         staff_review_access: StaffReservationReviewAccessModule | None = None,
         notifications: NotificationModule | None = None,
         audit_logs: AuditLogModule | None = None,
@@ -128,6 +134,7 @@ class ReservationModule:
             booking_settings=booking_settings,
             clock=clock,
         )
+        self._approval_letter_issuer = approval_letter_issuer
         self._staff_review_access = staff_review_access or StaffReservationReviewAccessModule(
             reservation_repository=reservation_repository
         )
@@ -187,6 +194,8 @@ class ReservationModule:
         )
         self._reservation_lifecycle.record_submission_held(reservation)
         reservation = self._reservation_repository.add(reservation)
+        if self._approval_letter_issuer is not None:
+            self._approval_letter_issuer.issue_for_new_reservation(reservation)
         self._audit_recorder.record(
             actor=student,
             action_type="reservation.submitted",

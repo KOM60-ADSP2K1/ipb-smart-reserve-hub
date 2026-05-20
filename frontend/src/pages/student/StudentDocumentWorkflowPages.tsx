@@ -37,6 +37,7 @@ type ApprovalLetterResponse = {
   content_type: string;
   filename: string;
   generated_at: string;
+  letter_number: string;
   reservation_code: string;
   reservation_id: string;
   size_bytes: number;
@@ -48,6 +49,12 @@ type SignedApprovalLetterResponse = {
   reservation_id: string;
   size_bytes: number;
   uploaded_at: string;
+};
+
+type SignedApprovalLetterSubmissionResponse = {
+  document_verification_due_at: string;
+  reservation_id: string;
+  status: string;
 };
 
 type PaymentResponse = {
@@ -65,11 +72,14 @@ type PaymentReceiptResponse = {
   uploaded_at: string;
 };
 
+type PaymentReceiptSubmissionResponse = {
+  payment_verification_due_at: string;
+  reservation_id: string;
+  status: string;
+};
+
 const signedLetterTypes = new Set([
   "application/pdf",
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
 ]);
 const maxSignedLetterBytes = 5 * 1024 * 1024;
 const paymentReceiptTypes = new Set(["image/jpeg", "image/jpg", "image/png"]);
@@ -106,6 +116,13 @@ async function uploadSignedApprovalLetter({
   );
 }
 
+async function submitSignedApprovalLetter(reservationId: string) {
+  return apiRequest<SignedApprovalLetterSubmissionResponse>(
+    `/student/reservations/${reservationId}/signed-approval-letter/submit`,
+    { method: "POST" },
+  );
+}
+
 async function fetchPayment(reservationId: string) {
   return apiRequest<PaymentResponse>(`/student/reservations/${reservationId}/payment`);
 }
@@ -122,6 +139,13 @@ async function uploadPaymentReceipt({
   return apiRequest<PaymentReceiptResponse>(
     `/student/reservations/${reservationId}/payment-receipt`,
     { body, method: "POST" },
+  );
+}
+
+async function submitPaymentReceipt(reservationId: string) {
+  return apiRequest<PaymentReceiptSubmissionResponse>(
+    `/student/reservations/${reservationId}/payment-receipt/submit`,
+    { method: "POST" },
   );
 }
 
@@ -460,6 +484,8 @@ export function StudentApprovalLetterPage() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [downloadMessage, setDownloadMessage] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const reservationQuery = useQuery({
     queryFn: () => fetchStudentReservation(reservationId),
     queryKey: ["student-reservation", reservationId],
@@ -472,6 +498,8 @@ export function StudentApprovalLetterPage() {
     () => summaryRowsFromReservation(reservationQuery.data),
     [reservationQuery.data],
   );
+  const approvalLetter = approvalLetterQuery.data ?? reservationQuery.data?.document.approval_letter ?? null;
+  const signedLetter = reservationQuery.data?.document.signed_approval_letter ?? null;
   const downloadMutation = useMutation({
     mutationFn: () => apiDownload(`/student/reservations/${reservationId}/approval-letter/download`),
     onError: (error) => {
@@ -479,7 +507,7 @@ export function StudentApprovalLetterPage() {
       setDownloadMessage(message);
     },
     onSuccess: ({ filename }) => {
-      setDownloadMessage(`${filename ?? approvalLetterQuery.data?.filename ?? "Surat persetujuan"} berhasil diunduh.`);
+      setDownloadMessage(`${filename ?? approvalLetter?.filename ?? "Surat persetujuan"} berhasil diunduh.`);
     },
   });
   const uploadMutation = useMutation({
@@ -495,10 +523,34 @@ export function StudentApprovalLetterPage() {
           ...current,
           document: {
             ...current.document,
-            review_status: "waiting_review",
+            review_status: "upload_needed",
             signed_approval_letter: signedLetter,
           },
-          status: "pending_document_review",
+          document_verification_due_at: null,
+          status: "pending_document_upload",
+        });
+      }
+      setSelectedFile(null);
+      setUploadMessage(`${signedLetter.filename} berhasil diunggah. Klik Kirim untuk mengajukan verifikasi.`);
+    },
+  });
+  const submitMutation = useMutation({
+    mutationFn: () => submitSignedApprovalLetter(reservationId),
+    onError: (error) => {
+      const message = error instanceof ApiError ? error.message : "Dokumen belum dapat dikirim.";
+      setSubmitError(message);
+    },
+    onSuccess: (submission) => {
+      const current = reservationQuery.data;
+      if (current) {
+        queryClient.setQueryData<StudentReservationWorkflowProjection>(["student-reservation", reservationId], {
+          ...current,
+          document: {
+            ...current.document,
+            review_status: "waiting_review",
+          },
+          document_verification_due_at: submission.document_verification_due_at,
+          status: submission.status,
         });
       }
       navigate(`/student/reservations/${reservationId}/verification/waiting`);
@@ -507,7 +559,7 @@ export function StudentApprovalLetterPage() {
 
   function validateFile(file: File) {
     if (!signedLetterTypes.has(file.type)) {
-      return "Unggah surat bertanda tangan harus berupa PDF, JPG, JPEG, atau PNG.";
+      return "Unggah surat bertanda tangan harus berupa PDF.";
     }
     if (file.size > maxSignedLetterBytes) {
       return "Ukuran surat bertanda tangan maksimal 5 MB.";
@@ -519,6 +571,7 @@ export function StudentApprovalLetterPage() {
     const file = event.target.files?.[0] ?? null;
     setSelectedFile(file);
     setUploadError(null);
+    setUploadMessage(null);
     if (!file) {
       setFileError(null);
       return;
@@ -534,11 +587,19 @@ export function StudentApprovalLetterPage() {
     const error = validateFile(selectedFile);
     setFileError(error);
     setUploadError(null);
+    setUploadMessage(null);
     if (error) return;
     uploadMutation.mutate(selectedFile);
   }
 
-  const approvalLetter = approvalLetterQuery.data;
+  function handleSubmit() {
+    setSubmitError(null);
+    if (!signedLetter) {
+      setSubmitError("Unggah surat bertanda tangan terlebih dahulu.");
+      return;
+    }
+    submitMutation.mutate();
+  }
 
   return (
     <PageFrame backHref={reservationPath(reservationId)}>
@@ -571,6 +632,7 @@ export function StudentApprovalLetterPage() {
               fileName={approvalLetter?.filename ?? "Memuat surat persetujuan..."}
               metadata={approvalLetter
                 ? `${contentTypeLabel(approvalLetter.content_type)} · ${formatBytes(approvalLetter.size_bytes)}`
+                  + ` · Nomor ${approvalLetter.letter_number}`
                 : "Metadata surat belum tersedia"}
             />
             {downloadMessage ? (
@@ -582,12 +644,12 @@ export function StudentApprovalLetterPage() {
             <h2 className="m-0 text-2xl font-bold">Unggah Dokumen</h2>
             <p className="m-0 mt-2 text-sm leading-6 text-[#6b7280]">
               Unggah surat permohonan yang sudah ditandatangani. Dokumen harus berformat PDF
-              , JPG, JPEG, atau PNG dengan ukuran maksimal 5 MB.
+              dengan ukuran maksimal 5 MB.
             </p>
             <div className="mt-6 block rounded-xl border-2 border-dashed border-[#bbf7d0] bg-[#f8fafc] p-7 text-center">
               <UploadCloud aria-hidden="true" className="mx-auto text-[#0f9d58]" size={34} />
               <p className="m-0 mt-3 text-base font-bold">Unggah Surat Persetujuan</p>
-              <p className="m-0 mt-1 text-sm text-[#6b7280]">PDF/JPG/JPEG/PNG maksimal 5 MB</p>
+              <p className="m-0 mt-1 text-sm text-[#6b7280]">PDF maksimal 5 MB</p>
               <input
                 id="signed-approval-letter-file"
                 aria-label="Pilih file surat persetujuan"
@@ -618,11 +680,23 @@ export function StudentApprovalLetterPage() {
             {fileError || uploadError ? (
               <p className="m-0 mt-3 text-sm font-semibold text-[#991b1b]">{fileError ?? uploadError}</p>
             ) : null}
+            {uploadMessage ? (
+              <p className="m-0 mt-3 text-sm font-semibold text-[#0f9d58]">{uploadMessage}</p>
+            ) : null}
             {selectedFile ? (
               <div className="mt-5">
                 <FileRow
                   fileName={selectedFile.name}
                   metadata={`${contentTypeLabel(selectedFile.type)} · ${formatBytes(selectedFile.size)}`}
+                />
+              </div>
+            ) : null}
+            {signedLetter ? (
+              <div className="mt-5">
+                <FileRow
+                  badge={<StatusBadge tone="valid">Tersimpan</StatusBadge>}
+                  fileName={signedLetter.filename}
+                  metadata={`${contentTypeLabel(signedLetter.content_type)} · ${formatBytes(signedLetter.size_bytes)}`}
                 />
               </div>
             ) : null}
@@ -632,12 +706,19 @@ export function StudentApprovalLetterPage() {
         <SummaryCard
           action={
             <>
-              <a
-                className="flex min-h-[52px] items-center justify-center rounded-lg bg-[#0f9d58] px-5 text-base font-semibold text-white no-underline"
-                href={`/student/reservations/${reservationId}/verification/waiting`}
+              <button
+                className="flex min-h-[52px] w-full items-center justify-center rounded-lg bg-[#0f9d58] px-5 text-base font-semibold text-white disabled:bg-[#9ca3af]"
+                disabled={submitMutation.isPending}
+                onClick={handleSubmit}
+                type="button"
               >
-                Kirim
-              </a>
+                {submitMutation.isPending ? "Mengirim..." : "Kirim"}
+              </button>
+              {submitError ? (
+                <p className="m-0 mt-3 text-center text-xs font-semibold leading-5 text-[#991b1b]">
+                  {submitError}
+                </p>
+              ) : null}
               <p className="m-0 mt-4 text-center text-xs leading-5 text-[#6b7280]">
                 Pastikan surat yang diunggah sudah ditandatangani.
               </p>
@@ -657,6 +738,8 @@ function PaymentUploadPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const reservationQuery = useQuery({
     queryFn: () => fetchStudentReservation(reservationId),
     queryKey: ["student-reservation", reservationId],
@@ -669,6 +752,7 @@ function PaymentUploadPage() {
     () => paymentRowsFromReservation(reservationQuery.data, paymentQuery.data?.amount_rupiah),
     [paymentQuery.data?.amount_rupiah, reservationQuery.data],
   );
+  const receipt = reservationQuery.data?.payment.receipt ?? null;
   const uploadMutation = useMutation({
     mutationFn: (file: File) => uploadPaymentReceipt({ file, reservationId }),
     onError: (error) => {
@@ -683,9 +767,33 @@ function PaymentUploadPage() {
           payment: {
             ...current.payment,
             receipt,
+            review_status: "upload_needed",
+          },
+          payment_verification_due_at: null,
+          status: "pending_payment",
+        });
+      }
+      setSelectedFile(null);
+      setUploadMessage(`${receipt.filename} berhasil diunggah. Klik Kirim untuk melanjutkan verifikasi pembayaran.`);
+    },
+  });
+  const submitMutation = useMutation({
+    mutationFn: () => submitPaymentReceipt(reservationId),
+    onError: (error) => {
+      const message = error instanceof ApiError ? error.message : "Bukti pembayaran belum dapat dikirim.";
+      setSubmitError(message);
+    },
+    onSuccess: (submission) => {
+      const current = reservationQuery.data;
+      if (current) {
+        queryClient.setQueryData<StudentReservationWorkflowProjection>(["student-reservation", reservationId], {
+          ...current,
+          payment: {
+            ...current.payment,
             review_status: "waiting_review",
           },
-          status: "pending_payment",
+          payment_verification_due_at: submission.payment_verification_due_at,
+          status: submission.status,
         });
       }
       navigate(`/student/reservations/${reservationId}/payment/waiting`);
@@ -711,6 +819,7 @@ function PaymentUploadPage() {
     const file = event.target.files?.[0] ?? null;
     setSelectedFile(file);
     setUploadError(null);
+    setUploadMessage(null);
     if (!file) {
       setFileError(null);
       return;
@@ -726,8 +835,18 @@ function PaymentUploadPage() {
     const error = validateFile(selectedFile);
     setFileError(error);
     setUploadError(null);
+    setUploadMessage(null);
     if (error) return;
     uploadMutation.mutate(selectedFile);
+  }
+
+  function handleSubmit() {
+    setSubmitError(null);
+    if (!receipt) {
+      setSubmitError("Unggah bukti pembayaran terlebih dahulu.");
+      return;
+    }
+    submitMutation.mutate();
   }
 
   return (
@@ -794,6 +913,9 @@ function PaymentUploadPage() {
           {fileError || uploadError ? (
             <p className="m-0 mt-3 text-sm font-semibold text-[#991b1b]">{fileError ?? uploadError}</p>
           ) : null}
+          {uploadMessage ? (
+            <p className="m-0 mt-3 text-sm font-semibold text-[#166534]">{uploadMessage}</p>
+          ) : null}
 
           <div className="mt-5">
             {selectedFile ? (
@@ -802,18 +924,32 @@ function PaymentUploadPage() {
                 metadata={`${contentTypeLabel(selectedFile.type)} · ${formatBytes(selectedFile.size)}`}
               />
             ) : null}
+            {receipt ? (
+              <FileRow
+                badge={<StatusBadge tone="valid">Tersimpan</StatusBadge>}
+                fileName={receipt.filename}
+                metadata={`${contentTypeLabel(receipt.content_type)} · ${formatBytes(receipt.size_bytes)} · Diunggah ${
+                  receipt.uploaded_at ? formatDate(receipt.uploaded_at) : "baru saja"
+                }`}
+              />
+            ) : null}
           </div>
         </section>
 
         <SummaryCard
           action={
             <>
-              <a
-                className="flex min-h-[52px] items-center justify-center rounded-lg bg-[#0f9d58] px-5 text-base font-semibold text-white no-underline"
-                href={`/student/reservations/${reservationId}/payment/waiting`}
+              <button
+                className="flex min-h-[52px] w-full items-center justify-center rounded-lg bg-[#0f9d58] px-5 text-base font-semibold text-white disabled:bg-[#9ca3af]"
+                disabled={submitMutation.isPending}
+                onClick={handleSubmit}
+                type="button"
               >
-                Kirim
-              </a>
+                {submitMutation.isPending ? "Mengirim..." : "Kirim"}
+              </button>
+              {submitError ? (
+                <p className="m-0 mt-3 text-center text-sm font-semibold text-[#991b1b]">{submitError}</p>
+              ) : null}
               <p className="m-0 mt-4 text-center text-xs leading-5 text-[#6b7280]">
                 Pastikan bukti pembayaran terlihat jelas.
               </p>
@@ -911,7 +1047,7 @@ function PaymentStatusPage({
           {isAccepted ? (
             <a
               className="mt-7 flex min-h-[52px] items-center justify-center rounded-lg bg-[#0f9d58] px-5 text-sm font-bold text-white no-underline"
-              href={studentDocumentWorkflowFixture.payment.detailHref}
+              href={reservationPath(reservationId)}
             >
               Lihat Detail
             </a>
@@ -919,7 +1055,7 @@ function PaymentStatusPage({
           {!isWaiting && !isAccepted ? (
             <a
               className="mt-7 flex min-h-[48px] items-center justify-center rounded-lg bg-[#fee2e2] px-5 text-sm font-bold text-[#991b1b] no-underline"
-              href={studentDocumentWorkflowFixture.payment.paymentHref}
+              href={`/student/reservations/${reservationId}/payment`}
             >
               Unggah Ulang
             </a>

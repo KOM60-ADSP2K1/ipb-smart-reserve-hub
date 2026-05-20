@@ -69,6 +69,7 @@ const approvalLetter = {
   content_type: "application/pdf",
   filename: "RSV-001-surat-persetujuan.pdf",
   generated_at: "2026-06-01T03:00:00Z",
+  letter_number: "RSV/IPBSRH/2026/000001",
   reservation_code: "RSV-001",
   reservation_id: "reservation-1",
   size_bytes: 128000,
@@ -90,19 +91,22 @@ function reservation(overrides: ReservationOverride = {}): StudentReservationWor
 
 function mockDocumentFetch({
   approval = approvalLetter,
+  approvalStatus = 200,
   reservationBody = baseReservation,
   uploadStatus = 201,
 }: {
   approval?: unknown;
+  approvalStatus?: number;
   reservationBody?: StudentReservationWorkflowProjection;
   uploadStatus?: number;
 } = {}) {
   let uploaded = false;
+  let submitted = false;
   return vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
     const url = String(input);
 
     if (url === "http://localhost:8000/student/reservations/reservation-1") {
-      if (uploaded) {
+      if (submitted) {
         return jsonResponse(reservation({
           document: {
             signed_approval_letter: {
@@ -117,11 +121,26 @@ function mockDocumentFetch({
           status: "pending_document_review",
         }));
       }
+      if (uploaded) {
+        return jsonResponse(reservation({
+          document: {
+            signed_approval_letter: {
+              content_type: "application/pdf",
+              filename: "signed-letter.pdf",
+              size_bytes: 1200,
+              uploaded_at: "2026-06-01T04:00:00Z",
+            },
+            review_status: "upload_needed",
+          },
+          document_verification_due_at: null,
+          status: "pending_document_upload",
+        }));
+      }
       return jsonResponse(reservationBody);
     }
 
     if (url === "http://localhost:8000/student/reservations/reservation-1/approval-letter") {
-      return jsonResponse(approval);
+      return jsonResponse(approval, approvalStatus);
     }
 
     if (url === "http://localhost:8000/student/reservations/reservation-1/approval-letter/download") {
@@ -152,6 +171,18 @@ function mockDocumentFetch({
         size_bytes: 1200,
         uploaded_at: "2026-06-01T04:00:00Z",
       }, 201);
+    }
+
+    if (
+      url === "http://localhost:8000/student/reservations/reservation-1/signed-approval-letter/submit" &&
+      init?.method === "POST"
+    ) {
+      submitted = true;
+      return jsonResponse({
+        document_verification_due_at: "2026-06-02T04:00:00Z",
+        reservation_id: "reservation-1",
+        status: "pending_document_review",
+      });
     }
 
     return jsonResponse({ detail: `Unhandled ${url}` }, 404);
@@ -193,11 +224,12 @@ function mockPaymentFetch({
   uploadStatus?: number;
 } = {}) {
   let uploaded = false;
+  let submitted = false;
   return vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
     const url = String(input);
 
     if (url === "http://localhost:8000/student/reservations/reservation-1") {
-      if (uploaded) {
+      if (submitted) {
         return jsonResponse(paidReservation({
           payment: {
             receipt: {
@@ -210,6 +242,21 @@ function mockPaymentFetch({
             review_status: "waiting_review",
           },
           payment_verification_due_at: "2026-06-02T04:00:00Z",
+        }));
+      }
+      if (uploaded) {
+        return jsonResponse(paidReservation({
+          payment: {
+            receipt: {
+              content_type: "image/jpeg",
+              filename: "receipt.jpg",
+              size_bytes: 1400,
+              uploaded_at: "2026-06-01T04:00:00Z",
+            },
+            required: true,
+            review_status: "upload_needed",
+          },
+          payment_verification_due_at: null,
         }));
       }
       return jsonResponse(reservationBody);
@@ -247,6 +294,18 @@ function mockPaymentFetch({
       }, 201);
     }
 
+    if (
+      url === "http://localhost:8000/student/reservations/reservation-1/payment-receipt/submit" &&
+      init?.method === "POST"
+    ) {
+      submitted = true;
+      return jsonResponse({
+        payment_verification_due_at: "2026-06-02T04:00:00Z",
+        reservation_id: "reservation-1",
+        status: "pending_payment",
+      });
+    }
+
     return jsonResponse({ detail: `Unhandled ${url}` }, 404);
   });
 }
@@ -265,7 +324,7 @@ describe("StudentDocumentWorkflowPages", () => {
     expect(await screen.findByText("RSV-001-surat-persetujuan.pdf")).toBeVisible();
     expect(screen.getByText("Grand Auditorium")).toBeVisible();
     expect(screen.getByText("24 Juni 2026")).toBeVisible();
-    expect(screen.getByText("PDF · 125 KB")).toBeVisible();
+    expect(screen.getByText("PDF · 125 KB · Nomor RSV/IPBSRH/2026/000001")).toBeVisible();
   });
 
   it("downloads the generated approval letter through the binary endpoint", async () => {
@@ -285,6 +344,37 @@ describe("StudentDocumentWorkflowPages", () => {
     expect(await screen.findByText("RSV-001-surat-persetujuan.pdf berhasil diunduh.")).toBeVisible();
   });
 
+  it("downloads using reservation approval-letter metadata when the metadata endpoint fails", async () => {
+    const user = userEvent.setup();
+    const fetchMock = mockDocumentFetch({
+      approval: { detail: "Surat belum dapat dimuat." },
+      approvalStatus: 500,
+      reservationBody: reservation({
+        document: {
+          approval_letter: {
+            content_type: "application/pdf",
+            filename: "RSV-001-surat-persetujuan.pdf",
+            generated_at: "2026-06-01T03:00:00Z",
+            letter_number: "RSV/IPBSRH/2026/000001",
+            size_bytes: 128000,
+          },
+          review_status: "upload_needed",
+        },
+      }),
+    });
+
+    renderDocumentRoutes("/student/reservations/reservation-1/letter");
+
+    await user.click(await screen.findByRole("button", { name: "Unduh" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://localhost:8000/student/reservations/reservation-1/approval-letter/download",
+        expect.any(Object),
+      );
+    });
+  });
+
   it("validates signed approval letter type and size before upload", async () => {
     const user = userEvent.setup();
     mockDocumentFetch();
@@ -293,7 +383,7 @@ describe("StudentDocumentWorkflowPages", () => {
 
     const input = await screen.findByLabelText("Pilih file surat persetujuan");
     await user.upload(input, new File(["bad"], "notes.txt", { type: "text/plain" }));
-    expect(screen.getByText("Unggah surat bertanda tangan harus berupa PDF, JPG, JPEG, atau PNG.")).toBeVisible();
+    expect(screen.getByText("Unggah surat bertanda tangan harus berupa PDF.")).toBeVisible();
 
     await user.upload(
       input,
@@ -302,7 +392,7 @@ describe("StudentDocumentWorkflowPages", () => {
     expect(screen.getByText("Ukuran surat bertanda tangan maksimal 5 MB.")).toBeVisible();
   });
 
-  it("uploads a signed approval letter and routes to waiting verification", async () => {
+  it("uploads a signed approval letter, shows it as stored, then submits it for verification", async () => {
     const user = userEvent.setup();
     const fetchMock = mockDocumentFetch();
 
@@ -318,6 +408,20 @@ describe("StudentDocumentWorkflowPages", () => {
       expect(fetchMock).toHaveBeenCalledWith(
         "http://localhost:8000/student/reservations/reservation-1/signed-approval-letter",
         expect.objectContaining({ body: expect.any(FormData), method: "POST" }),
+      );
+    });
+    expect(
+      await screen.findByText("signed-letter.pdf berhasil diunggah. Klik Kirim untuk mengajukan verifikasi."),
+    ).toBeVisible();
+    expect(screen.getByText("Tersimpan")).toBeVisible();
+    expect(screen.queryByText("Menunggu Verifikasi Dokumen")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Kirim" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://localhost:8000/student/reservations/reservation-1/signed-approval-letter/submit",
+        expect.objectContaining({ method: "POST" }),
       );
     });
     expect((await screen.findAllByText("Menunggu Verifikasi Dokumen"))[0]).toBeVisible();
@@ -405,7 +509,7 @@ describe("StudentDocumentWorkflowPages", () => {
     expect(screen.getByText("Ukuran bukti pembayaran maksimal 5 MB.")).toBeVisible();
   });
 
-  it("uploads a payment receipt and routes to payment waiting", async () => {
+  it("uploads a payment receipt, shows it as stored, then continues to payment waiting", async () => {
     const user = userEvent.setup();
     const fetchMock = mockPaymentFetch();
 
@@ -421,6 +525,20 @@ describe("StudentDocumentWorkflowPages", () => {
       expect(fetchMock).toHaveBeenCalledWith(
         "http://localhost:8000/student/reservations/reservation-1/payment-receipt",
         expect.objectContaining({ body: expect.any(FormData), method: "POST" }),
+      );
+    });
+    expect(
+      await screen.findByText("receipt.jpg berhasil diunggah. Klik Kirim untuk melanjutkan verifikasi pembayaran."),
+    ).toBeVisible();
+    expect(screen.getByText("Tersimpan")).toBeVisible();
+    expect(screen.queryByText("Menunggu Verifikasi Pembayaran")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Kirim" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://localhost:8000/student/reservations/reservation-1/payment-receipt/submit",
+        expect.objectContaining({ method: "POST" }),
       );
     });
     expect((await screen.findAllByText("Menunggu Verifikasi Pembayaran"))[0]).toBeVisible();
@@ -472,5 +590,31 @@ describe("StudentDocumentWorkflowPages", () => {
     renderDocumentRoutes("/student/reservations/reservation-1/payment/waiting");
 
     expect(await screen.findByRole("heading", { name: "Reservasi Disetujui" })).toBeVisible();
+  });
+
+  it("continues from stale accepted routes to payment when payment is still required", async () => {
+    mockPaymentFetch();
+
+    renderDocumentRoutes("/student/reservations/reservation-1/accepted");
+
+    expect(await screen.findByRole("heading", { name: "Unggah Bukti Pembayaran" })).toBeVisible();
+    expect(await screen.findByText("Transfer ke BNI 123456789 a.n. IPB")).toBeVisible();
+  });
+
+  it("uses the current reservation route for accepted page actions instead of fixture links", async () => {
+    mockPaymentFetch({
+      reservationBody: paidReservation({
+        payment: { required: true, review_status: "approved" },
+        status: "approved",
+      }),
+    });
+
+    renderDocumentRoutes("/student/reservations/reservation-1/accepted");
+
+    expect(await screen.findByRole("heading", { name: "Reservasi Disetujui" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Lihat Detail" })).toHaveAttribute(
+      "href",
+      "/student/reservations/reservation-1",
+    );
   });
 });

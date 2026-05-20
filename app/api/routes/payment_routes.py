@@ -7,6 +7,7 @@ from app.core.access_policy import AccessPolicyAction
 from app.schemas.reservation_schemas import (
     StaffDocumentRejectionRequest,
     StaffDocumentReviewResponse,
+    StudentPaymentReceiptSubmissionResponse,
     StudentPaymentReceiptResponse,
     StudentReservationPaymentResponse,
 )
@@ -14,6 +15,7 @@ from app.services.accounts import UserAccount
 from app.services.payments import (
     InvalidPaymentReceiptFile,
     PaymentModule,
+    PaymentReceiptNotSubmitted,
     PaymentReceiptFileTooLarge,
     PaymentReceiptNotUploaded,
     PaymentReceiptUpload,
@@ -88,6 +90,32 @@ def register_payment_routes(
                 detail="Ukuran bukti pembayaran maksimal 5 MB.",
             )
 
+    @app.post(
+        "/student/reservations/{reservation_id}/payment-receipt/submit",
+        response_model=StudentPaymentReceiptSubmissionResponse,
+    )
+    async def submit_student_payment_receipt(
+        reservation_id: str,
+        payments: PaymentModule = Depends(get_payments),
+        current_user: UserAccount = Depends(require_access(AccessPolicyAction.enter_student_shell)),
+    ):
+        try:
+            return payments.submit_student_payment_receipt(current_user, reservation_id)
+        except ReservationNotFound:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservasi tidak ditemukan.")
+        except ReservationPaymentUnavailable:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Pembayaran hanya tersedia untuk reservasi berbayar yang menunggu pembayaran.",
+            )
+        except PaymentReceiptNotUploaded:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bukti pembayaran belum diunggah.")
+        except PaymentReceiptNotSubmitted:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Bukti pembayaran belum dikirim untuk verifikasi.",
+            )
+
     @app.get("/student/reservations/{reservation_id}/payment-receipt/download")
     async def download_student_payment_receipt(
         reservation_id: str,
@@ -100,6 +128,11 @@ def register_payment_routes(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reservasi tidak ditemukan.")
         except PaymentReceiptNotUploaded:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bukti pembayaran belum diunggah.")
+        except PaymentReceiptNotSubmitted:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Bukti pembayaran belum dikirim untuk verifikasi.",
+            )
         return attachment_response(download)
 
     @app.get("/staff/reservations/{reservation_id}/payment-receipt/download")
@@ -119,6 +152,11 @@ def register_payment_routes(
             )
         except PaymentReceiptNotUploaded:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bukti pembayaran belum diunggah.")
+        except PaymentReceiptNotSubmitted:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Bukti pembayaran belum dikirim untuk verifikasi.",
+            )
         return attachment_response(download)
 
     @app.post(
@@ -141,6 +179,11 @@ def register_payment_routes(
             )
         except PaymentReceiptNotUploaded:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bukti pembayaran belum diunggah.")
+        except PaymentReceiptNotSubmitted:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Bukti pembayaran belum dikirim untuk verifikasi.",
+            )
 
     @app.post(
         "/staff/reservations/{reservation_id}/payment-review/reject",

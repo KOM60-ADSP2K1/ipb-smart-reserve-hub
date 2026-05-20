@@ -8,7 +8,7 @@ from app.services.reservation_private_files import (
     ReservationPrivateFileModule,
     UnsupportedPrivateFileType,
 )
-from app.storage import InMemoryPrivateStorage
+from app.storage import InMemoryPrivateStorage, LocalPrivateStorage
 
 
 def test_reservation_private_file_module_validates_stores_and_downloads_private_file():
@@ -68,3 +68,14 @@ def test_reservation_private_file_module_rejects_invalid_type_and_size_before_st
             allowed_extensions=(".png",),
             max_size_bytes=3,
         )
+
+
+def test_local_private_storage_persists_private_file_bytes_across_instances(tmp_path):
+    first_storage = LocalPrivateStorage(tmp_path)
+    first_storage.put("signed-approval-letters/reservation-1/file.pdf", b"%PDF-1.4", content_type="application/pdf")
+
+    restarted_storage = LocalPrivateStorage(tmp_path)
+
+    assert restarted_storage.get("signed-approval-letters/reservation-1/file.pdf") == b"%PDF-1.4"
+    with pytest.raises(KeyError):
+        restarted_storage.get("../outside.pdf")

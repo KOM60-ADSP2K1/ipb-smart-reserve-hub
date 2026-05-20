@@ -97,16 +97,36 @@ function buildDocuments(reservation: StudentReservationWorkflowProjection): Rese
   return documents;
 }
 
-function actionForReservation(reservation: StudentReservationWorkflowProjection) {
-  if (reservation.status === "approved") {
-    return {
-      href: `/student/reservations/${reservation.id}/cancellation`,
-      label: "Ajukan Pembatalan",
-      tone: "caution" as const,
-    };
+type DetailAction = {
+  href: string;
+  label: string;
+  tone: "caution" | "primary";
+};
+
+function actionsForReservation(reservation: StudentReservationWorkflowProjection): DetailAction[] {
+  const actions: DetailAction[] = [];
+
+  if (
+    reservation.payment.required &&
+    reservation.payment.review_status === "upload_needed" &&
+    reservation.status === "approved"
+  ) {
+    actions.push({
+      href: `/student/reservations/${reservation.id}/payment`,
+      label: "Lanjut ke Pembayaran",
+      tone: "primary",
+    });
   }
 
-  return null;
+  if (reservation.status === "approved") {
+    actions.push({
+      href: `/student/reservations/${reservation.id}/cancellation`,
+      label: "Ajukan Pembatalan",
+      tone: "caution",
+    });
+  }
+
+  return actions;
 }
 
 function noticeForReservation(reservation: StudentReservationWorkflowProjection) {
@@ -459,7 +479,7 @@ function ReservationReviewPanel({ detail }: { detail: StudentReservationWorkflow
 
 function DetailContent({ detail }: { detail: StudentReservationWorkflowProjection }) {
   const documents = buildDocuments(detail);
-  const action = actionForReservation(detail);
+  const actions = actionsForReservation(detail);
   const notice = noticeForReservation(detail);
   const statusLabel = mapStudentReservationWorkflow(detail).statusLabel;
 
@@ -529,14 +549,21 @@ function DetailContent({ detail }: { detail: StudentReservationWorkflowProjectio
 
       <ReservationReviewPanel detail={detail} />
 
-      {action ? (
-        <div className="mt-9 flex justify-end border-t border-[#e5e7eb] pt-7 max-md:justify-stretch">
-          <a
-            className="flex min-h-[44px] items-center justify-center rounded-lg border border-[#fbbf24] bg-[#fffbeb] px-5 text-sm font-bold text-[#92400e] no-underline max-md:w-full"
-            href={action.href}
-          >
-            {action.label}
-          </a>
+      {actions.length > 0 ? (
+        <div className="mt-9 flex flex-wrap justify-end gap-3 border-t border-[#e5e7eb] pt-7 max-md:justify-stretch">
+          {actions.map((action) => (
+            <a
+              className={`flex min-h-[44px] items-center justify-center rounded-lg px-5 text-sm font-bold no-underline max-md:w-full ${
+                action.tone === "primary"
+                  ? "border border-[#0f9d58] bg-[#0f9d58] text-white"
+                  : "border border-[#fbbf24] bg-[#fffbeb] text-[#92400e]"
+              }`}
+              href={action.href}
+              key={action.href}
+            >
+              {action.label}
+            </a>
+          ))}
         </div>
       ) : null}
     </div>

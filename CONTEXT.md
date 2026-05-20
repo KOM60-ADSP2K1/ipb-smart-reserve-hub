@@ -146,6 +146,10 @@ Student-owned Private File Downloads let students reopen uploaded signed approva
 
 Reservation Private Files are reservation-scoped private storage facts for generated approval letters, uploaded signed approval letters, and uploaded payment receipts. The Reservation Private File Module owns upload validation, file metadata, download bytes, content type, and attachment filename mapping so document and payment workflows do not duplicate storage rules.
 
+Approval Letter Issuance creates the official generated approval letter for a Facility Reservation.
+
+It owns formal approval-letter number allocation, approval-letter PDF generation from the repository template, private storage writes, and generated-letter metadata. Reservation submission asks Approval Letter Issuance to issue a letter for every new held reservation, while approval-letter read/download workflows may ask it to ensure a missing generated letter exists for development or legacy data.
+
 Terminal Reservation rejection records a nullable rejection source on the Reservation. Document review rejection stores `document`, payment review rejection stores `payment`, and old rejected Reservations without a source are exposed as `unknown`. Cancellation rejection is a separate review outcome and does not set terminal rejection source.
 
 ## Staff Reservation Review Access

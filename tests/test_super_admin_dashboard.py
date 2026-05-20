@@ -80,6 +80,14 @@ async def test_super_admin_fetches_dashboard_aggregate_with_kpis_admins_and_acti
             "is_active": True,
             "assigned_staff_count": 1,
             "active_assigned_staff_count": 1,
+            "assigned_staff": [
+                {
+                    "id": staff_id,
+                    "email": "staff@ipb.ac.id",
+                    "full_name": "Seed User",
+                    "is_active": True,
+                }
+            ],
             "assignment_coverage": "covered",
             "issue_flags": [],
         },
@@ -92,6 +100,7 @@ async def test_super_admin_fetches_dashboard_aggregate_with_kpis_admins_and_acti
             "is_active": False,
             "assigned_staff_count": 0,
             "active_assigned_staff_count": 0,
+            "assigned_staff": [],
             "assignment_coverage": "needs_staff",
             "issue_flags": ["needs_staff"],
         },

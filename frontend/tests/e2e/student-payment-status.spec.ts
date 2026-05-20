@@ -80,10 +80,7 @@ test.describe("student payment status pages", () => {
     await expect(page.getByRole("button", { name: "Unggah" })).toBeVisible();
     await expect(page.getByText("Total Pembayaran", { exact: true })).toBeVisible();
     await expect(page.getByText("Rp1.500.000").first()).toBeVisible();
-    await expect(page.getByRole("link", { name: "Kirim" })).toHaveAttribute(
-      "href",
-      "/student/reservations/RSV-FIXTURE-001/payment/waiting",
-    );
+    await expect(page.getByRole("button", { name: "Kirim" })).toBeVisible();
 
     if (isMobile) {
       await expectNoHorizontalOverflow(page);

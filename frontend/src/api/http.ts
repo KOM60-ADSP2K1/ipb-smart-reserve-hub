@@ -150,8 +150,22 @@ export async function apiDownload(path: string, options: RequestInit = {}) {
     throw new ApiError(errorMessage(payload, response.statusText), response.status, payload);
   }
 
-  return {
-    blob: await response.blob(),
-    filename: getAttachmentFilename(response.headers.get("Content-Disposition")),
-  };
+  const blob = await response.blob();
+  const filename = getAttachmentFilename(response.headers.get("Content-Disposition")) ?? "download";
+  triggerBrowserDownload(blob, filename);
+
+  return { blob, filename };
+}
+
+function triggerBrowserDownload(blob: Blob, filename: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.rel = "noopener";
+  anchor.style.display = "none";
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
 }

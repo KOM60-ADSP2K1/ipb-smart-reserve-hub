@@ -1,4 +1,6 @@
 from datetime import UTC, datetime
+import subprocess
+import tempfile
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -57,6 +59,31 @@ async def _upload_signed_approval_letter(client: AsyncClient, *, token: str, res
     )
 
 
+async def _submit_signed_approval_letter(client: AsyncClient, *, token: str, reservation_id: str) -> None:
+    await client.post(
+        f"/student/reservations/{reservation_id}/signed-approval-letter/submit",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+
+async def _upload_and_submit_signed_approval_letter(client: AsyncClient, *, token: str, reservation_id: str) -> None:
+    await _upload_signed_approval_letter(client, token=token, reservation_id=reservation_id)
+    await _submit_signed_approval_letter(client, token=token, reservation_id=reservation_id)
+
+
+def _pdf_text(content: bytes) -> str:
+    with tempfile.NamedTemporaryFile(suffix=".pdf") as pdf:
+        pdf.write(content)
+        pdf.flush()
+        extracted = subprocess.run(
+            ["pdftotext", pdf.name, "-"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    return extracted.stdout
+
+
 @pytest.mark.anyio
 async def test_student_accesses_stable_generated_approval_letter_metadata():
     app = create_app(
@@ -100,6 +127,7 @@ async def test_student_accesses_stable_generated_approval_letter_metadata():
     assert second.json() == first_body
     assert first_body["reservation_id"] == reservation_id
     assert first_body["reservation_code"] == reservation["reservation_code"]
+    assert first_body["letter_number"] == "RSV/IPBSRH/2026/000001"
     assert first_body["filename"] == f"{reservation['reservation_code']}-surat-persetujuan.pdf"
     assert first_body["content_type"] == "application/pdf"
     assert first_body["size_bytes"] > 0
@@ -151,11 +179,13 @@ async def test_student_downloads_generated_approval_letter_pdf_multiple_times():
     assert second.status_code == 200
     assert second.content == first.content
     assert first.content.startswith(b"%PDF-")
-    assert b"SURAT PERSETUJUAN RESERVASI FASILITAS" in first.content
-    assert reservation["reservation_code"].encode() in first.content
-    assert b"Budi Santoso" in first.content
-    assert b"Auditorium Andi Hakim Nasoetion" in first.content
-    assert b"/staff/reservations/" in first.content
+    text = _pdf_text(first.content)
+    assert "Surat Permohonan Reservasi Fasilitas" in text
+    assert "RSV/IPBSRH/2026/000001" in text
+    assert reservation["reservation_code"] in text
+    assert "Budi Santoso" in text
+    assert "Auditorium Andi Hakim Nasoetion" in text
+    assert "/staff/reservations/" not in text
 
 
 @pytest.mark.anyio
@@ -190,16 +220,26 @@ async def test_generated_approval_letter_pdf_includes_official_reservation_detai
             headers={"Authorization": f"Bearer {token}"},
         )
 
-    assert b"Tanggal generate: 2026-05-01" in download.content
-    assert b"Tanggal reservasi: 2026-06-01" in download.content
-    assert b"Waktu reservasi: 09:00-11:00 WIB" in download.content
-    assert b"NIM: G64190001" in download.content
-    assert b"Telepon/WhatsApp: 08123456789" in download.content
-    assert b"Organisasi: BEM KM IPB" in download.content
-    assert b"Jumlah peserta: 80" in download.content
-    assert b"Tanda tangan mahasiswa/perwakilan organisasi:" in download.content
-    assert b"Persetujuan pihak fasilitas/TU:" in download.content
-    assert b"Kontak TU: TU Fasilitas - 0251-8620000" in download.content
+    text = _pdf_text(download.content)
+    assert "Tanggal" in text
+    assert "1 Mei 2026" in text
+    assert "Tanggal dan waktu" in text
+    assert "1 Juni 2026" in text
+    assert "09:00" in text
+    assert "11:00 WIB" in text
+    assert "NIM/NIP" in text
+    assert "G64190001" in text
+    assert "budi@apps.ipb.ac.id / 08123456789" in text
+    assert "Organisasi pemohon" in text
+    assert "BEM KM IPB" in text
+    assert "Estimasi peserta" in text
+    assert "80 orang" in text
+    assert "Pemohon," in text
+    assert "Mengetahui" not in text
+    assert "Verifikasi internal" not in text
+    assert "/staff/reservations/" not in text
+    assert "Lampiran" in text
+    assert "1 berkas" in text
 
 
 @pytest.mark.anyio
@@ -257,7 +297,7 @@ async def test_student_cannot_access_another_students_approval_letter():
 
 
 @pytest.mark.anyio
-async def test_student_uploads_signed_approval_letter_after_generated_letter_exists():
+async def test_student_uploads_signed_approval_letter_without_submitting_for_verification():
     app = create_app(
         database_url="sqlite+pysqlite:///:memory:",
         clock=lambda: datetime(2026, 5, 1, 3, 0, tzinfo=UTC),
@@ -307,14 +347,15 @@ async def test_student_uploads_signed_approval_letter_after_generated_letter_exi
         "size_bytes": 22,
         "uploaded_at": "2026-05-01T03:00:00Z",
     }
-    assert updated.json()["status"] == "pending_document_review"
-    assert updated.json()["document_verification_due_at"] == "2026-05-03T03:00:00Z"
+    assert updated.json()["status"] == "pending_document_upload"
+    assert updated.json()["document_verification_due_at"] is None
     assert updated.json()["document"] == {
         "approval_letter": {
             "filename": f"{reservation['reservation_code']}-surat-persetujuan.pdf",
             "content_type": "application/pdf",
             "size_bytes": updated.json()["document"]["approval_letter"]["size_bytes"],
             "generated_at": "2026-05-01T03:00:00Z",
+            "letter_number": "RSV/IPBSRH/2026/000001",
             "uploaded_at": None,
         },
         "signed_approval_letter": {
@@ -324,10 +365,59 @@ async def test_student_uploads_signed_approval_letter_after_generated_letter_exi
             "generated_at": None,
             "uploaded_at": "2026-05-01T03:00:00Z",
         },
-        "review_status": "waiting_review",
+        "review_status": "upload_needed",
         "rejection_reason": None,
     }
     assert reservation_list.json()[0]["document"] == updated.json()["document"]
+
+
+@pytest.mark.anyio
+async def test_student_submits_uploaded_signed_approval_letter_for_verification():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime(2026, 5, 1, 3, 0, tzinfo=UTC),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    organization_unit_id = test_data.create_organization_unit(name="BEM KM IPB")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        token = await _register_and_login(
+            client,
+            email="budi@apps.ipb.ac.id",
+            full_name="Budi Santoso",
+            nim="G64190001",
+            phone="08123456789",
+        )
+        reservation = await _create_reservation(
+            client,
+            token=token,
+            facility_id=facility_id,
+            organization_unit_id=organization_unit_id,
+        )
+        reservation_id = reservation["id"]
+        await _upload_signed_approval_letter(client, token=token, reservation_id=reservation_id)
+
+        submit = await client.post(
+            f"/student/reservations/{reservation_id}/signed-approval-letter/submit",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        updated = await client.get(
+            f"/student/reservations/{reservation_id}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert submit.status_code == 200
+    assert submit.json() == {
+        "reservation_id": reservation_id,
+        "status": "pending_document_review",
+        "document_verification_due_at": "2026-05-03T03:00:00Z",
+    }
+    assert updated.json()["status"] == "pending_document_review"
+    assert updated.json()["document_verification_due_at"] == "2026-05-03T03:00:00Z"
+    assert updated.json()["document"]["review_status"] == "waiting_review"
 
 
 @pytest.mark.anyio
@@ -367,6 +457,51 @@ async def test_student_downloads_uploaded_signed_approval_letter():
     assert download.headers["content-type"] == "application/pdf"
     assert download.headers["content-disposition"] == 'attachment; filename="signed-letter.pdf"'
     assert download.content == b"%PDF-1.4 signed letter"
+
+
+@pytest.mark.anyio
+async def test_student_replaces_uploaded_signed_approval_letter_before_staff_review():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime(2026, 5, 1, 3, 0, tzinfo=UTC),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    organization_unit_id = test_data.create_organization_unit(name="BEM KM IPB")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        token = await _register_and_login(
+            client,
+            email="budi@apps.ipb.ac.id",
+            full_name="Budi Santoso",
+            nim="G64190001",
+            phone="08123456789",
+        )
+        reservation = await _create_reservation(
+            client,
+            token=token,
+            facility_id=facility_id,
+            organization_unit_id=organization_unit_id,
+        )
+        await _upload_signed_approval_letter(client, token=token, reservation_id=reservation["id"])
+
+        replacement = await client.post(
+            f"/student/reservations/{reservation['id']}/signed-approval-letter",
+            headers={"Authorization": f"Bearer {token}"},
+            files={"file": ("replacement.pdf", b"%PDF-1.4 replacement", "application/pdf")},
+        )
+        download = await client.get(
+            f"/student/reservations/{reservation['id']}/signed-approval-letter/download",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert replacement.status_code == 201
+    assert replacement.json()["filename"] == "replacement.pdf"
+    assert replacement.json()["size_bytes"] == 20
+    assert download.headers["content-disposition"] == 'attachment; filename="replacement.pdf"'
+    assert download.content == b"%PDF-1.4 replacement"
 
 
 @pytest.mark.anyio
@@ -450,7 +585,7 @@ async def test_student_signed_approval_letter_download_requires_uploaded_file():
 
 
 @pytest.mark.anyio
-async def test_student_cannot_upload_signed_approval_letter_before_generated_letter_exists():
+async def test_student_uploads_signed_approval_letter_immediately_after_reservation_creation():
     app = create_app(
         database_url="sqlite+pysqlite:///:memory:",
         clock=lambda: datetime(2026, 5, 1, 3, 0, tzinfo=UTC),
@@ -486,8 +621,8 @@ async def test_student_cannot_upload_signed_approval_letter_before_generated_let
             headers={"Authorization": f"Bearer {token}"},
         )
 
-    assert upload.status_code == 409
-    assert upload.json()["detail"] == "Surat persetujuan harus dibuat sebelum unggah surat bertanda tangan."
+    assert upload.status_code == 201
+    assert upload.json()["filename"] == "signed-letter.pdf"
     assert unchanged.json()["status"] == "pending_document_upload"
 
 
@@ -527,9 +662,9 @@ async def test_student_upload_signed_approval_letter_rejects_unsupported_file_ty
             headers={"Authorization": f"Bearer {token}"},
             files={
                 "file": (
-                    "signed-letter.docx",
+                    "signed-letter.jpg",
                     b"not an accepted signed letter",
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    "image/jpeg",
                 )
             },
         )
@@ -539,7 +674,49 @@ async def test_student_upload_signed_approval_letter_rejects_unsupported_file_ty
         )
 
     assert upload.status_code == 400
-    assert upload.json()["detail"] == "Unggah surat bertanda tangan harus berupa PDF, JPG, JPEG, atau PNG."
+    assert upload.json()["detail"] == "Unggah surat bertanda tangan harus berupa PDF."
+    assert unchanged.json()["status"] == "pending_document_upload"
+
+
+@pytest.mark.anyio
+async def test_student_upload_signed_approval_letter_rejects_pdf_without_pdf_header():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime(2026, 5, 1, 3, 0, tzinfo=UTC),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    organization_unit_id = test_data.create_organization_unit(name="BEM KM IPB")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        token = await _register_and_login(
+            client,
+            email="budi@apps.ipb.ac.id",
+            full_name="Budi Santoso",
+            nim="G64190001",
+            phone="08123456789",
+        )
+        reservation = await _create_reservation(
+            client,
+            token=token,
+            facility_id=facility_id,
+            organization_unit_id=organization_unit_id,
+        )
+
+        upload = await client.post(
+            f"/student/reservations/{reservation['id']}/signed-approval-letter",
+            headers={"Authorization": f"Bearer {token}"},
+            files={"file": ("signed-letter.pdf", b"not really a pdf", "application/pdf")},
+        )
+        unchanged = await client.get(
+            f"/student/reservations/{reservation['id']}",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+
+    assert upload.status_code == 400
+    assert upload.json()["detail"] == "Unggah surat bertanda tangan harus berupa PDF."
     assert unchanged.json()["status"] == "pending_document_upload"
 
 
@@ -623,7 +800,7 @@ async def test_assigned_staff_approval_moves_free_facility_reservation_to_approv
             facility_id=facility_id,
             organization_unit_id=organization_unit_id,
         )
-        await _upload_signed_approval_letter(client, token=student_token, reservation_id=reservation["id"])
+        await _upload_and_submit_signed_approval_letter(client, token=student_token, reservation_id=reservation["id"])
 
         review = await client.post(
             f"/staff/reservations/{reservation['id']}/document-review/approve",
@@ -638,6 +815,56 @@ async def test_assigned_staff_approval_moves_free_facility_reservation_to_approv
     assert review.json()["reservation_id"] == reservation["id"]
     assert review.json()["status"] == "approved"
     assert updated.json()["status"] == "approved"
+
+
+@pytest.mark.anyio
+async def test_assigned_staff_cannot_review_uploaded_letter_before_student_submits_it():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime(2026, 5, 1, 3, 0, tzinfo=UTC),
+    )
+    test_data = DataBuilder(app)
+    test_data.create_user(email="admin@ipb.ac.id", role=UserRole.super_admin)
+    staff_id = test_data.create_user(email="staff@ipb.ac.id", role=UserRole.staff)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion", price_rupiah=0)
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    organization_unit_id = test_data.create_organization_unit(name="BEM KM IPB")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        admin_token = await _login(client, email="admin@ipb.ac.id")
+        staff_token = await _login(client, email="staff@ipb.ac.id")
+        student_token = await _register_and_login(
+            client,
+            email="budi@apps.ipb.ac.id",
+            full_name="Budi Santoso",
+            nim="G64190001",
+            phone="08123456789",
+        )
+        await client.put(
+            f"/admin/facilities/{facility_id}/staff-assignments/{staff_id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        reservation = await _create_reservation(
+            client,
+            token=student_token,
+            facility_id=facility_id,
+            organization_unit_id=organization_unit_id,
+        )
+        await _upload_signed_approval_letter(client, token=student_token, reservation_id=reservation["id"])
+
+        review = await client.post(
+            f"/staff/reservations/{reservation['id']}/document-review/approve",
+            headers={"Authorization": f"Bearer {staff_token}"},
+        )
+        unchanged = await client.get(
+            f"/student/reservations/{reservation['id']}",
+            headers={"Authorization": f"Bearer {student_token}"},
+        )
+
+    assert review.status_code == 409
+    assert review.json()["detail"] == "Surat bertanda tangan belum dikirim untuk verifikasi."
+    assert unchanged.json()["status"] == "pending_document_upload"
 
 
 @pytest.mark.anyio
@@ -674,7 +901,7 @@ async def test_assigned_staff_downloads_uploaded_signed_approval_letter_for_revi
             facility_id=facility_id,
             organization_unit_id=organization_unit_id,
         )
-        await _upload_signed_approval_letter(client, token=student_token, reservation_id=reservation["id"])
+        await _upload_and_submit_signed_approval_letter(client, token=student_token, reservation_id=reservation["id"])
 
         download = await client.get(
             f"/staff/reservations/{reservation['id']}/signed-approval-letter/download",
@@ -683,6 +910,59 @@ async def test_assigned_staff_downloads_uploaded_signed_approval_letter_for_revi
 
     assert download.status_code == 200
     assert download.headers["content-type"] == "application/pdf"
+    assert download.headers["content-disposition"] == 'attachment; filename="signed-letter.pdf"'
+    assert download.content == b"%PDF-1.4 signed letter"
+
+
+@pytest.mark.anyio
+async def test_assigned_staff_downloads_uploaded_signed_approval_letter_after_app_restart(tmp_path):
+    database_url = f"sqlite+pysqlite:///{tmp_path / 'reservation-files.db'}"
+    clock = lambda: datetime(2026, 5, 1, 3, 0, tzinfo=UTC)
+    app = create_app(database_url=database_url, clock=clock)
+    test_data = DataBuilder(app)
+    test_data.create_user(email="admin@ipb.ac.id", role=UserRole.super_admin)
+    staff_id = test_data.create_user(email="staff@ipb.ac.id", role=UserRole.staff)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    organization_unit_id = test_data.create_organization_unit(name="BEM KM IPB")
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        admin_token = await _login(client, email="admin@ipb.ac.id")
+        staff_token = await _login(client, email="staff@ipb.ac.id")
+        student_token = await _register_and_login(
+            client,
+            email="budi@apps.ipb.ac.id",
+            full_name="Budi Santoso",
+            nim="G64190001",
+            phone="08123456789",
+        )
+        await client.put(
+            f"/admin/facilities/{facility_id}/staff-assignments/{staff_id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        reservation = await _create_reservation(
+            client,
+            token=student_token,
+            facility_id=facility_id,
+            organization_unit_id=organization_unit_id,
+        )
+        await _upload_and_submit_signed_approval_letter(client, token=student_token, reservation_id=reservation["id"])
+
+    restarted_app = create_app(database_url=database_url, clock=clock)
+    async with AsyncClient(transport=ASGITransport(app=restarted_app), base_url="http://test") as client:
+        restarted_staff_token = await _login(client, email="staff@ipb.ac.id")
+        detail = await client.get(
+            f"/staff/reservations/{reservation['id']}",
+            headers={"Authorization": f"Bearer {restarted_staff_token}"},
+        )
+        download = await client.get(
+            detail.json()["review_actions"]["document"]["download_url"],
+            headers={"Authorization": f"Bearer {restarted_staff_token}"},
+        )
+
+    assert detail.status_code == 200
+    assert detail.json()["document"]["signed_approval_letter"]["filename"] == "signed-letter.pdf"
+    assert download.status_code == 200
     assert download.headers["content-disposition"] == 'attachment; filename="signed-letter.pdf"'
     assert download.content == b"%PDF-1.4 signed letter"
 
@@ -722,7 +1002,7 @@ async def test_unassigned_staff_cannot_approve_signed_approval_letter():
             facility_id=facility_id,
             organization_unit_id=organization_unit_id,
         )
-        await _upload_signed_approval_letter(client, token=student_token, reservation_id=reservation["id"])
+        await _upload_and_submit_signed_approval_letter(client, token=student_token, reservation_id=reservation["id"])
 
         review = await client.post(
             f"/staff/reservations/{reservation['id']}/document-review/approve",
@@ -772,7 +1052,7 @@ async def test_assigned_staff_approval_moves_paid_facility_reservation_to_pendin
             facility_id=facility_id,
             organization_unit_id=organization_unit_id,
         )
-        await _upload_signed_approval_letter(client, token=student_token, reservation_id=reservation["id"])
+        await _upload_and_submit_signed_approval_letter(client, token=student_token, reservation_id=reservation["id"])
 
         review = await client.post(
             f"/staff/reservations/{reservation['id']}/document-review/approve",
@@ -824,7 +1104,7 @@ async def test_assigned_staff_rejection_requires_reason():
             facility_id=facility_id,
             organization_unit_id=organization_unit_id,
         )
-        await _upload_signed_approval_letter(client, token=student_token, reservation_id=reservation["id"])
+        await _upload_and_submit_signed_approval_letter(client, token=student_token, reservation_id=reservation["id"])
 
         review = await client.post(
             f"/staff/reservations/{reservation['id']}/document-review/reject",
@@ -875,7 +1155,7 @@ async def test_assigned_staff_rejection_rejects_reservation_without_revision():
             facility_id=facility_id,
             organization_unit_id=organization_unit_id,
         )
-        await _upload_signed_approval_letter(client, token=student_token, reservation_id=reservation["id"])
+        await _upload_and_submit_signed_approval_letter(client, token=student_token, reservation_id=reservation["id"])
 
         review = await client.post(
             f"/staff/reservations/{reservation['id']}/document-review/reject",

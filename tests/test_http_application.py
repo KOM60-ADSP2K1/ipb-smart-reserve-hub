@@ -193,6 +193,7 @@ def test_http_application_enables_cors_middleware():
     assert cors_middlewares[0].kwargs["allow_methods"] == ["*"]
     assert cors_middlewares[0].kwargs["allow_headers"] == ["*"]
     assert cors_middlewares[0].kwargs["allow_credentials"] is True
+    assert cors_middlewares[0].kwargs["expose_headers"] == ["Content-Disposition"]
 
 
 def test_http_application_module_builds_app_with_foundation_routes():
