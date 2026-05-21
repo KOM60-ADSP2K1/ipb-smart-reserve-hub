@@ -15,6 +15,22 @@ PYTHON_BIN="${PYTHON_BIN:-}"
 backend_pid=""
 frontend_pid=""
 
+wait_for_first_exit() {
+  while true; do
+    if ! kill -0 "$backend_pid" 2>/dev/null; then
+      wait "$backend_pid" 2>/dev/null || true
+      return
+    fi
+
+    if ! kill -0 "$frontend_pid" 2>/dev/null; then
+      wait "$frontend_pid" 2>/dev/null || true
+      return
+    fi
+
+    sleep 1
+  done
+}
+
 cleanup() {
   local exit_code=$?
 
@@ -88,4 +104,4 @@ backend_pid=$!
 ) &
 frontend_pid=$!
 
-wait -n "$backend_pid" "$frontend_pid"
+wait_for_first_exit

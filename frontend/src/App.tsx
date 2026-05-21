@@ -59,6 +59,7 @@ import { ReservationWorkflowComponentsPage } from "./pages/__reference__/Reserva
 export function App() {
   return (
     <Routes>
+      <Route element={<Navigate replace to="/login" />} path="/" />
       <Route element={<LoginPage />} path="/login" />
       <Route element={<RegisterPage />} path="/register" />
       <Route element={<RequireRole allow={["student"]}><StudentHomePage /></RequireRole>} path="/student" />
@@ -147,7 +148,7 @@ export function App() {
         path="/__reference__/upload-calendar-states"
       />
       <Route element={<UiPrimitivesPage />} path="/__reference__/ui-primitives" />
-      <Route element={<Navigate replace to="/__harness__/smoke" />} path="*" />
+      <Route element={<Navigate replace to="/login" />} path="*" />
     </Routes>
   );
 }

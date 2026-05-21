@@ -249,6 +249,24 @@ def test_http_application_module_builds_app_with_foundation_routes():
     assert app.state.session_factory is not None
 
 
+def test_http_application_groups_openapi_operations_by_domain_tags():
+    app = HttpApplicationModule(settings=SettingsModule(database_url="sqlite+pysqlite:///:memory:")).build()
+
+    schema = app.openapi()
+    tags = {tag["name"] for tag in schema["tags"]}
+
+    assert "Authentication" in tags
+    assert "Facilities" in tags
+    assert "Reservations" in tags
+    assert "Payments" in tags
+    assert "System Status" in tags
+    assert schema["paths"]["/auth/login"]["post"]["tags"] == ["Authentication"]
+    assert schema["paths"]["/facilities"]["get"]["tags"] == ["Facilities"]
+    assert schema["paths"]["/student/reservations"]["get"]["tags"] == ["Reservations"]
+    assert schema["paths"]["/student/reservations/{reservation_id}/payment"]["get"]["tags"] == ["Payments"]
+    assert schema["paths"]["/health"]["get"]["tags"] == ["System Status"]
+
+
 def test_facility_reservation_workflow_assembly_loads_shared_booking_settings():
     session_factory = build_session_factory("sqlite+pysqlite:///:memory:")
     Base.metadata.create_all(bind=session_factory.kw["bind"])

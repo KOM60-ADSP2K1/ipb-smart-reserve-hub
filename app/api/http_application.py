@@ -7,6 +7,7 @@ from urllib.parse import unquote
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.routing import APIRoute
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -45,6 +46,25 @@ from app.core.module_factories import (
 )
 from app.core.settings import SettingsModule
 from app.storage import InMemoryPrivateStorage, LocalPrivateStorage, PrivateStorage
+
+OPENAPI_TAGS = [
+    {"name": "Authentication", "description": "Login, session refresh, identity, and shell access."},
+    {"name": "User Management", "description": "Admin-managed user account administration."},
+    {"name": "Facilities", "description": "Public facility catalog, details, availability, and time selection."},
+    {"name": "Reservations", "description": "Student reservation submission and reservation lifecycle actions."},
+    {"name": "Approval Letters", "description": "Approval-letter upload, submission, download, and review flows."},
+    {"name": "Payments", "description": "Payment receipt upload, submission, download, and review flows."},
+    {"name": "Reviews", "description": "Student, staff, and admin facility review flows."},
+    {"name": "Notifications", "description": "User notification listing and read acknowledgements."},
+    {"name": "Audit Logs", "description": "Administrative audit log visibility."},
+    {"name": "Facility Management", "description": "Staff-assigned facility editing and admin staff assignment flows."},
+    {"name": "Staff Reservation Operations", "description": "Staff reservation queues, detail views, and schedules."},
+    {"name": "Organization Units", "description": "Public and admin organization-unit management flows."},
+    {"name": "Booking Settings", "description": "Administrative booking and policy settings."},
+    {"name": "System Status", "description": "Health and system status endpoints."},
+    {"name": "Super Admin Dashboard", "description": "Super admin dashboard summaries."},
+    {"name": "Super Admin Reports", "description": "Super admin report aggregation endpoints."},
+]
 
 
 @dataclass(frozen=True)
@@ -507,7 +527,7 @@ class HttpApplicationModule:
         self._runtime_dependency_registry = runtime_dependency_registry
 
     def build(self) -> FastAPI:
-        app = FastAPI(title="IPB Smart Reserve Hub")
+        app = FastAPI(title="IPB Smart Reserve Hub", openapi_tags=OPENAPI_TAGS)
         app.add_middleware(
             CORSMiddleware,
             allow_origins=["*"],
@@ -612,6 +632,7 @@ class HttpApplicationModule:
             require_access=super_admin_report_dependencies.require_access,
         )
 
+        _assign_openapi_tags(app)
         app.state.session_factory = runtime.session_factory
         return app
 
@@ -628,3 +649,51 @@ def _build_private_storage(settings: SettingsModule) -> PrivateStorage:
         return LocalPrivateStorage(Path(database_path).resolve().parent / "private-storage")
 
     return LocalPrivateStorage("private-storage")
+
+
+def _assign_openapi_tags(app: FastAPI) -> None:
+    for route in app.routes:
+        if not isinstance(route, APIRoute) or route.tags:
+            continue
+
+        route.tags = [_infer_openapi_tag(route.path)]
+
+
+def _infer_openapi_tag(path: str) -> str:
+    if path == "/health" or path.startswith("/admin/system-status"):
+        return "System Status"
+    if path.startswith("/auth/") or path.endswith("/shell"):
+        return "Authentication"
+    if path.startswith("/admin/users"):
+        return "User Management"
+    if path.startswith("/admin/dashboard"):
+        return "Super Admin Dashboard"
+    if path.startswith("/admin/reports"):
+        return "Super Admin Reports"
+    if path.startswith("/admin/audit-logs"):
+        return "Audit Logs"
+    if path.startswith("/admin/settings"):
+        return "Booking Settings"
+    if path.startswith("/organization-units") or path.startswith("/admin/organization-units"):
+        return "Organization Units"
+    if "/payment" in path or "payment-receipt" in path:
+        return "Payments"
+    if "approval-letter" in path or "/document-review/" in path:
+        return "Approval Letters"
+    if path.startswith("/notifications"):
+        return "Notifications"
+    if (
+        path.startswith("/student/reviews")
+        or path.endswith("/review")
+        or path.startswith("/staff/facilities/") and path.endswith("/reviews")
+        or path.startswith("/staff/facilities/") and path.endswith("/statistics")
+        or path.startswith("/admin/reviews")
+    ):
+        return "Reviews"
+    if path.startswith("/staff/reservations") or path.startswith("/staff/facilities/") and path.endswith("/schedule"):
+        return "Staff Reservation Operations"
+    if path.startswith("/staff/facilities") or path.startswith("/admin/facilities"):
+        return "Facility Management"
+    if path == "/facility-categories" or path.startswith("/facilities/") and "reservations" not in path or path == "/facilities":
+        return "Facilities"
+    return "Reservations"
