@@ -50,7 +50,7 @@ Expand Super Admin System from status-only cards into an operational system page
 
 ## Triage Notes
 
-- 2026-05-19: ISSUE-0085 is done, so the blocker is clear. Kept this issue out of AFK implementation because the statistics portion is implementable, but global approval-letter template management needs product/technical decisions that are not present in the review or existing docs. Current generated approval letters are PDF bytes produced by `app/pdf/__init__.py`; there is no active template storage model or rendering contract to extend safely without deciding format and fallback behavior.
+- 2026-05-19: ISSUE-0085 is done, so the blocker is clear. Kept this issue out of AFK implementation because the statistics portion is implementable, but global approval-letter template management needs product/technical decisions that are not present in the review or existing docs. Current generated approval letters are PDF bytes produced by `backend/app/pdf/__init__.py`; there is no active template storage model or rendering contract to extend safely without deciding format and fallback behavior.
 
 ## Agent Brief
 

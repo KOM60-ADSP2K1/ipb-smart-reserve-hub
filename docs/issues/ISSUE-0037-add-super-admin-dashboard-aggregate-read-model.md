@@ -77,8 +77,8 @@ Evidence to record when closing:
 
 2026-05-13: Implemented and verified Super Admin dashboard aggregate read model.
 
-- Code evidence: `app/api/routes/super_admin_dashboard_routes.py` adds `GET /admin/dashboard`; `app/services/super_admin_dashboard.py` composes user listing, Facility governance, system status, audit logs, and Reservation count into a dashboard aggregate.
-- API behavior evidence: `tests/test_super_admin_dashboard.py` verifies KPI values, system status, administrator governance rows, Facility governance composition, recent audit activity, and student/staff denial.
-- Wiring evidence: `tests/test_http_application.py` verifies the dashboard route is registered through the runtime dependency registry and default app build.
+- Code evidence: `backend/app/api/routes/super_admin_dashboard_routes.py` adds `GET /admin/dashboard`; `backend/app/services/super_admin_dashboard.py` composes user listing, Facility governance, system status, audit logs, and Reservation count into a dashboard aggregate.
+- API behavior evidence: `backend/tests/test_super_admin_dashboard.py` verifies KPI values, system status, administrator governance rows, Facility governance composition, recent audit activity, and student/staff denial.
+- Wiring evidence: `backend/tests/test_http_application.py` verifies the dashboard route is registered through the runtime dependency registry and default app build.
 - Documentation evidence: `docs/frontend/per-page-brief/super-00-dashboard.md`, `docs/frontend/backend-gaps.md`, and `README.md` document the implemented dashboard contract.
-- Test command: `uv run pytest tests/test_super_admin_dashboard.py tests/test_http_application.py` passed with 7 tests.
+- Test command: `uv run pytest backend/tests/test_super_admin_dashboard.py backend/tests/test_http_application.py` passed with 7 tests.

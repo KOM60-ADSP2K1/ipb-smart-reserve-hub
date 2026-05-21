@@ -55,7 +55,7 @@
 - Endpoints consumed: `GET /student/reservations/:reservationId`, `POST /student/reservations/:reservationId/cancellation-request`.
 - Page-needed fields: reservation summary, cancellation eligibility, cancellation status/reason when present.
 - Auth/session assumptions: student-owned reservation only.
-- Source files: `app/api/routes/reservation_routes.py`, `app/schemas/reservation_schemas.py`.
+- Source files: `backend/app/api/routes/reservation_routes.py`, `backend/app/schemas/reservation_schemas.py`.
 
 ### BG-STUDENT-13-01: Student Cancellation Request
 
@@ -63,7 +63,7 @@
 - Domain area: Reservation Workflow
 - Affected UI: cancellation request form and post-submit cancelled detail state.
 - Contract needed: owned reservation detail plus cancellation request endpoint that immediately returns `cancelled` with cancellation projection fields.
-- Evidence: `POST /student/reservations/{reservation_id}/cancellation-request` exists; `tests/test_cancellation_workflow.py` verifies approved cancellation immediately transitions to `cancelled`, preserves required reason handling, records audit, and exposes cancellation reason fields used by list/detail projections.
+- Evidence: `POST /student/reservations/{reservation_id}/cancellation-request` exists; `backend/tests/test_cancellation_workflow.py` verifies approved cancellation immediately transitions to `cancelled`, preserves required reason handling, records audit, and exposes cancellation reason fields used by list/detail projections.
 - Source issue/PRD: `docs/issues/ISSUE-0013-cancellation-workflow.md`, `docs/issues/ISSUE-0089-automatic-student-cancellation-lifecycle.md`.
 
 ## Shared Components

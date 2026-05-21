@@ -55,7 +55,7 @@
 - Endpoints consumed: `POST /auth/register`.
 - Page-needed fields: request `email`, `password`, `full_name`, `nim`, `phone`; response `id`, `email`, `full_name`, `role`, `is_active`, `nim`, `phone`, `academic_profile`.
 - Auth/session assumptions: registration does not create a frontend session.
-- Source files: `app/api/routes/account_routes.py`, `app/schemas/account_schemas.py`.
+- Source files: `backend/app/api/routes/account_routes.py`, `backend/app/schemas/account_schemas.py`.
 
 ### BG-AUTH-REGISTER-01: Student Registration Contract
 
@@ -63,7 +63,7 @@
 - Domain area: Auth and session
 - Affected UI: register form.
 - Contract needed: student self-registration accepts email/password/name/NIM/phone and returns public user identity.
-- Evidence: `POST /auth/register` exists in `app/api/routes/account_routes.py`; `StudentRegistrationRequest` and `UserResponse` exist in `app/schemas/account_schemas.py`.
+- Evidence: `POST /auth/register` exists in `backend/app/api/routes/account_routes.py`; `StudentRegistrationRequest` and `UserResponse` exist in `backend/app/schemas/account_schemas.py`.
 - Source issue/PRD: `docs/issues/ISSUE-0022-implement-student-self-registration-page.md`.
 
 ## Shared Components

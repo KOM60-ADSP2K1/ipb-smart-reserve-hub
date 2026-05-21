@@ -55,7 +55,7 @@
 - Endpoints consumed: `GET /student/reservations`, cancellation endpoints when actions are implemented.
 - Page-needed fields: reservation status, facility, date/time, price, document/payment/rejection projections, cancellation fields, review presence.
 - Auth/session assumptions: student-owned list only.
-- Source files: `app/api/routes/reservation_routes.py`, `app/schemas/reservation_schemas.py`.
+- Source files: `backend/app/api/routes/reservation_routes.py`, `backend/app/schemas/reservation_schemas.py`.
 
 ### BG-STUDENT-10-01: Student Reservation List Projections
 

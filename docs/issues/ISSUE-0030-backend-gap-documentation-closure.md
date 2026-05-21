@@ -122,7 +122,7 @@ What was verified:
 
 - `docs/frontend/backend-gaps.md` now acts as a closure index and points to stable contract documentation.
 - `README.md` documents the shared reservation file metadata shape for workflow projections.
-- `tests/test_documentation_closure.py` covers the documentation closure behavior.
-- Focused verification passes: `uv run --extra dev pytest tests/test_documentation_closure.py -q` reports `2 passed`.
+- `backend/tests/test_documentation_closure.py` covers the documentation closure behavior.
+- Focused verification passes: `uv run --extra dev pytest backend/tests/test_documentation_closure.py -q` reports `2 passed`.
 
 No runtime behavior changes were required for this docs-only closure slice.

@@ -57,7 +57,7 @@
 - Page-needed fields: selected `starts_at`, `ends_at`, availability result `available`, `reasons`.
 - Public calendar dependency: if the optional calendar endpoint is consumed, it must use the privacy-safe blocked-slot contract tracked by `BG-STUDENT-02-02`: entries contain only `starts_at`, `ends_at`, and generic `status: reserved`.
 - Auth/session assumptions: protected route; endpoint is public but submission flow requires student session.
-- Source files: `app/api/routes/facility_routes.py`, `app/schemas/reservation_time_selection_schemas.py`.
+- Source files: `backend/app/api/routes/facility_routes.py`, `backend/app/schemas/reservation_time_selection_schemas.py`.
 
 ### BG-STUDENT-03-01: Reservation Time Validation
 
@@ -65,7 +65,7 @@
 - Domain area: Reservation Workflow
 - Affected UI: calendar/time validation and continue gating.
 - Contract needed: pre-submit validation for booking window, open hours, blackout, and conflicts.
-- Evidence: `POST /facilities/{facility_id}/reservation-time-selection` exists in `app/api/routes/facility_routes.py`.
+- Evidence: `POST /facilities/{facility_id}/reservation-time-selection` exists in `backend/app/api/routes/facility_routes.py`.
 - Source issue/PRD: `docs/issues/ISSUE-0006-reservation-time-selection-rules.md`.
 
 ## Shared Components

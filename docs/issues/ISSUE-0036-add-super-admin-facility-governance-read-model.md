@@ -75,8 +75,8 @@ Evidence to record when closing:
 
 2026-05-13: Implemented and verified Super Admin Facility governance read model.
 
-- Code evidence: `app/api/routes/facility_management_routes.py` adds `GET /admin/facilities/governance`; `app/services/facility_management.py` projects governance rows with active/inactive state, assigned staff counts, active assigned staff counts, coverage, and issue flags; `app/repositories/facility_management_repository.py` loads all Facilities with staff assignments.
-- API behavior evidence: `tests/test_super_admin_facility_governance.py` verifies active/inactive Facility rows, assignment coverage, `needs_staff` issue flags, and student/staff denial.
-- Scope evidence: `tests/test_http_application.py` verifies existing assign/unassign routes remain registered and no `/admin/facilities/import` route exists.
+- Code evidence: `backend/app/api/routes/facility_management_routes.py` adds `GET /admin/facilities/governance`; `backend/app/services/facility_management.py` projects governance rows with active/inactive state, assigned staff counts, active assigned staff counts, coverage, and issue flags; `backend/app/repositories/facility_management_repository.py` loads all Facilities with staff assignments.
+- API behavior evidence: `backend/tests/test_super_admin_facility_governance.py` verifies active/inactive Facility rows, assignment coverage, `needs_staff` issue flags, and student/staff denial.
+- Scope evidence: `backend/tests/test_http_application.py` verifies existing assign/unassign routes remain registered and no `/admin/facilities/import` route exists.
 - Documentation evidence: `docs/frontend/per-page-brief/super-02-fasilitas.md`, `docs/frontend/backend-gaps.md`, and `README.md` document the implemented governance contract.
-- Test command: `uv run pytest tests/test_super_admin_facility_governance.py tests/test_http_application.py` passed with 7 tests.
+- Test command: `uv run pytest backend/tests/test_super_admin_facility_governance.py backend/tests/test_http_application.py` passed with 7 tests.

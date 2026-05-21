@@ -55,7 +55,7 @@
 - Endpoints consumed: `GET /student/reservations/:reservationId`, `GET /student/reservations/:reservationId/approval-letter`, `GET /student/reservations/:reservationId/approval-letter/download`, `POST /student/reservations/:reservationId/signed-approval-letter`, `POST /student/reservations/:reservationId/signed-approval-letter/submit`.
 - Page-needed fields: reservation `document.approval_letter`, `document.signed_approval_letter`, `document.review_status`, deadlines, summary fields. Generated approval-letter metadata includes `letter_number`.
 - Auth/session assumptions: student can access only owned reservations/files.
-- Source files: `app/api/routes/approval_letter_routes.py`, `app/api/routes/reservation_routes.py`, `app/schemas/reservation_schemas.py`.
+- Source files: `backend/app/api/routes/approval_letter_routes.py`, `backend/app/api/routes/reservation_routes.py`, `backend/app/schemas/reservation_schemas.py`.
 
 ### BG-STUDENT-05-01: Approval Letter Generation And Upload
 
@@ -63,7 +63,7 @@
 - Domain area: Reservation Workflow
 - Affected UI: generated approval letter row and signed-letter upload panel.
 - Contract needed: generated approval letter is issued during reservation creation, exposes `letter_number`, supports authorized download, signed approval-letter upload accepts PDF only up to 5 MB and stores metadata without entering review, and signed approval-letter submit moves the reservation to document verification waiting with `document_verification_due_at`.
-- Evidence: approval letter routes exist in `app/api/routes/approval_letter_routes.py`; metadata schemas exist in `app/schemas/reservation_schemas.py`; issuance is wired through `app/services/approval_letters.py` and `app/services/reservations.py`.
+- Evidence: approval letter routes exist in `backend/app/api/routes/approval_letter_routes.py`; metadata schemas exist in `backend/app/schemas/reservation_schemas.py`; issuance is wired through `backend/app/services/approval_letters.py` and `backend/app/services/reservations.py`.
 - Source issue/PRD: `docs/issues/ISSUE-0008-generated-approval-letter-download.md`, `docs/issues/ISSUE-0009-signed-letter-upload-and-staff-document-review.md`.
 
 ## Shared Components

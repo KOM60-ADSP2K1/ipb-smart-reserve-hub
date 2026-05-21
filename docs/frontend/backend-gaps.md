@@ -5,7 +5,7 @@ This file is an index. Detailed backend integration requirements and backend gap
 ## Stable Contract Documentation
 
 - `README.md` contains the current local run, demo account, and reservation file metadata overview.
-- `app/README.md` contains the backend package overview.
+- `backend/app/README.md` contains the backend package overview.
 - `CONTEXT.md` contains domain language for frontend/backend integration concepts.
 - `docs/frontend/per-page-brief/` contains page-owned integration details and backend gap entries.
 - `docs/frontend/frontend-stack.md` contains frontend stack, session, and testing conventions.

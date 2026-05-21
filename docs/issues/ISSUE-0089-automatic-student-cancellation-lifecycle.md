@@ -42,12 +42,12 @@ Change student cancellation from a staff-reviewed request into an immediate canc
 ## Implementation Notes
 
 - Current backend has `cancellation_requested` plus staff approve/reject endpoints. This issue intentionally changes that domain behavior.
-- Likely backend touchpoints: `app/services/reservations.py`, `reservation_lifecycle.py`, reservation schemas/routes, staff reservation operation projections, and tests.
+- Likely backend touchpoints: `backend/app/services/reservations.py`, `reservation_lifecycle.py`, reservation schemas/routes, staff reservation operation projections, and tests.
 - Likely frontend touchpoints: cancellation page, student detail/list workflow mapper, staff reservation queue/detail pages.
 
 ## Triage Notes
 
-- 2026-05-19: ISSUE-0088 is done, so this issue is unblocked. Acceptance criteria are concrete enough for agent implementation despite the original HITL mode: preserve the existing approved-reservation cancellation route shape, change the outcome to immediate `cancelled`, update staff projections so cancellation review is not actionable, and update affected frontend copy/tests/docs.
+- 2026-05-19: ISSUE-0088 is done, so this issue is unblocked. Acceptance criteria are concrete enough for agent implementation despite the original HITL mode: preserve the existing approved-reservation cancellation route shape, change the outcome to immediate `cancelled`, update staff projections so cancellation review is not actionable, and update affected frontend copy/backend/tests/docs.
 
 ## Agent Brief
 

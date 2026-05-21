@@ -55,7 +55,7 @@
 - Endpoints consumed: `GET /student/reservations/:reservationId`, `POST /student/reservations/:reservationId/review`.
 - Page-needed fields: request `rating`, `comment`; response review `id`, `reservation_id`, `facility_id`, `rating`, `comment`, `author_name`, `is_deleted`, `edit_warning`.
 - Auth/session assumptions: student-owned completed reservation only.
-- Source files: `app/api/routes/review_routes.py`, `app/schemas/review_schemas.py`.
+- Source files: `backend/app/api/routes/review_routes.py`, `backend/app/schemas/review_schemas.py`.
 
 ### BG-STUDENT-12-01: Student Review Submission
 

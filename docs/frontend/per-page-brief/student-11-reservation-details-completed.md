@@ -54,7 +54,7 @@
 - Endpoints consumed: `GET /student/reservations/:reservationId`, private file downloads, `POST /student/reservations/:reservationId/review`.
 - Page-needed fields: `status=completed`, `review`, document/payment metadata.
 - Auth/session assumptions: student-owned reservation only.
-- Source files: `app/api/routes/reservation_routes.py`, `app/api/routes/review_routes.py`, `app/schemas/reservation_schemas.py`.
+- Source files: `backend/app/api/routes/reservation_routes.py`, `backend/app/api/routes/review_routes.py`, `backend/app/schemas/reservation_schemas.py`.
 
 ### BG-STUDENT-11-COMPLETED-01: Completed Detail And Review Eligibility
 

@@ -55,7 +55,7 @@
 - Endpoints consumed: `GET /staff/facilities`.
 - Page-needed fields: `id`, `name`, `location`, `capacity`, `category`, `price_summary`, `open_hours_summary`, `is_active`.
 - Auth/session assumptions: staff assigned facility access only.
-- Source files: `app/api/routes/facility_management_routes.py`, `app/schemas/facility_management_schemas.py`.
+- Source files: `backend/app/api/routes/facility_management_routes.py`, `backend/app/schemas/facility_management_schemas.py`.
 
 ### BG-STAFF-01-01: Staff Assigned Facility List
 

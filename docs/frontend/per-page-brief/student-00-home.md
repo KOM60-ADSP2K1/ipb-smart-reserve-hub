@@ -56,7 +56,7 @@
 - Endpoints consumed: `GET /facility-categories`, `GET /facilities?featured=true&limit=...`.
 - Page-needed fields: category `id`, `name`, `slug`, `icon_hint`, `facility_count`; facility item `id`, `name`, `location`, `capacity`, `category`, `cover_image_url`, `rating_average`, `review_count`, `price_summary`, `open_hours_summary`.
 - Auth/session assumptions: page is protected by student session, but discovery endpoints are public.
-- Source files: `app/api/routes/facility_routes.py`, `app/schemas/facility_schemas.py`.
+- Source files: `backend/app/api/routes/facility_routes.py`, `backend/app/schemas/facility_schemas.py`.
 
 ### BG-STUDENT-00-01: Home Categories And Featured Facilities
 
@@ -64,7 +64,7 @@
 - Domain area: Facility Catalog
 - Affected UI: category shortcuts and featured facility cards.
 - Contract needed: public category list and featured facility page/envelope.
-- Evidence: `GET /facility-categories` and `GET /facilities` with `featured`/`limit` query support exist in `app/api/routes/facility_routes.py`; response schemas exist in `app/schemas/facility_schemas.py`.
+- Evidence: `GET /facility-categories` and `GET /facilities` with `featured`/`limit` query support exist in `backend/app/api/routes/facility_routes.py`; response schemas exist in `backend/app/schemas/facility_schemas.py`.
 - Source issue/PRD: `docs/issues/ISSUE-0023-public-facility-categories-with-stable-slugs.md`, `docs/issues/ISSUE-0025-featured-facility-catalog-query.md`.
 
 ## Shared Components

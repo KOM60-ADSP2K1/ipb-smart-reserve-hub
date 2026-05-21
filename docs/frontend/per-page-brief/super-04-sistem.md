@@ -54,7 +54,7 @@
 - Endpoints consumed: `GET /admin/system-status`, `GET /admin/settings`, `PATCH /admin/settings`.
 - Page-needed fields: status checks, storage/worker/database health, booking deadline/cutoff/email-domain settings.
 - Auth/session assumptions: super-admin bearer token.
-- Source files: `app/api/routes/system_status_routes.py`, `app/api/routes/booking_setting_routes.py`.
+- Source files: `backend/app/api/routes/system_status_routes.py`, `backend/app/api/routes/booking_setting_routes.py`.
 
 ### BG-SUPER-04-01: Super Admin System Status And Settings
 

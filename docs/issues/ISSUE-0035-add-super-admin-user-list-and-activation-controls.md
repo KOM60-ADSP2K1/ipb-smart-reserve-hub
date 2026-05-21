@@ -78,8 +78,8 @@ Evidence to record when closing:
 
 2026-05-13: Implemented and verified Super Admin user list and activation controls.
 
-- Code evidence: `app/api/routes/account_routes.py` adds `GET /admin/users`, `POST /admin/users/{user_id}/deactivate`, and `POST /admin/users/{user_id}/activate`; `app/services/accounts.py` owns pagination and status mutation behavior; `app/repositories/user_repository.py` applies role, active-status, and identity search filters.
-- API behavior evidence: `tests/test_super_admin_user_management.py` verifies paginated/filterable listing, student profile fields, activation/deactivation, inactive login/refresh rejection, deactivated token `/auth/me` rejection, and student/staff denial.
-- Scope evidence: `tests/test_http_application.py` verifies no `/admin/users/{user_id}/role` route exists.
+- Code evidence: `backend/app/api/routes/account_routes.py` adds `GET /admin/users`, `POST /admin/users/{user_id}/deactivate`, and `POST /admin/users/{user_id}/activate`; `backend/app/services/accounts.py` owns pagination and status mutation behavior; `backend/app/repositories/user_repository.py` applies role, active-status, and identity search filters.
+- API behavior evidence: `backend/tests/test_super_admin_user_management.py` verifies paginated/filterable listing, student profile fields, activation/deactivation, inactive login/refresh rejection, deactivated token `/auth/me` rejection, and student/staff denial.
+- Scope evidence: `backend/tests/test_http_application.py` verifies no `/admin/users/{user_id}/role` route exists.
 - Documentation evidence: `docs/frontend/per-page-brief/super-01-pengguna.md`, `docs/frontend/backend-gaps.md`, and `README.md` document the implemented user-management contract.
-- Test command: `uv run pytest tests/test_super_admin_user_management.py tests/test_http_application.py tests/test_auth_foundation.py::test_inactive_users_cannot_login_or_refresh_sessions` passed with 9 tests.
+- Test command: `uv run pytest backend/tests/test_super_admin_user_management.py backend/tests/test_http_application.py backend/tests/test_auth_foundation.py::test_inactive_users_cannot_login_or_refresh_sessions` passed with 9 tests.

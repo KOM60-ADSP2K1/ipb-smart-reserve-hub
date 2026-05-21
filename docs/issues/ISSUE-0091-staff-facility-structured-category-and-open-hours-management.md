@@ -49,7 +49,7 @@ Replace staff Facility free-text open-hours editing with structured per-day rows
 
 ## Triage Notes
 
-- 2026-05-19: ISSUE-0085 is done, no ADR or out-of-scope entry blocks this work, and the backend/frontend acceptance criteria are concrete. Although initially marked HITL because it changes contracts, the planned behavior is fully specified: expose category/open-hour data, validate structured updates, keep derived summary display, and update staff edit UI/tests/docs. Ready for AFK implementation with backend TDD and frontend integration tests.
+- 2026-05-19: ISSUE-0085 is done, no ADR or out-of-scope entry blocks this work, and the backend/frontend acceptance criteria are concrete. Although initially marked HITL because it changes contracts, the planned behavior is fully specified: expose category/open-hour data, validate structured updates, keep derived summary display, and update staff edit UI/backend/tests/docs. Ready for AFK implementation with backend TDD and frontend integration tests.
 
 ## Agent Brief
 
@@ -88,4 +88,4 @@ Staff users editing an assigned Facility should see and save the Facility catego
 ## Update Log
 
 - 2026-05-19: Implemented structured staff Facility category and open-hours management. Backend staff Facility profiles now expose `category_id` and `open_hours`, updates accept category changes and open-hour replacement, validation rejects invalid open-hour values, and summaries are derived from structured rows on replacement. Staff edit UI now loads active Facility categories, renders category selection plus add/remove/editable open-hour rows, removes the old free-text summary edit path from the page, and keeps summary as display text. Updated page/backend docs and refreshed desktop/mobile Playwright snapshots.
-- 2026-05-19: Verification run: `python3 -m compileall app tests` passed; `npm run typecheck` passed from `frontend/`; `npm test -- StaffFacilityPages` passed; `npx playwright test staff-edit-facility.spec.ts --update-snapshots` passed; `npx playwright test staff-edit-facility.spec.ts` passed on rerun after one nondeterministic mobile screenshot diff just above threshold. `python3 -m pytest tests/test_staff_facility_management.py -q` could not run because this environment lacks the `pytest` module.
+- 2026-05-19: Verification run: `python3 -m compileall app tests` passed; `npm run typecheck` passed from `frontend/`; `npm test -- StaffFacilityPages` passed; `npx playwright test staff-edit-facility.spec.ts --update-snapshots` passed; `npx playwright test staff-edit-facility.spec.ts` passed on rerun after one nondeterministic mobile screenshot diff just above threshold. `python3 -m pytest backend/tests/test_staff_facility_management.py -q` could not run because this environment lacks the `pytest` module.

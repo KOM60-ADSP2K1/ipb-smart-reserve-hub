@@ -1,9 +1,9 @@
 # Inventaris Test Case
 
-Dibuat dari automated test suite saat ini di `tests/`.
+Dibuat dari automated test suite saat ini di `backend/tests/`.
 
 - Terakhir diverifikasi: 2026-05-13
-- Perintah verifikasi: `uv run pytest`
+- Perintah verifikasi: `cd backend && uv run pytest`
 - Hasil: 183 passed
 - Keterangan status: `Passed` berarti test otomatis lulus pada verifikasi terakhir; `Not Passed` berarti test belum lulus.
 

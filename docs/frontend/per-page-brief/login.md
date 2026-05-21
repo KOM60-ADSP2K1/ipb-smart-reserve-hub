@@ -55,7 +55,7 @@
 - Endpoints consumed: `POST /auth/login`, `GET /auth/me` after token restore or login.
 - Page-needed fields: token `access_token`; user `id`, `email`, `full_name`, `role`, `is_active`.
 - Auth/session assumptions: token stored in memory and mirrored to `sessionStorage`.
-- Source files: `app/api/routes/account_routes.py`, `app/schemas/account_schemas.py`.
+- Source files: `backend/app/api/routes/account_routes.py`, `backend/app/schemas/account_schemas.py`.
 
 ### BG-AUTH-LOGIN-01: Login And Session Contract
 
@@ -63,7 +63,7 @@
 - Domain area: Auth and session
 - Affected UI: login form, redirect handling, role landing.
 - Contract needed: login returns bearer token and current-user lookup returns role identity.
-- Evidence: `POST /auth/login` and `GET /auth/me` exist in `app/api/routes/account_routes.py`; `TokenResponse` and `UserResponse` exist in `app/schemas/account_schemas.py`.
+- Evidence: `POST /auth/login` and `GET /auth/me` exist in `backend/app/api/routes/account_routes.py`; `TokenResponse` and `UserResponse` exist in `backend/app/schemas/account_schemas.py`.
 - Source issue/PRD: `docs/issues/ISSUE-0001-project-foundation-auth-and-role-shell.md`, `docs/issues/ISSUE-0019-add-current-user-auth-endpoint.md`.
 
 ## Shared Components

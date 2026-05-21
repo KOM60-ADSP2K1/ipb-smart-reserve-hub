@@ -99,4 +99,4 @@ Existing auth, student, staff, and Super Admin pages/components should present a
   - `npm run build`
 - 2026-05-19: Non-blocking verification notes:
   - `npm run lint` still fails on pre-existing unrelated lint findings in `src/auth/session.tsx`, `src/pages/student/StudentReservationTimePage.test.tsx`, and several Playwright specs using `any`; the touched `StudentDocumentWorkflowPages.tsx` unused constants found by lint were removed.
-  - Plain `npm test` is not a valid all-suite command in the current frontend layout because Vitest imports `tests/e2e/*.spec.ts` and fails on Playwright `test.describe()` usage; targeted Vitest suites and Playwright tests above passed.
+  - Plain `npm test` is not a valid all-suite command in the current frontend layout because Vitest imports `backend/tests/e2e/*.spec.ts` and fails on Playwright `test.describe()` usage; targeted Vitest suites and Playwright tests above passed.

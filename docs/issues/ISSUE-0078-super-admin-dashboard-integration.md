@@ -87,4 +87,4 @@ The dashboard should load from the Super Admin dashboard aggregate and render on
 - 2026-05-13: Normalized unsupported trend/export/add-admin behavior by removing fixture trends and marking export/add-admin actions as deferred.
 - 2026-05-13: Added stable loading, empty, and recoverable error states; added RTL tests for aggregate rendering, missing sections, retry, and deferred actions.
 - 2026-05-13: Updated Super Admin dashboard Playwright API mocks and refreshed intentional dashboard screenshots.
-- 2026-05-13: Verification: `npm test -- --run src/pages/super-admin/SuperAdminDashboardUsersPages.test.tsx`, `npm run typecheck`, and `npx playwright test tests/e2e/super-admin-dashboard-users.spec.ts` pass. `npm run lint` still fails on pre-existing unrelated Student/auth lint errors; no Super Admin dashboard files are reported.
+- 2026-05-13: Verification: `npm test -- --run src/pages/super-admin/SuperAdminDashboardUsersPages.test.tsx`, `npm run typecheck`, and `npx playwright test backend/tests/e2e/super-admin-dashboard-users.spec.ts` pass. `npm run lint` still fails on pre-existing unrelated Student/auth lint errors; no Super Admin dashboard files are reported.

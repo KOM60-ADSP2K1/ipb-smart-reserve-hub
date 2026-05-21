@@ -55,7 +55,7 @@
 - Endpoints consumed: `GET /organization-units`, `POST /facilities/:facilityId/reservations`.
 - Page-needed fields: organization unit `id`, `name`; request fields from `ReservationSubmissionRequest`; response `StudentReservationResponse.id`, `status`, `document`, `payment`, `extra_requirements`.
 - Auth/session assumptions: reservation submission requires student bearer token.
-- Source files: `app/api/routes/organization_unit_routes.py`, `app/api/routes/reservation_routes.py`, `app/schemas/reservation_schemas.py`.
+- Source files: `backend/app/api/routes/organization_unit_routes.py`, `backend/app/api/routes/reservation_routes.py`, `backend/app/schemas/reservation_schemas.py`.
 
 ### BG-STUDENT-04-01: Reservation Submission Extra Requirements
 

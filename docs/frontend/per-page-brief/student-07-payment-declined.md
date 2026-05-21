@@ -54,7 +54,7 @@
 - Endpoints consumed: `GET /student/reservations/:reservationId`.
 - Page-needed fields: `status=rejected`, `payment.review_status`, `payment.rejection_reason`, `rejection.source`, `rejection.reason`.
 - Auth/session assumptions: student-owned reservation only.
-- Source files: `app/api/routes/reservation_routes.py`, `app/schemas/reservation_schemas.py`.
+- Source files: `backend/app/api/routes/reservation_routes.py`, `backend/app/schemas/reservation_schemas.py`.
 
 ### BG-STUDENT-07-DECLINED-01: Payment Declined Projection
 
@@ -62,7 +62,7 @@
 - Domain area: Payment
 - Affected UI: payment declined state page and routing.
 - Contract needed: response exposes payment rejection source/reason.
-- Evidence: payment projection and rejection projection schemas exist in `app/schemas/reservation_schemas.py`.
+- Evidence: payment projection and rejection projection schemas exist in `backend/app/schemas/reservation_schemas.py`.
 - Source issue/PRD: `docs/issues/ISSUE-0027-student-reservation-workflow-projections.md`.
 
 ## Shared Components

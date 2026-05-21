@@ -30,6 +30,7 @@ To run each side manually, use separate terminals.
 From the repository root:
 
 ```sh
+cd backend
 uv sync --extra dev
 uv run python -m app.dev.seed
 uv run uvicorn app.main:create_app --factory --reload
@@ -45,7 +46,7 @@ Useful checks:
 
 ```sh
 curl http://localhost:8000/health
-uv run pytest
+cd backend && uv run pytest
 ```
 
 ### 2. Frontend
@@ -90,6 +91,7 @@ The seed includes 35 demo reservations across pending, review, approved, cancell
 The default local database is `ipb_smart_reserve_hub.db`. If your local database is old and the seed fails with a missing-column error, use a fresh database path:
 
 ```sh
+cd backend
 IPB_DATABASE_URL=sqlite+pysqlite:///./ipb_smart_reserve_hub_fresh.db uv run python -m app.dev.seed
 IPB_DATABASE_URL=sqlite+pysqlite:///./ipb_smart_reserve_hub_fresh.db uv run uvicorn app.main:create_app --factory --reload
 ```
@@ -113,15 +115,16 @@ Generated approval letters use `generated_at`; uploaded signed letters and payme
 ## Repository Layout
 
 ```text
-app/        FastAPI backend, domain services, repositories, schemas, seed data.
+backend/    Python backend project: app package, tests, and pyproject config.
 frontend/   Vite React frontend, tests, screenshots, and UI implementation.
 docs/       Product, frontend, backend, issue, and deployment documentation.
-tests/      Backend behavior/API tests.
+scripts/    Repo-level developer entrypoints such as make/dev helpers.
 ```
 
 More technical details live in:
 
-- [Backend README](app/README.md)
+- [Backend README](backend/README.md)
+- [Backend package README](backend/app/README.md)
 - [Frontend README](frontend/README.md)
 - [Backend deployment guide](docs/backend-deployment.md)
 
@@ -136,9 +139,9 @@ make dev
 Backend:
 
 ```sh
-uv run pytest
-uv run python -m app.dev.seed
-uv run uvicorn app.main:create_app --factory --reload
+make backend-test
+make backend-seed
+make backend-run
 ```
 
 Frontend:

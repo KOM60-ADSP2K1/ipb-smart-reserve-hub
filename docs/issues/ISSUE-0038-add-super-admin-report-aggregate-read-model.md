@@ -75,8 +75,8 @@ Evidence to record when closing:
 
 2026-05-13: Implemented and verified Super Admin report aggregate read model.
 
-- Code evidence: `app/api/routes/super_admin_report_routes.py` adds `GET /admin/reports/aggregate`; `app/services/super_admin_reports.py` computes date-filtered Reservation KPIs, status counts, trend points, and paid Reservation totals.
-- API behavior evidence: `tests/test_super_admin_reports.py` verifies date-range filtering, status-oriented KPI values, trend data, paid totals, and student/staff denial.
-- Scope evidence: `tests/test_http_application.py` verifies existing audit/review routes remain registered and no `/admin/reports/export` route exists.
+- Code evidence: `backend/app/api/routes/super_admin_report_routes.py` adds `GET /admin/reports/aggregate`; `backend/app/services/super_admin_reports.py` computes date-filtered Reservation KPIs, status counts, trend points, and paid Reservation totals.
+- API behavior evidence: `backend/tests/test_super_admin_reports.py` verifies date-range filtering, status-oriented KPI values, trend data, paid totals, and student/staff denial.
+- Scope evidence: `backend/tests/test_http_application.py` verifies existing audit/review routes remain registered and no `/admin/reports/export` route exists.
 - Documentation evidence: `docs/frontend/per-page-brief/super-03-laporan.md`, `docs/frontend/backend-gaps.md`, and `README.md` document the implemented report aggregate contract.
-- Test command: `uv run pytest tests/test_super_admin_reports.py tests/test_http_application.py` passed with 7 tests.
+- Test command: `uv run pytest backend/tests/test_super_admin_reports.py backend/tests/test_http_application.py` passed with 7 tests.

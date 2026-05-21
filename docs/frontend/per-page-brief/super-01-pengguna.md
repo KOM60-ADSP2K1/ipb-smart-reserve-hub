@@ -54,7 +54,7 @@
 - Endpoints consumed: `POST /admin/users`, `GET /admin/users`, `POST /admin/users/:userId/deactivate`, `POST /admin/users/:userId/activate`.
 - Page-needed fields: user identity, role, unit/profile, active status. Last activity and profile-review flags are deferred unless a backend field is added.
 - Auth/session assumptions: super-admin bearer token.
-- Source files: `app/api/routes/account_routes.py`.
+- Source files: `backend/app/api/routes/account_routes.py`.
 
 ### BG-SUPER-01-01: Super Admin User Management Read Model
 
@@ -62,7 +62,7 @@
 - Domain area: Super Admin
 - Affected UI: user list, filters, KPI counts, activate/manage-access actions.
 - Contract implemented: paginated/filterable user list plus activate/deactivate user status mutation endpoints. Role mutation remains out of scope.
-- Evidence: `app/api/routes/account_routes.py` registers `GET /admin/users`, `POST /admin/users/{user_id}/deactivate`, and `POST /admin/users/{user_id}/activate`; `tests/test_super_admin_user_management.py` verifies filters, pagination, student profile fields, activation/deactivation, active-session enforcement, and non-admin denial.
+- Evidence: `backend/app/api/routes/account_routes.py` registers `GET /admin/users`, `POST /admin/users/{user_id}/deactivate`, and `POST /admin/users/{user_id}/activate`; `backend/tests/test_super_admin_user_management.py` verifies filters, pagination, student profile fields, activation/deactivation, active-session enforcement, and non-admin denial.
 - Source issue/PRD: `docs/issues/ISSUE-0001-project-foundation-auth-and-role-shell.md`.
 
 ## Shared Components

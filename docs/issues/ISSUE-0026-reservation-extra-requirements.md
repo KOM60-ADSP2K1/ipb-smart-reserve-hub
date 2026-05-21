@@ -49,7 +49,7 @@ Let students submit structured extra requirements when creating a Facility Reser
 
 - [ ] Reservation submission accepts an `extra_requirements` object with `av_support`, `logistics_coordination`, `extra_cleaning`, `security_personnel`, and optional `notes`.
 - [ ] Extra requirement flags are persisted as explicit Reservation columns, with notes persisted separately.
-- [ ] Omitted `extra_requirements` remain backward-tolerant for tests/clients by defaulting flags to false and notes to null or empty as agreed in implementation.
+- [ ] Omitted `extra_requirements` remain backward-tolerant for backend/tests/clients by defaulting flags to false and notes to null or empty as agreed in implementation.
 - [ ] Student reservation list/detail responses expose a nested `extra_requirements` object.
 - [ ] Existing reservation availability, conflict, organization unit, and access rules continue to apply unchanged.
 - [ ] Behavior is covered by student reservation submission HTTP/API tests and service-level tests where useful.
@@ -129,7 +129,7 @@ Verified behavior:
 
 Verification run:
 
-- `uv run pytest tests/test_reservation_submission.py -q` -> 6 passed
+- `uv run pytest backend/tests/test_reservation_submission.py -q` -> 6 passed
 - `uv run pytest -q` -> 141 passed
 
 Closing as completed.

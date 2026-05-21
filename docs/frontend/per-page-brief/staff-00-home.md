@@ -54,7 +54,7 @@
 - Endpoints consumed: `GET /staff/reservations/verification-queue`.
 - Page-needed fields: reservation ID/code, facility, student/organization, date/time, workflow type, status, due time, assigned facility scope.
 - Auth/session assumptions: staff sees only assigned-facility reservations.
-- Source files: `app/api/routes/approval_letter_routes.py`, `app/api/routes/payment_routes.py`, `app/api/routes/reservation_routes.py`.
+- Source files: `backend/app/api/routes/approval_letter_routes.py`, `backend/app/api/routes/payment_routes.py`, `backend/app/api/routes/reservation_routes.py`.
 
 ### BG-STAFF-00-01: Staff Verification Queue
 
@@ -62,7 +62,7 @@
 - Domain area: Staff Operations
 - Affected UI: staff home verification queue.
 - Contract implemented: assigned-staff read model for pending document and payment reviews; automatic student cancellation keeps cancellation review out of the actionable queue.
-- Evidence: `app/api/routes/staff_reservation_operation_routes.py` registers `GET /staff/reservations/verification-queue`; `tests/test_staff_reservation_operations.py` verifies assigned-facility scoping and document/payment queue item projections, and verifies cancellation review is not queued.
+- Evidence: `backend/app/api/routes/staff_reservation_operation_routes.py` registers `GET /staff/reservations/verification-queue`; `backend/tests/test_staff_reservation_operations.py` verifies assigned-facility scoping and document/payment queue item projections, and verifies cancellation review is not queued.
 - Source issue/PRD: `docs/issues/ISSUE-0009-signed-letter-upload-and-staff-document-review.md`, `docs/issues/ISSUE-0010-paid-facility-receipt-upload-and-payment-review.md`, `docs/issues/ISSUE-0089-automatic-student-cancellation-lifecycle.md`.
 
 ## Shared Components

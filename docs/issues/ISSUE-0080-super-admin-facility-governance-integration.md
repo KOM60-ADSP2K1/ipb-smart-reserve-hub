@@ -90,4 +90,4 @@ The page should load governance rows from `GET /admin/facilities/governance`, re
 
 - 2026-05-13: Integrated `/super-admin/facilities` with `GET /admin/facilities/governance`, rendering backend active state, assignment coverage, assigned/active staff counts, and issue flags. Added per-facility staff-ID assignment controls that call the existing PUT/DELETE staff assignment endpoints.
 - 2026-05-13: Preserved create/import as deferred actions and added loading, empty, API error, retry, success, and mutation error feedback.
-- 2026-05-13: Verification: `npm test -- --run src/pages/super-admin/SuperAdminDashboardUsersPages.test.tsx`, `npm run typecheck`, and `npx playwright test tests/e2e/super-admin-facilities-reports.spec.ts` passed. `npm run lint` still fails only in pre-existing auth/student files, with no Super Admin files reported.
+- 2026-05-13: Verification: `npm test -- --run src/pages/super-admin/SuperAdminDashboardUsersPages.test.tsx`, `npm run typecheck`, and `npx playwright test backend/tests/e2e/super-admin-facilities-reports.spec.ts` passed. `npm run lint` still fails only in pre-existing auth/student files, with no Super Admin files reported.

@@ -54,7 +54,7 @@
 - Endpoints consumed: `GET /auth/me`.
 - Page-needed fields: `full_name`, `email`, `nim`, `phone`, `academic_profile.program_studi`, `faculty`, `entry_year`, `degree`, `is_active`.
 - Auth/session assumptions: clear token on `401` or failed `/auth/me`.
-- Source files: `app/api/routes/account_routes.py`, `app/schemas/account_schemas.py`.
+- Source files: `backend/app/api/routes/account_routes.py`, `backend/app/schemas/account_schemas.py`.
 
 ### BG-STUDENT-20-01: Current User Profile Identity
 
@@ -62,7 +62,7 @@
 - Domain area: Auth and session
 - Affected UI: student profile identity and academic info.
 - Contract needed: `/auth/me` includes NIM, phone, and best-effort academic profile for students.
-- Evidence: `UserResponse` includes `nim`, `phone`, and `academic_profile`; `/auth/me` exists in `app/api/routes/account_routes.py`; `AcademicProfileDeriver` now covers legacy `G6419...` and newer digit-based `G640123...` entry-year formats.
+- Evidence: `UserResponse` includes `nim`, `phone`, and `academic_profile`; `/auth/me` exists in `backend/app/api/routes/account_routes.py`; `AcademicProfileDeriver` now covers legacy `G6419...` and newer digit-based `G640123...` entry-year formats.
 - Source issue/PRD: `docs/issues/ISSUE-0029-student-academic-profile-identity.md`.
 
 ## Shared Components

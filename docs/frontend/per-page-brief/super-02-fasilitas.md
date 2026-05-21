@@ -54,7 +54,7 @@
 - Endpoints consumed: `GET /admin/facilities/governance` plus existing assignment mutation endpoints.
 - Page-needed fields: facility identity, location/unit, capacity, active state, assigned staff count, assignment issue flags.
 - Auth/session assumptions: super-admin bearer token.
-- Source files: `app/api/routes/facility_management_routes.py`.
+- Source files: `backend/app/api/routes/facility_management_routes.py`.
 
 ### BG-SUPER-02-01: Super Admin Facility Governance Read Model
 
@@ -62,7 +62,7 @@
 - Domain area: Super Admin
 - Affected UI: facility governance list, KPI cards, assignment coverage sidebar.
 - Contract implemented: Super Admin Facility governance list with active/inactive Facilities, assignment coverage, active assigned staff counts, and issue flags. Facility create/import remains out of scope.
-- Evidence: `app/api/routes/facility_management_routes.py` registers `GET /admin/facilities/governance`; `tests/test_super_admin_facility_governance.py` verifies active/inactive governance rows, assignment counts, issue flags, and non-admin denial; `tests/test_http_application.py` verifies assignment mutation routes remain and no import route exists.
+- Evidence: `backend/app/api/routes/facility_management_routes.py` registers `GET /admin/facilities/governance`; `backend/tests/test_super_admin_facility_governance.py` verifies active/inactive governance rows, assignment counts, issue flags, and non-admin denial; `backend/tests/test_http_application.py` verifies assignment mutation routes remain and no import route exists.
 - Source issue/PRD: `docs/issues/ISSUE-0016-staff-facility-management-and-assignment-scope.md`.
 
 ### BG-SUPER-02-02: Facility Create And Import Actions

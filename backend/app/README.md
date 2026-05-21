@@ -13,6 +13,14 @@ make dev
 To run only the backend from the repository root:
 
 ```sh
+make backend-seed
+make backend-run
+```
+
+To work directly inside the backend project:
+
+```sh
+cd backend
 uv sync --extra dev
 uv run python -m app.dev.seed
 uv run uvicorn app.main:create_app --factory --reload
@@ -41,6 +49,7 @@ sqlite+pysqlite:///./ipb_smart_reserve_hub.db
 Override it with `IPB_DATABASE_URL`:
 
 ```sh
+cd backend
 IPB_DATABASE_URL=sqlite+pysqlite:///./my_local.db uv run uvicorn app.main:create_app --factory --reload
 ```
 
@@ -51,6 +60,7 @@ The app creates SQLAlchemy tables at startup for the current metadata. There is 
 Seed demo data:
 
 ```sh
+cd backend
 uv run python -m app.dev.seed
 ```
 
@@ -93,11 +103,11 @@ Request flow:
 
 ```text
 Client
-  -> FastAPI route in app/api/routes
+  -> FastAPI route in backend/app/api/routes
   -> AccessPolicyModule for role checks
-  -> Service module in app/services
-  -> Repository in app/repositories
-  -> SQLAlchemy model in app/models
+  -> Service module in backend/app/services
+  -> Repository in backend/app/repositories
+  -> SQLAlchemy model in backend/app/models
   -> Database
 ```
 
@@ -132,7 +142,7 @@ Keep new backend code on the layer that owns the decision:
 Top-level structure:
 
 ```text
-app/
+backend/app/
   api/              FastAPI route registration and shared response helpers.
   core/             Configuration, database session setup, security, access policy, dependency factories.
   dev/              Local seed tooling for development/demo data.
@@ -295,13 +305,13 @@ Use schemas for request/response shape. Keep database models and internal servic
 Run all backend tests from the repository root:
 
 ```sh
-uv run pytest
+cd backend && uv run pytest
 ```
 
 Run one test file:
 
 ```sh
-uv run pytest tests/test_notifications.py
+cd backend && uv run pytest tests/test_notifications.py
 ```
 
 Tests are behavior/API oriented. Prefer testing through public service or HTTP interfaces rather than private implementation details.
@@ -357,8 +367,8 @@ Common endpoints:
 
 Staff facility profiles include the assigned facility category ID/label, `open_hours_summary`, and structured `open_hours` rows. Staff facility updates can change editable profile fields, category, active state, payment instructions, and replace structured open-hour rows; invalid open-hour ranges and inactive/missing categories are rejected while assigned-facility access control is preserved.
 
-For more detail, inspect route files in `app/api/routes/` and schemas in `app/schemas/`.
+For more detail, inspect route files in `backend/app/api/routes/` and schemas in `backend/app/schemas/`.
 
 ## Deployment
 
-See [Backend Deployment](../docs/backend-deployment.md).
+See [Backend Deployment](../../docs/backend-deployment.md).

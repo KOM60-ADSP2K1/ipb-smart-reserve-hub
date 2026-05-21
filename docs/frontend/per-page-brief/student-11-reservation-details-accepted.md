@@ -55,7 +55,7 @@
 - Endpoints consumed: `GET /student/reservations/:reservationId`, private file download endpoints, cancellation request endpoint.
 - Page-needed fields: detail fields, document/payment metadata, cancellation fields, review presence.
 - Auth/session assumptions: student-owned reservation/files only.
-- Source files: `app/api/routes/reservation_routes.py`, `app/api/routes/approval_letter_routes.py`, `app/api/routes/payment_routes.py`.
+- Source files: `backend/app/api/routes/reservation_routes.py`, `backend/app/api/routes/approval_letter_routes.py`, `backend/app/api/routes/payment_routes.py`.
 
 ### BG-STUDENT-11-ACCEPTED-01: Approved Detail And Private File Actions
 

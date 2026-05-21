@@ -54,7 +54,7 @@
 - Endpoints consumed: `GET /student/reservations/:reservationId`.
 - Page-needed fields: `status`, `document.review_status`, `document.signed_approval_letter`, `document_verification_due_at`, reservation summary.
 - Auth/session assumptions: student-owned reservation only.
-- Source files: `app/api/routes/reservation_routes.py`, `app/schemas/reservation_schemas.py`.
+- Source files: `backend/app/api/routes/reservation_routes.py`, `backend/app/schemas/reservation_schemas.py`.
 
 ### BG-STUDENT-06-WAITING-01: Document Waiting Projection
 
@@ -62,7 +62,7 @@
 - Domain area: Reservation Workflow
 - Affected UI: waiting verification status page.
 - Contract needed: response distinguishes uploaded signed letter waiting review from upload-needed or approved states.
-- Evidence: `StudentReservationDocumentProjectionResponse.review_status` and signed-letter metadata exist in `app/schemas/reservation_schemas.py`.
+- Evidence: `StudentReservationDocumentProjectionResponse.review_status` and signed-letter metadata exist in `backend/app/schemas/reservation_schemas.py`.
 - Source issue/PRD: `docs/issues/ISSUE-0027-student-reservation-workflow-projections.md`.
 
 ## Shared Components

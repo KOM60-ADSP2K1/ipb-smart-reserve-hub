@@ -56,7 +56,7 @@
 - Endpoints consumed: `GET /facilities/:facilityId`, `GET /facilities/:facilityId/calendar`, optionally `GET /facilities/:facilityId/availability`.
 - Page-needed fields: `FacilityDetailResponse`, review summary/reviews, image list, contact, price, open-hours summary, and privacy-safe calendar entries containing only `starts_at`, `ends_at`, and generic `status: reserved`.
 - Auth/session assumptions: protected student route; public facility endpoints.
-- Source files: `app/api/routes/facility_routes.py`, `app/schemas/facility_schemas.py`.
+- Source files: `backend/app/api/routes/facility_routes.py`, `backend/app/schemas/facility_schemas.py`.
 
 ### BG-STUDENT-02-01: Public Facility Detail And Calendar
 
@@ -64,7 +64,7 @@
 - Domain area: Facility Catalog
 - Affected UI: detail header, gallery, contact/pricing cards, public calendar.
 - Contract needed: active facility detail plus public blocked-slot calendar.
-- Evidence: detail, calendar, and availability routes exist in `app/api/routes/facility_routes.py`; schemas exist in `app/schemas/facility_schemas.py`.
+- Evidence: detail, calendar, and availability routes exist in `backend/app/api/routes/facility_routes.py`; schemas exist in `backend/app/schemas/facility_schemas.py`.
 - Source issue/PRD: `docs/issues/ISSUE-0002-facility-catalog-and-detail-browsing.md`, `docs/issues/ISSUE-0003-facility-availability-calendar.md`.
 
 ### BG-STUDENT-02-02: Privacy-Safe Public Calendar Blocks
@@ -73,7 +73,7 @@
 - Domain area: Facility Catalog
 - Affected UI: public facility calendar and reservation time calendar.
 - Contract needed: public calendar responses return only blocked/reserved time ranges and generic availability status. They must not expose another user's activity title, organization, requester, reservation purpose, workflow state, document metadata, payment metadata, or reservation ID.
-- Evidence: `FacilityCalendarEntryResponse` contains only `starts_at`, `ends_at`, and `status`; `tests/test_facility_browsing.py` verifies pending, approved, and cancellation-requested reservations are privacy-safe public blocks; `tests/test_staff_reservation_operations.py` verifies private staff schedule details remain separate.
+- Evidence: `FacilityCalendarEntryResponse` contains only `starts_at`, `ends_at`, and `status`; `backend/tests/test_facility_browsing.py` verifies pending, approved, and cancellation-requested reservations are privacy-safe public blocks; `backend/tests/test_staff_reservation_operations.py` verifies private staff schedule details remain separate.
 - Source issue/PRD: `docs/issues/ISSUE-0063-contract-audit-and-fixture-normalization.md`, `docs/issues/ISSUE-0066-public-facility-calendar-privacy-contract-correction.md`.
 
 ## Shared Components

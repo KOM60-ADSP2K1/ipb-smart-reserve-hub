@@ -64,8 +64,8 @@ The public calendar endpoint should return only the blocked time range and a gen
 
 **Key interfaces:**
 - Public API: `GET /facilities/{facility_id}/calendar?start=...&end=...`.
-- Public schema: `FacilityCalendarEntryResponse` in `app/schemas/facility_schemas.py`.
-- Public projection: `FacilityCatalogModule.list_public_calendar_entries` in `app/services/facilities.py`.
+- Public schema: `FacilityCalendarEntryResponse` in `backend/app/schemas/facility_schemas.py`.
+- Public projection: `FacilityCatalogModule.list_public_calendar_entries` in `backend/app/services/facilities.py`.
 - Private staff schedule: `GET /staff/facilities/{facility_id}/schedule` via staff reservation operations, unchanged.
 - Docs: `README.md`, `docs/frontend/per-page-brief/student-02-facility-details.md`, `docs/frontend/per-page-brief/student-03-reservation-time-form.md`, and `docs/frontend/backend-gaps.md`.
 
@@ -88,4 +88,4 @@ The public calendar endpoint should return only the blocked time range and a gen
 - 2026-05-13: Implemented the privacy-safe public calendar contract. `FacilityCalendarEntryResponse` and `FacilityCatalogModule.list_public_calendar_entries` now expose only `starts_at`, `ends_at`, and generic `status: reserved`.
 - 2026-05-13: Updated backend behavior tests so `GET /facilities/{facility_id}/calendar` verifies pending document upload, approved, and cancellation-requested reservations are public blocked ranges without activity title, organization unit, reservation ID, workflow, document, or payment details. Updated staff schedule coverage to verify assigned Staff still receive private operational schedule details while the public calendar remains sanitized.
 - 2026-05-13: Updated `README.md`, `docs/frontend/per-page-brief/student-02-facility-details.md`, `docs/frontend/per-page-brief/student-03-reservation-time-form.md`, and `docs/frontend/backend-gaps.md`; `BG-STUDENT-02-02` is now `resolved`.
-  Verification passed: `uv run pytest tests/test_public_facility_calendar.py tests/test_facility_browsing.py tests/test_staff_reservation_operations.py`.
+  Verification passed: `uv run pytest backend/tests/test_public_facility_calendar.py backend/tests/test_facility_browsing.py backend/tests/test_staff_reservation_operations.py`.

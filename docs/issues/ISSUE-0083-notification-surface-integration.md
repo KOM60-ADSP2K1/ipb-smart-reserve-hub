@@ -74,4 +74,4 @@ Implemented a shared notification surface in `frontend/src/components/Notificati
 ## Update Log
 
 - 2026-05-13: Added shared notification surface, backend list/read integration, read-state mutation/refetch, role-safe target resolution, mobile-safe loading/empty/error states, and shell wiring across Student, Staff, and Super Admin headers.
-- 2026-05-13: Verification passed: `npm test -- --run src/components/NotificationSurface.test.tsx`, `npm run typecheck`, `npx playwright test tests/e2e/student-home.spec.ts`, `npx playwright test tests/e2e/staff-home-reservations.spec.ts`, and `npx playwright test tests/e2e/super-admin-dashboard-users.spec.ts`.
+- 2026-05-13: Verification passed: `npm test -- --run src/components/NotificationSurface.test.tsx`, `npm run typecheck`, `npx playwright test backend/tests/e2e/student-home.spec.ts`, `npx playwright test backend/tests/e2e/staff-home-reservations.spec.ts`, and `npx playwright test backend/tests/e2e/super-admin-dashboard-users.spec.ts`.

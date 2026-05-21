@@ -54,7 +54,7 @@ Create a dev-only, idempotent seed command that gives frontend developers predic
 - [ ] A separate synthetic Student User account owns seeded blocking Reservations used for public calendar display.
 - [ ] Seeded data includes at least two or three active Facilities with categories, public cover/detail images, open-hours summaries, Facility Open Hours, active Organization Units, and one Staff assignment.
 - [ ] Seeded data includes at least one approved and one pending/held future blocking Reservation for public calendar visibility.
-- [ ] The seed code lives outside `tests/` and uses normal application database/session setup rather than `tests.DataBuilder`.
+- [ ] The seed code lives outside `backend/tests/` and uses normal application database/session setup rather than `tests.DataBuilder`.
 - [ ] Behavior tests verify the public seed command/module behavior, production refusal, and idempotent database-observable outcomes.
 - [ ] README or local development docs include the seed command and demo credentials.
 
@@ -103,7 +103,7 @@ Seeded Facility data should be realistic enough for frontend reservation tracing
 - [ ] A separate synthetic Student User account owns seeded blocking Reservations used for public calendar display.
 - [ ] Seeded data includes at least two or three active Facilities with categories, public cover/detail images, open-hours summaries, Facility Open Hours, active Organization Units, and one Staff assignment.
 - [ ] Seeded data includes at least one approved and one pending/held future blocking Reservation for public calendar visibility.
-- [ ] Seed code lives outside `tests/` and does not depend on `tests.DataBuilder` or other test-only utilities.
+- [ ] Seed code lives outside `backend/tests/` and does not depend on `tests.DataBuilder` or other test-only utilities.
 - [ ] Behavior tests verify the seed command/module behavior, production refusal, and idempotent database-observable outcomes.
 - [ ] README or local development docs include the seed command and demo credentials.
 
@@ -134,7 +134,7 @@ What changed:
 
 Verification:
 
-- `uv run pytest tests/test_dev_seed.py` passes: 5 tests.
+- `uv run pytest backend/tests/test_dev_seed.py` passes: 5 tests.
 - The documented CLI command was smoke-tested against a temporary SQLite database.
 
 Closing this issue as implemented.

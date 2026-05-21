@@ -129,6 +129,6 @@ The reservation time-selection backend/API path is implemented and covered by be
 
 Verification run during triage:
 
-- uv run pytest tests/test_facility_browsing.py -> 21 passed
+- uv run pytest backend/tests/test_facility_browsing.py -> 21 passed
 
 Remaining payment, document, approval, and staff review workflows were already out of scope for this issue.

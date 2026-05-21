@@ -75,8 +75,8 @@ Evidence to record when closing:
 
 2026-05-13: Implemented and verified staff assigned-reservation queue/list read models.
 
-- Code evidence: `app/api/routes/staff_reservation_operation_routes.py` adds `GET /staff/reservations/verification-queue` and `GET /staff/reservations`; `app/services/staff_reservation_operations.py` owns the staff-facing read-model projection; `app/repositories/staff_reservation_operations_repository.py` scopes queries to assigned Facilities and applies list filters.
-- API behavior evidence: `tests/test_staff_reservation_operations.py` verifies assigned queue scoping, document/payment/cancellation actionable workflow items, list status/Facility/date filters, lifecycle and review projections, unassigned exclusion, and student denial.
-- Wiring evidence: `tests/test_http_application.py` verifies the new route group is registered through the runtime dependency registry and default app build.
+- Code evidence: `backend/app/api/routes/staff_reservation_operation_routes.py` adds `GET /staff/reservations/verification-queue` and `GET /staff/reservations`; `backend/app/services/staff_reservation_operations.py` owns the staff-facing read-model projection; `backend/app/repositories/staff_reservation_operations_repository.py` scopes queries to assigned Facilities and applies list filters.
+- API behavior evidence: `backend/tests/test_staff_reservation_operations.py` verifies assigned queue scoping, document/payment/cancellation actionable workflow items, list status/Facility/date filters, lifecycle and review projections, unassigned exclusion, and student denial.
+- Wiring evidence: `backend/tests/test_http_application.py` verifies the new route group is registered through the runtime dependency registry and default app build.
 - Documentation evidence: `docs/frontend/per-page-brief/staff-00-home.md`, `docs/frontend/per-page-brief/staff-10-reservation-lists.md`, `docs/frontend/backend-gaps.md`, and `README.md` document the implemented queue/list contracts.
-- Test command: `uv run pytest tests/test_staff_reservation_operations.py tests/test_http_application.py` passed with 9 tests.
+- Test command: `uv run pytest backend/tests/test_staff_reservation_operations.py backend/tests/test_http_application.py` passed with 9 tests.

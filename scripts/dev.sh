@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BACKEND_DIR="$ROOT_DIR/backend"
 FRONTEND_DIR="$ROOT_DIR/frontend"
 
 if [[ -d "$HOME/.local/bin" ]]; then
@@ -74,7 +75,10 @@ if ! command -v npm >/dev/null 2>&1; then
 fi
 
 if [[ "${SKIP_SYNC:-0}" != "1" ]] && command -v uv >/dev/null 2>&1; then
-  uv sync --extra dev
+  (
+    cd "$BACKEND_DIR"
+    uv sync --extra dev
+  )
 elif [[ "${SKIP_SYNC:-0}" != "1" ]]; then
   printf 'uv was not found; skipping backend dependency sync and using %s.\n' "$PYTHON_BIN" >&2
 fi
@@ -85,16 +89,28 @@ fi
 
 if [[ "${SKIP_SEED:-0}" != "1" ]]; then
   if command -v uv >/dev/null 2>&1; then
-    uv run python -m app.dev.seed
+    (
+      cd "$BACKEND_DIR"
+      uv run python -m app.dev.seed
+    )
   else
-    "$PYTHON_BIN" -m app.dev.seed
+    (
+      cd "$BACKEND_DIR"
+      "$PYTHON_BIN" -m app.dev.seed
+    )
   fi
 fi
 
 if command -v uv >/dev/null 2>&1; then
-  uv run python -m uvicorn app.main:create_app --factory --reload &
+  (
+    cd "$BACKEND_DIR"
+    uv run python -m uvicorn app.main:create_app --factory --reload
+  ) &
 else
-  "$PYTHON_BIN" -m uvicorn app.main:create_app --factory --reload &
+  (
+    cd "$BACKEND_DIR"
+    "$PYTHON_BIN" -m uvicorn app.main:create_app --factory --reload
+  ) &
 fi
 backend_pid=$!
 

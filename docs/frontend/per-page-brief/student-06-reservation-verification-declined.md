@@ -54,7 +54,7 @@
 - Endpoints consumed: `GET /student/reservations/:reservationId`.
 - Page-needed fields: `status=rejected`, `document.review_status`, `document.rejection_reason`, `rejection.source`, `rejection.reason`.
 - Auth/session assumptions: student-owned reservation only.
-- Source files: `app/api/routes/reservation_routes.py`, `app/schemas/reservation_schemas.py`.
+- Source files: `backend/app/api/routes/reservation_routes.py`, `backend/app/schemas/reservation_schemas.py`.
 
 ### BG-STUDENT-06-DECLINED-01: Document Declined Projection
 
@@ -62,7 +62,7 @@
 - Domain area: Reservation Workflow
 - Affected UI: document declined state page and routing.
 - Contract needed: response exposes document rejection source/reason without adding UI-only lifecycle statuses.
-- Evidence: `StudentReservationRejectionProjectionResponse` and document projection rejection fields exist in `app/schemas/reservation_schemas.py`.
+- Evidence: `StudentReservationRejectionProjectionResponse` and document projection rejection fields exist in `backend/app/schemas/reservation_schemas.py`.
 - Source issue/PRD: `docs/issues/ISSUE-0027-student-reservation-workflow-projections.md`.
 
 ## Shared Components

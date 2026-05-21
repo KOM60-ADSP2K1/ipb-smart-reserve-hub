@@ -54,7 +54,7 @@
 - Endpoints consumed: `GET /student/reservations/:reservationId`.
 - Page-needed fields: `status=approved`, facility, organization unit, starts/ends, price, document/payment approved projections.
 - Auth/session assumptions: student-owned reservation only.
-- Source files: `app/api/routes/reservation_routes.py`, `app/schemas/reservation_schemas.py`.
+- Source files: `backend/app/api/routes/reservation_routes.py`, `backend/app/schemas/reservation_schemas.py`.
 
 ### BG-STUDENT-08-01: Accepted Reservation Projection
 

@@ -54,7 +54,7 @@
 - Endpoints consumed: `GET /staff/facilities/:facilityId/schedule`; public `GET /facilities/:facilityId/calendar` remains available for non-private calendar data.
 - Page-needed fields: activity title, organization, starts/ends, status/review type if reference needs operational detail.
 - Auth/session assumptions: staff must be assigned to facility for operational details.
-- Source files: `app/api/routes/facility_routes.py`, `app/schemas/facility_schemas.py`.
+- Source files: `backend/app/api/routes/facility_routes.py`, `backend/app/schemas/facility_schemas.py`.
 
 ### BG-STAFF-02-01: Staff Facility Schedule
 
@@ -62,7 +62,7 @@
 - Domain area: Staff Operations
 - Affected UI: assigned facility schedule.
 - Contract implemented: assigned-staff private schedule endpoint with Reservation identity, status, workflow/review state, Organization Unit, schedule times, and staff detail routing data.
-- Evidence: `app/api/routes/staff_reservation_operation_routes.py` registers `GET /staff/facilities/{facility_id}/schedule`; `tests/test_staff_reservation_operations.py` verifies assigned schedule data, unassigned denial, and non-staff denial; `tests/test_facility_browsing.py::test_students_view_public_facility_calendar_without_private_reservation_data` verifies the public calendar shape remains private-data-free.
+- Evidence: `backend/app/api/routes/staff_reservation_operation_routes.py` registers `GET /staff/facilities/{facility_id}/schedule`; `backend/tests/test_staff_reservation_operations.py` verifies assigned schedule data, unassigned denial, and non-staff denial; `backend/tests/test_facility_browsing.py::test_students_view_public_facility_calendar_without_private_reservation_data` verifies the public calendar shape remains private-data-free.
 - Source issue/PRD: `docs/issues/ISSUE-0003-facility-availability-calendar.md`, `docs/issues/ISSUE-0016-staff-facility-management-and-assignment-scope.md`.
 
 ## Shared Components

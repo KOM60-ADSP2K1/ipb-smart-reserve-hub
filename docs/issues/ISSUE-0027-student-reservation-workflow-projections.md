@@ -147,6 +147,6 @@ Implemented in commit `6e7ce7b feat: reservation workflow` on `development`.
 
 Triage verification confirmed the requested workflow projections, persisted rejection source behavior, legacy `unknown` source handling, cancellation separation, docs, and tests are present. Focused verification passed with:
 
-`uv run pytest tests/test_reservation_submission.py::test_student_rejected_reservation_without_persisted_source_exposes_unknown_rejection_source tests/test_approval_letter_workflow.py::test_assigned_staff_rejection_rejects_reservation_without_revision tests/test_payment_workflow.py::test_assigned_staff_payment_rejection_requires_reason_and_rejects_reservation`
+`uv run pytest backend/tests/test_reservation_submission.py::test_student_rejected_reservation_without_persisted_source_exposes_unknown_rejection_source backend/tests/test_approval_letter_workflow.py::test_assigned_staff_rejection_rejects_reservation_without_revision backend/tests/test_payment_workflow.py::test_assigned_staff_payment_rejection_requires_reason_and_rejects_reservation`
 
 Result: `3 passed`.

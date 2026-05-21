@@ -55,7 +55,7 @@
 - Endpoints consumed: `GET /admin/dashboard`; underlying standalone endpoints include `GET /admin/system-status`, `GET /admin/audit-logs`, `GET /admin/users`, and `GET /admin/facilities/governance`.
 - Page-needed fields: total users, active facilities, reservation total, system status, administrator list/status, access-state note, activity log entries.
 - Auth/session assumptions: super-admin bearer token.
-- Source files: `app/api/routes/system_status_routes.py`, `app/api/routes/audit_log_routes.py`, `app/api/routes/account_routes.py`.
+- Source files: `backend/app/api/routes/system_status_routes.py`, `backend/app/api/routes/audit_log_routes.py`, `backend/app/api/routes/account_routes.py`.
 
 ### BG-SUPER-00-01: Super Admin Dashboard Read Model
 
@@ -63,7 +63,7 @@
 - Domain area: Super Admin
 - Affected UI: KPI cards, administrator governance table, activity log.
 - Contract implemented: dashboard aggregate read model with KPI values, system status, administrator rows, Facility governance rows, and recent audit activity.
-- Evidence: `app/api/routes/super_admin_dashboard_routes.py` registers `GET /admin/dashboard`; `tests/test_super_admin_dashboard.py` verifies KPI values, administrator governance rows, Facility governance composition, recent activity, and non-admin denial.
+- Evidence: `backend/app/api/routes/super_admin_dashboard_routes.py` registers `GET /admin/dashboard`; `backend/tests/test_super_admin_dashboard.py` verifies KPI values, administrator governance rows, Facility governance composition, recent activity, and non-admin denial.
 - Source issue/PRD: `docs/issues/ISSUE-0015-super-admin-review-moderation-and-audit-logs.md`, `docs/issues/ISSUE-0017-optional-system-status.md`.
 
 ### BG-SUPER-00-02: Dashboard Export Action

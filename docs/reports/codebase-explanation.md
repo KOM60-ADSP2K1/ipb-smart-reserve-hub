@@ -28,35 +28,48 @@ Secara sederhana:
 Struktur besar repo:
 
 ```text
-app/        Backend FastAPI
+backend/            Project backend Python
 frontend/   Frontend React + Vite
-tests/      Backend tests
+backend/tests/      Backend tests
 docs/       Dokumentasi produk, frontend, backend, dan laporan
 ```
 
-### `app/` = backend
+### `backend/` = project backend
+
+Folder ini adalah seam backend yang berisi package aplikasi Python, test, dan konfigurasi project.
+
+Isi utamanya:
+
+- `backend/app/`
+  Package FastAPI utama.
+- `backend/tests/`
+  Test backend.
+- `backend/pyproject.toml`
+  Dependency dan konfigurasi test backend.
+
+### `backend/app/` = aplikasi backend
 
 Folder ini adalah inti logika sistem.
 
 Subbagian penting:
 
-- `app/main.py`
+- `backend/app/main.py`
   Titik masuk backend. Fungsi `create_app()` membuat aplikasi FastAPI.
-- `app/api/routes/`
+- `backend/app/api/routes/`
   Kumpulan endpoint HTTP. Ini adalah "pintu masuk" request dari frontend.
-- `app/services/`
+- `backend/app/services/`
   Aturan bisnis utama. Di sinilah logika aplikasi berada.
-- `app/repositories/`
+- `backend/app/repositories/`
   Lapisan akses data. Bertugas membaca/menulis ke database.
-- `app/models/`
+- `backend/app/models/`
   Model SQLAlchemy untuk tabel database.
-- `app/schemas/`
+- `backend/app/schemas/`
   Bentuk request/response API.
-- `app/core/`
+- `backend/app/core/`
   Fondasi seperti settings, database, access policy, security, dan module factory.
-- `app/storage/`
+- `backend/app/storage/`
   Penyimpanan file privat.
-- `app/pdf/`
+- `backend/app/pdf/`
   Generator PDF surat persetujuan.
 
 ### `frontend/` = antarmuka user
@@ -78,7 +91,7 @@ Subbagian penting:
 - `frontend/src/reservations/`
   Mapper/presenter untuk workflow reservasi.
 
-### `tests/` = backend behavior tests
+### `backend/tests/` = backend behavior tests
 
 Test di repo ini cukup kuat untuk sisi backend. Fokusnya bukan test method private, tapi test perilaku sistem, misalnya:
 
@@ -131,11 +144,11 @@ Encapsulation artinya aturan dan data terkait suatu konsep dibungkus di dalam sa
 
 Contoh bagus:
 
-- `UserAccountModule` di `app/services/accounts.py`
+- `UserAccountModule` di `backend/app/services/accounts.py`
   Semua hal tentang registrasi, login, refresh token, dan current user dikumpulkan di satu module.
-- `FacilityReservationLifecycleModule` di `app/services/reservation_lifecycle.py`
+- `FacilityReservationLifecycleModule` di `backend/app/services/reservation_lifecycle.py`
   Semua aturan perubahan status reservasi diletakkan di satu tempat.
-- `ApprovalLetterModule` di `app/services/approval_letters.py`
+- `ApprovalLetterModule` di `backend/app/services/approval_letters.py`
   Semua urusan generate/download/upload surat ada di satu module.
 
 Kenapa ini bagus:
@@ -282,9 +295,9 @@ Halaman ini:
 
 File yang relevan:
 
-- `app/api/routes/facility_routes.py`
-- `app/services/reservation_time_selection.py`
-- `app/services/facility_availability.py`
+- `backend/app/api/routes/facility_routes.py`
+- `backend/app/services/reservation_time_selection.py`
+- `backend/app/services/facility_availability.py`
 
 Yang terjadi:
 
@@ -297,9 +310,9 @@ Yang terjadi:
 
 File yang relevan:
 
-- `app/api/routes/reservation_routes.py`
-- `app/services/reservations.py`
-- `app/repositories/reservation_repository.py`
+- `backend/app/api/routes/reservation_routes.py`
+- `backend/app/services/reservations.py`
+- `backend/app/repositories/reservation_repository.py`
 
 Yang terjadi:
 
@@ -313,9 +326,9 @@ Yang terjadi:
 
 File yang relevan:
 
-- `app/services/reservation_lifecycle.py`
-- `app/services/notifications.py`
-- `app/services/audit_logs.py`
+- `backend/app/services/reservation_lifecycle.py`
+- `backend/app/services/notifications.py`
+- `backend/app/services/audit_logs.py`
 
 Yang terjadi:
 
@@ -333,17 +346,17 @@ Ini menunjukkan satu hal penting tentang codebase ini:
 
 Kalau ingin memahami backend tanpa tersesat, baca dengan urutan ini:
 
-1. `app/main.py`
+1. `backend/app/main.py`
    untuk tahu entry point
-2. `app/api/http_application.py`
+2. `backend/app/api/http_application.py`
    untuk tahu bagaimana dependency dirakit dan route didaftarkan
-3. `app/api/routes/`
+3. `backend/app/api/routes/`
    untuk tahu endpoint yang tersedia
-4. `app/services/`
+4. `backend/app/services/`
    untuk tahu logika bisnis yang sebenarnya
-5. `app/repositories/`
+5. `backend/app/repositories/`
    untuk tahu akses database
-6. `app/models/__init__.py`
+6. `backend/app/models/__init__.py`
    untuk tahu bentuk tabel
 
 Untuk memahami satu fitur, pakai pola:
@@ -405,7 +418,7 @@ Berikut area yang perlu dipahami sebagai "gap" atau "warning".
 
 ### 9.1 Penyimpanan file privat belum durable
 
-Di `app/storage/__init__.py`, implementasi nyata saat ini adalah `InMemoryPrivateStorage`.
+Di `backend/app/storage/__init__.py`, implementasi nyata saat ini adalah `InMemoryPrivateStorage`.
 
 Artinya:
 

@@ -57,7 +57,7 @@
 - Trend behavior: backend daily trend points stay daily in `Mingguan`, group by week in `Bulanan`, and group by month in `Tahunan`; the line/area chart uses sparse axis labels plus hover/focus point detail.
 - Audit behavior: `/super-admin/reports` filters audit preview by the selected report date range and renders a maximum of 10 rows. `/super-admin/reports/logs` consumes the same audit endpoint without the report date range to show the complete administrative log list.
 - Auth/session assumptions: super-admin bearer token.
-- Source files: `app/api/routes/audit_log_routes.py`, `app/api/routes/review_routes.py`.
+- Source files: `backend/app/api/routes/audit_log_routes.py`, `backend/app/api/routes/review_routes.py`.
 
 ### BG-SUPER-03-01: Super Admin Report Aggregates
 
@@ -65,7 +65,7 @@
 - Domain area: Super Admin
 - Affected UI: report KPI cards and reservation trend chart.
 - Contract implemented: aggregate report metrics with date-range Reservation KPIs, status counts, trend data, and paid Reservation totals. Report export remains out of scope.
-- Evidence: `app/api/routes/super_admin_report_routes.py` registers `GET /admin/reports/aggregate`; `tests/test_super_admin_reports.py` verifies date filtering, status counts, trend data, paid totals, and non-admin denial; `tests/test_http_application.py` verifies audit/review routes remain and no export route exists.
+- Evidence: `backend/app/api/routes/super_admin_report_routes.py` registers `GET /admin/reports/aggregate`; `backend/tests/test_super_admin_reports.py` verifies date filtering, status counts, trend data, paid totals, and non-admin denial; `backend/tests/test_http_application.py` verifies audit/review routes remain and no export route exists.
 - Source issue/PRD: `docs/issues/ISSUE-0015-super-admin-review-moderation-and-audit-logs.md`.
 
 ### BG-SUPER-03-02: Super Admin Audit And Review Moderation

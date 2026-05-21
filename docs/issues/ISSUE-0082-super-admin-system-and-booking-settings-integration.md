@@ -90,4 +90,4 @@ The page should load service checks from `GET /admin/system-status`, load editab
 
 - 2026-05-13: Integrated `/super-admin/system` with `GET /admin/system-status`, `GET /admin/settings`, and `PATCH /admin/settings`; added editable Booking Settings fields, full-payload save, unchanged/invalid/pending save disablement, validation feedback, and recoverable status/settings errors.
 - 2026-05-13: Kept settings history deferred because no backend history endpoint is registered.
-- 2026-05-13: Verification: `npm test -- --run src/pages/super-admin/SuperAdminDashboardUsersPages.test.tsx`, `npm run typecheck`, and `npx playwright test tests/e2e/super-admin-system.spec.ts` passed. `npm run lint` still fails only in pre-existing auth/student files, with no Super Admin files reported.
+- 2026-05-13: Verification: `npm test -- --run src/pages/super-admin/SuperAdminDashboardUsersPages.test.tsx`, `npm run typecheck`, and `npx playwright test backend/tests/e2e/super-admin-system.spec.ts` passed. `npm run lint` still fails only in pre-existing auth/student files, with no Super Admin files reported.

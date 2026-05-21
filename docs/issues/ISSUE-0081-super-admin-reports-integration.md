@@ -92,4 +92,4 @@ The page should load aggregate report data for a selected date range, pass that 
 
 - 2026-05-13: Integrated `/super-admin/reports` with `GET /admin/reports/aggregate`, `GET /admin/audit-logs`, and `GET /admin/reviews`; added date range controls, accessible trend labels, status counts, formatted audit timestamps, and backend review moderation rows.
 - 2026-05-13: Wired review delete/restore buttons to `POST /admin/reviews/:id/delete` and `/restore`, with success/error feedback and review refetch. Kept report export deferred.
-- 2026-05-13: Verification: `npm test -- --run src/pages/super-admin/SuperAdminDashboardUsersPages.test.tsx`, `npm run typecheck`, and `npx playwright test tests/e2e/super-admin-facilities-reports.spec.ts` passed. `npm run lint` still fails only in pre-existing auth/student files, with no Super Admin files reported.
+- 2026-05-13: Verification: `npm test -- --run src/pages/super-admin/SuperAdminDashboardUsersPages.test.tsx`, `npm run typecheck`, and `npx playwright test backend/tests/e2e/super-admin-facilities-reports.spec.ts` passed. `npm run lint` still fails only in pre-existing auth/student files, with no Super Admin files reported.

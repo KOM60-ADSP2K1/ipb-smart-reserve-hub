@@ -114,7 +114,7 @@ When `featured=true` is present, the query should rank Facilities by useful publ
 - Exposing private staff, reservation, payment, or student data.
 
 **Implementation notes:**
-The current route is in `app/api/routes/facility_routes.py`, and the current catalog behavior/ranking helpers are in `app/services/facilities.py`. Existing tests in `tests/test_facility_browsing.py` cover the current paginated collection and are the natural place for the new public HTTP behavior tests.
+The current route is in `backend/app/api/routes/facility_routes.py`, and the current catalog behavior/ranking helpers are in `backend/app/services/facilities.py`. Existing tests in `backend/tests/test_facility_browsing.py` cover the current paginated collection and are the natural place for the new public HTTP behavior tests.
 
 ### Comment 2 - ghiffaribraviah - 2026-05-11T03:01:16Z
 
@@ -126,4 +126,4 @@ Closing as implemented. `GET /facilities?featured=true` now returns the standard
 
 Documentation was updated in `README.md`, `CONTEXT.md`, and `docs/frontend/backend-gaps.md`.
 
-Verification: `uv run pytest tests/test_facility_browsing.py` passes with 30 tests.
+Verification: `uv run pytest backend/tests/test_facility_browsing.py` passes with 30 tests.

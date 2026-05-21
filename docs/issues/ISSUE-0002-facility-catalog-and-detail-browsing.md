@@ -82,7 +82,7 @@ Architecture follow-up completed:
 - Added a test-only DataBuilder to reduce persistence setup leakage in behavior tests.
 
 TDD verification:
-- Added behavior tests in tests/test_facility_browsing.py.
+- Added behavior tests in backend/tests/test_facility_browsing.py.
 - Ran .venv/bin/pytest -q.
 - Result: 11 passed.
 

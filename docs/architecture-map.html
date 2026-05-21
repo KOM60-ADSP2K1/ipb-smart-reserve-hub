@@ -640,7 +640,7 @@
             kind: "actor",
             column: "Actors",
             description: "Unauthenticated user who can browse public facility data and self-register as a student.",
-            file_paths: ["README.md", "app/api/routes/account_routes.py", "app/api/routes/facility_routes.py"],
+            file_paths: ["README.md", "backend/app/api/routes/account_routes.py", "backend/app/api/routes/facility_routes.py"],
             inferred: false
           },
           {
@@ -649,7 +649,7 @@
             kind: "actor",
             column: "Actors",
             description: "Authenticated student who browses facilities, creates reservations, uploads required files, reviews outcomes, and receives notifications.",
-            file_paths: ["CONTEXT.md", "frontend/src/App.tsx", "app/core/access_policy.py"],
+            file_paths: ["CONTEXT.md", "frontend/src/App.tsx", "backend/app/core/access_policy.py"],
             inferred: false
           },
           {
@@ -658,7 +658,7 @@
             kind: "actor",
             column: "Actors",
             description: "Assigned facility operator who reviews reservation documents, payments, cancellation requests, and manages assigned facilities.",
-            file_paths: ["CONTEXT.md", "frontend/src/App.tsx", "app/core/access_policy.py"],
+            file_paths: ["CONTEXT.md", "frontend/src/App.tsx", "backend/app/core/access_policy.py"],
             inferred: false
           },
           {
@@ -667,7 +667,7 @@
             kind: "actor",
             column: "Actors",
             description: "Administrator who manages users, facility governance, reports, booking settings, reviews, and system status.",
-            file_paths: ["CONTEXT.md", "frontend/src/App.tsx", "app/core/access_policy.py"],
+            file_paths: ["CONTEXT.md", "frontend/src/App.tsx", "backend/app/core/access_policy.py"],
             inferred: false
           },
           {
@@ -676,7 +676,7 @@
             kind: "actor",
             column: "Actors",
             description: "Background process concept that advances reservation deadlines and emits notifications/audit logs when run.",
-            file_paths: ["app/services/deadline_worker.py", "docs/backend-deployment.md"],
+            file_paths: ["backend/app/services/deadline_worker.py", "docs/backend-deployment.md"],
             inferred: false
           },
           {
@@ -797,7 +797,7 @@
             kind: "backend_runtime",
             column: "Backend/API",
             description: "create_app loads settings and delegates construction to HttpApplicationModule.",
-            file_paths: ["app/main.py"],
+            file_paths: ["backend/app/main.py"],
             inferred: false
           },
           {
@@ -806,7 +806,7 @@
             kind: "backend_runtime",
             column: "Backend/API",
             description: "Builds FastAPI, enables permissive CORS, creates DB schema on startup, assembles grouped dependencies, and registers all route groups.",
-            file_paths: ["app/api/http_application.py", "app/core/module_factories.py", "app/core/database.py"],
+            file_paths: ["backend/app/api/http_application.py", "backend/app/core/module_factories.py", "backend/app/core/database.py"],
             inferred: false
           },
           {
@@ -815,7 +815,7 @@
             kind: "api_routes",
             column: "Backend/API",
             description: "Auth, current-user, admin-managed user CRUD-lite, and shell endpoints.",
-            file_paths: ["app/api/routes/account_routes.py", "app/schemas/account_schemas.py"],
+            file_paths: ["backend/app/api/routes/account_routes.py", "backend/app/schemas/account_schemas.py"],
             inferred: false
           },
           {
@@ -824,7 +824,7 @@
             kind: "api_routes",
             column: "Backend/API",
             description: "Public categories, catalog, detail, calendar, availability, and reservation time selection endpoints.",
-            file_paths: ["app/api/routes/facility_routes.py", "app/schemas/facility_schemas.py", "app/schemas/reservation_time_selection_schemas.py"],
+            file_paths: ["backend/app/api/routes/facility_routes.py", "backend/app/schemas/facility_schemas.py", "backend/app/schemas/reservation_time_selection_schemas.py"],
             inferred: false
           },
           {
@@ -834,10 +834,10 @@
             column: "Backend/API",
             description: "Reservation submission/list/detail/cancellation, approval letter workflow, payment workflow, and review submission/moderation endpoints.",
             file_paths: [
-              "app/api/routes/reservation_routes.py",
-              "app/api/routes/approval_letter_routes.py",
-              "app/api/routes/payment_routes.py",
-              "app/api/routes/review_routes.py"
+              "backend/app/api/routes/reservation_routes.py",
+              "backend/app/api/routes/approval_letter_routes.py",
+              "backend/app/api/routes/payment_routes.py",
+              "backend/app/api/routes/review_routes.py"
             ],
             inferred: false
           },
@@ -847,7 +847,7 @@
             kind: "api_routes",
             column: "Backend/API",
             description: "Assigned reservation queue/list/detail, facility schedule, and assigned facility management endpoints.",
-            file_paths: ["app/api/routes/staff_reservation_operation_routes.py", "app/api/routes/facility_management_routes.py"],
+            file_paths: ["backend/app/api/routes/staff_reservation_operation_routes.py", "backend/app/api/routes/facility_management_routes.py"],
             inferred: false
           },
           {
@@ -857,12 +857,12 @@
             column: "Backend/API",
             description: "Dashboard, reports, booking settings, organization units, audit logs, system status, and facility governance endpoints.",
             file_paths: [
-              "app/api/routes/super_admin_dashboard_routes.py",
-              "app/api/routes/super_admin_report_routes.py",
-              "app/api/routes/booking_setting_routes.py",
-              "app/api/routes/organization_unit_routes.py",
-              "app/api/routes/audit_log_routes.py",
-              "app/api/routes/system_status_routes.py"
+              "backend/app/api/routes/super_admin_dashboard_routes.py",
+              "backend/app/api/routes/super_admin_report_routes.py",
+              "backend/app/api/routes/booking_setting_routes.py",
+              "backend/app/api/routes/organization_unit_routes.py",
+              "backend/app/api/routes/audit_log_routes.py",
+              "backend/app/api/routes/system_status_routes.py"
             ],
             inferred: false
           },
@@ -872,7 +872,7 @@
             kind: "service",
             column: "Services",
             description: "Student registration, admin-created users, login, refresh, token resolution, active-user lookup, and academic profile projection.",
-            file_paths: ["app/services/accounts.py", "app/services/academic_profiles.py", "app/core/security.py"],
+            file_paths: ["backend/app/services/accounts.py", "backend/app/services/academic_profiles.py", "backend/app/core/security.py"],
             inferred: false
           },
           {
@@ -881,7 +881,7 @@
             kind: "service",
             column: "Services",
             description: "Public facility categories, catalog results, facility detail projection, and public calendar projection.",
-            file_paths: ["app/services/facilities.py", "app/services/public_facility_reviews.py", "app/services/public_facility_calendar.py"],
+            file_paths: ["backend/app/services/facilities.py", "backend/app/services/public_facility_reviews.py", "backend/app/services/public_facility_calendar.py"],
             inferred: false
           },
           {
@@ -890,7 +890,7 @@
             kind: "service",
             column: "Services",
             description: "Determines open-hours fit, blackout overlap, and blocking reservation overlap for a candidate reservation time.",
-            file_paths: ["app/services/facility_availability.py", "app/repositories/facility_availability_reader.py"],
+            file_paths: ["backend/app/services/facility_availability.py", "backend/app/repositories/facility_availability_reader.py"],
             inferred: false
           },
           {
@@ -899,7 +899,7 @@
             kind: "service",
             column: "Services",
             description: "Applies booking-window and local time rules, then combines them with facility availability into one validation result.",
-            file_paths: ["app/services/reservation_time_selection.py", "app/services/booking_settings.py"],
+            file_paths: ["backend/app/services/reservation_time_selection.py", "backend/app/services/booking_settings.py"],
             inferred: false
           },
           {
@@ -908,7 +908,7 @@
             kind: "service",
             column: "Services",
             description: "Reservation submission, student list/detail, pre-approval cancellation, cancellation-request workflow, notifications, audit, and student-facing workflow projection mapping.",
-            file_paths: ["app/services/reservations.py", "app/services/student_reservation_workflow_projections.py"],
+            file_paths: ["backend/app/services/reservations.py", "backend/app/services/student_reservation_workflow_projections.py"],
             inferred: false
           },
           {
@@ -917,7 +917,7 @@
             kind: "service",
             column: "Services",
             description: "Owns reservation status transitions, due-date assignment, effective completed status, overdue verification, and expiration rules.",
-            file_paths: ["app/services/reservation_lifecycle.py"],
+            file_paths: ["backend/app/services/reservation_lifecycle.py"],
             inferred: false
           },
           {
@@ -926,7 +926,7 @@
             kind: "service",
             column: "Services",
             description: "Lazily generates approval-letter PDFs, stores/downloads private files, handles signed-letter upload, and processes staff document review decisions.",
-            file_paths: ["app/services/approval_letters.py", "app/services/reservation_private_files.py", "app/pdf/__init__.py"],
+            file_paths: ["backend/app/services/approval_letters.py", "backend/app/services/reservation_private_files.py", "backend/app/pdf/__init__.py"],
             inferred: false
           },
           {
@@ -935,7 +935,7 @@
             kind: "service",
             column: "Services",
             description: "Exposes student payment instructions, stores payment receipts, and handles staff payment approval/rejection.",
-            file_paths: ["app/services/payments.py", "app/services/reservation_private_files.py"],
+            file_paths: ["backend/app/services/payments.py", "backend/app/services/reservation_private_files.py"],
             inferred: false
           },
           {
@@ -944,7 +944,7 @@
             kind: "service",
             column: "Services",
             description: "Student review submission/deletion, staff facility review listing/statistics, and admin review moderation.",
-            file_paths: ["app/services/reviews.py"],
+            file_paths: ["backend/app/services/reviews.py"],
             inferred: false
           },
           {
@@ -953,7 +953,7 @@
             kind: "service",
             column: "Services",
             description: "Creates student and staff/admin notifications for reservation workflow events and maps notification targets to frontend routes by role.",
-            file_paths: ["app/services/notifications.py"],
+            file_paths: ["backend/app/services/notifications.py"],
             inferred: false
           },
           {
@@ -962,7 +962,7 @@
             kind: "service",
             column: "Services",
             description: "Read-model projection module for staff queue/list/detail/schedule screens.",
-            file_paths: ["app/services/staff_reservation_operations.py"],
+            file_paths: ["backend/app/services/staff_reservation_operations.py"],
             inferred: false
           },
           {
@@ -971,7 +971,7 @@
             kind: "service",
             column: "Services",
             description: "Facility governance, staff assignment, assigned facility updates, images, open hours, blackouts, and related audit logging.",
-            file_paths: ["app/services/facility_management.py", "app/services/assigned_facility_access.py"],
+            file_paths: ["backend/app/services/facility_management.py", "backend/app/services/assigned_facility_access.py"],
             inferred: false
           },
           {
@@ -980,7 +980,7 @@
             kind: "service",
             column: "Services",
             description: "Create, update, activate/deactivate, and list active organization units.",
-            file_paths: ["app/services/organization_units.py"],
+            file_paths: ["backend/app/services/organization_units.py"],
             inferred: false
           },
           {
@@ -989,7 +989,7 @@
             kind: "service",
             column: "Services",
             description: "Loads default+stored booking settings, validates admin updates, and provides policy values to auth and reservation workflow timings.",
-            file_paths: ["app/services/booking_settings.py"],
+            file_paths: ["backend/app/services/booking_settings.py"],
             inferred: false
           },
           {
@@ -998,7 +998,7 @@
             kind: "service",
             column: "Services",
             description: "Aggregates high-level counts, administrator list, facility governance, recent audit activity, and system status.",
-            file_paths: ["app/services/super_admin_dashboard.py"],
+            file_paths: ["backend/app/services/super_admin_dashboard.py"],
             inferred: false
           },
           {
@@ -1007,7 +1007,7 @@
             kind: "service",
             column: "Services",
             description: "Date-range aggregate KPIs, reservation status counts, and per-day trend calculation for reports.",
-            file_paths: ["app/services/super_admin_reports.py"],
+            file_paths: ["backend/app/services/super_admin_reports.py"],
             inferred: false
           },
           {
@@ -1016,7 +1016,7 @@
             kind: "service",
             column: "Services",
             description: "Reports backend/database health plus storage/worker placeholders.",
-            file_paths: ["app/services/system_status.py"],
+            file_paths: ["backend/app/services/system_status.py"],
             inferred: false
           },
           {
@@ -1025,7 +1025,7 @@
             kind: "service",
             column: "Services",
             description: "Scans reservations, applies lifecycle deadline transitions, records audit entries, and emits notifications.",
-            file_paths: ["app/services/deadline_worker.py"],
+            file_paths: ["backend/app/services/deadline_worker.py"],
             inferred: false
           },
           {
@@ -1035,17 +1035,17 @@
             column: "Persistence",
             description: "Write/read adapters for users, booking settings, facilities, reservations, staff operations, notifications, reviews, organization units, and audit logs.",
             file_paths: [
-              "app/repositories/user_repository.py",
-              "app/repositories/booking_settings_repository.py",
-              "app/repositories/facility_catalog_reader.py",
-              "app/repositories/facility_availability_reader.py",
-              "app/repositories/facility_management_repository.py",
-              "app/repositories/reservation_repository.py",
-              "app/repositories/staff_reservation_operations_repository.py",
-              "app/repositories/notification_repository.py",
-              "app/repositories/review_repository.py",
-              "app/repositories/organization_unit_repository.py",
-              "app/repositories/audit_log_repository.py"
+              "backend/app/repositories/user_repository.py",
+              "backend/app/repositories/booking_settings_repository.py",
+              "backend/app/repositories/facility_catalog_reader.py",
+              "backend/app/repositories/facility_availability_reader.py",
+              "backend/app/repositories/facility_management_repository.py",
+              "backend/app/repositories/reservation_repository.py",
+              "backend/app/repositories/staff_reservation_operations_repository.py",
+              "backend/app/repositories/notification_repository.py",
+              "backend/app/repositories/review_repository.py",
+              "backend/app/repositories/organization_unit_repository.py",
+              "backend/app/repositories/audit_log_repository.py"
             ],
             inferred: false
           },
@@ -1055,7 +1055,7 @@
             kind: "persistence_model",
             column: "Persistence",
             description: "Single SQLAlchemy model module containing users, facilities, categories, assignments, reservations, reviews, audit logs, notifications, organization units, and private file metadata tables.",
-            file_paths: ["app/models/__init__.py"],
+            file_paths: ["backend/app/models/__init__.py"],
             inferred: false
           },
           {
@@ -1064,7 +1064,7 @@
             kind: "api_contract",
             column: "Persistence",
             description: "Request/response schemas for accounts, facilities, reservations, reviews, settings, audit, notifications, and admin aggregates.",
-            file_paths: ["app/schemas"],
+            file_paths: ["backend/app/schemas"],
             inferred: false
           },
           {
@@ -1073,7 +1073,7 @@
             kind: "storage",
             column: "Persistence",
             description: "Only concrete adapter in code is InMemoryPrivateStorage; approval letters, signed letters, and payment receipts store bytes here via ReservationPrivateFileModule.",
-            file_paths: ["app/storage/__init__.py", "app/services/reservation_private_files.py"],
+            file_paths: ["backend/app/storage/__init__.py", "backend/app/services/reservation_private_files.py"],
             inferred: false
           },
           {
@@ -1082,7 +1082,7 @@
             kind: "storage",
             column: "Persistence",
             description: "Minimal internal PDF generator used to create reservation approval letters without external PDF service dependency.",
-            file_paths: ["app/pdf/__init__.py"],
+            file_paths: ["backend/app/pdf/__init__.py"],
             inferred: false
           },
           {
@@ -1091,7 +1091,7 @@
             kind: "database",
             column: "Persistence",
             description: "SQLAlchemy engine/session factory with SQLite defaults for local use and PostgreSQL expected in deployment. Schema is created with Base.metadata.create_all().",
-            file_paths: ["app/core/database.py", "app/core/settings.py", "docs/backend-deployment.md"],
+            file_paths: ["backend/app/core/database.py", "backend/app/core/settings.py", "docs/backend-deployment.md"],
             inferred: false
           },
           {
@@ -1118,7 +1118,7 @@
             kind: "build_pipeline",
             column: "Build/Deploy",
             description: "uv-managed dependency sync, pytest behavior tests, dev seed command, and uvicorn app startup.",
-            file_paths: ["pyproject.toml", "README.md", "app/dev/seed.py", "tests"],
+            file_paths: ["backend/pyproject.toml", "README.md", "backend/app/dev/seed.py", "tests"],
             inferred: false
           },
           {

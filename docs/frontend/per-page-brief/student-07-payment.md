@@ -55,7 +55,7 @@
 - Endpoints consumed: `GET /student/reservations/:reservationId/payment`, `POST /student/reservations/:reservationId/payment-receipt`, `POST /student/reservations/:reservationId/payment-receipt/submit`, `GET /student/reservations/:reservationId`.
 - Page-needed fields: `amount_rupiah`, `payment_instructions`, `payment.required`, `payment.review_status`, `payment.receipt`; receipt upload accepts JPG/JPEG/PNG images only.
 - Auth/session assumptions: student-owned reservation only.
-- Source files: `app/api/routes/payment_routes.py`, `app/schemas/reservation_schemas.py`.
+- Source files: `backend/app/api/routes/payment_routes.py`, `backend/app/schemas/reservation_schemas.py`.
 
 ### BG-STUDENT-07-01: Payment Instructions And Receipt Upload
 
@@ -63,7 +63,7 @@
 - Domain area: Payment
 - Affected UI: payment instruction card and receipt upload panel.
 - Contract needed: retrieve payment instructions, upload receipt metadata without entering review, and explicitly submit the uploaded receipt for payment verification.
-- Evidence: payment instruction, receipt upload, and receipt submit routes exist in `app/api/routes/payment_routes.py`; payment schemas exist in `app/schemas/reservation_schemas.py`.
+- Evidence: payment instruction, receipt upload, and receipt submit routes exist in `backend/app/api/routes/payment_routes.py`; payment schemas exist in `backend/app/schemas/reservation_schemas.py`.
 - Source issue/PRD: `docs/issues/ISSUE-0010-paid-facility-receipt-upload-and-payment-review.md`.
 
 ## Shared Components

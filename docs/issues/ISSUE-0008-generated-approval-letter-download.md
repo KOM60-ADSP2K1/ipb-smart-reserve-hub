@@ -127,7 +127,7 @@ Closing this issue as implemented.
 
 **Verification:**
 
-- `uv run --extra dev pytest -q tests/test_approval_letter_workflow.py` passed: 4 tests.
+- `uv run --extra dev pytest -q backend/tests/test_approval_letter_workflow.py` passed: 4 tests.
 - `uv run --extra dev pytest -q` passed: 59 tests.
 
 Implemented in local commit `02b9018 feat: add generated approval letter downloads`.

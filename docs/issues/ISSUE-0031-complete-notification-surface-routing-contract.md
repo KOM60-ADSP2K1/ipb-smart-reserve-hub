@@ -71,7 +71,7 @@ Evidence to record when closing:
 
 2026-05-13: Implemented and verified notification category/target contract.
 
-- Code evidence: `app/services/notifications.py` now projects `category` and role-aware `target` descriptors for notification responses; `app/schemas/notification_schemas.py` exposes the response contract.
-- API behavior evidence: `tests/test_notifications.py` verifies student, staff, and Super Admin notification rows include category/target data, `read_at` survives mark-read, another user cannot mark someone else's notification, and workflow-triggered staff/Super Admin notifications still appear for assigned staff plus Super Admin.
+- Code evidence: `backend/app/services/notifications.py` now projects `category` and role-aware `target` descriptors for notification responses; `backend/app/schemas/notification_schemas.py` exposes the response contract.
+- API behavior evidence: `backend/tests/test_notifications.py` verifies student, staff, and Super Admin notification rows include category/target data, `read_at` survives mark-read, another user cannot mark someone else's notification, and workflow-triggered staff/Super Admin notifications still appear for assigned staff plus Super Admin.
 - Documentation evidence: `docs/frontend/per-component-brief/notification-surface.md`, `docs/frontend/backend-gaps.md`, and `README.md` document the shared notification category/target contract.
-- Test command: `uv run pytest tests/test_notifications.py` passed with 4 tests.
+- Test command: `uv run pytest backend/tests/test_notifications.py` passed with 4 tests.

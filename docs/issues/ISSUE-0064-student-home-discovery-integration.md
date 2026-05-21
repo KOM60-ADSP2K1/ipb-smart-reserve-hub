@@ -92,4 +92,4 @@ The Student home page should fetch categories from the public facility category 
   - Added loading skeletons plus empty and retryable error states inside stable category/featured section containers.
   - Added RTL coverage for successful rendering and endpoint calls, empty categories, empty featured Facilities, retry after category query failure, and backend-owned hrefs.
   - Updated the Student home Playwright spec to mock the public discovery endpoints deterministically and refreshed the desktop/mobile screenshots.
-  - Verification: `npm test -- --run src/pages/student/StudentHomePage.test.tsx`; `npm run typecheck`; `npx playwright test tests/e2e/student-home.spec.ts --update-snapshots`; `npx playwright test tests/e2e/student-home.spec.ts`.
+  - Verification: `npm test -- --run src/pages/student/StudentHomePage.test.tsx`; `npm run typecheck`; `npx playwright test backend/tests/e2e/student-home.spec.ts --update-snapshots`; `npx playwright test backend/tests/e2e/student-home.spec.ts`.

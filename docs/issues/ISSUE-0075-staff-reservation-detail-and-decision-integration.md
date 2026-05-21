@@ -101,5 +101,5 @@ The Staff detail route should load the assigned Reservation detail by backend Re
   - Added stable loading and unassigned/not-found access error states.
   - Added Vitest/RTL coverage in `frontend/src/pages/staff/StaffReservationDetailDecisionPages.test.tsx` for detail rendering, missing/unavailable file behavior, downloads, approve/refetch, reject without reason, reject success, mutation errors, and access denial.
   - Updated Staff detail/dialog Playwright mocks and regenerated desktop/mobile screenshots for intentional backend-data normalization.
-- Verification: `npm test -- --run src/pages/staff/StaffReservationDetailDecisionPages.test.tsx`; `npm run typecheck`; `npx playwright test tests/e2e/staff-reservation-detail-decision.spec.ts`.
+- Verification: `npm test -- --run src/pages/staff/StaffReservationDetailDecisionPages.test.tsx`; `npm run typecheck`; `npx playwright test backend/tests/e2e/staff-reservation-detail-decision.spec.ts`.
 - Note: `npm run lint` still fails on pre-existing unrelated lint errors in `frontend/src/auth/session.tsx`, student workflow files, and student e2e specs; no new Staff detail/list files were reported in the lint output.

@@ -123,5 +123,5 @@ Completed scope:
 - README, CONTEXT, and frontend backend gaps docs are updated.
 
 Verification:
-- uv run --extra dev pytest tests/test_academic_profile_deriver.py tests/test_auth_foundation.py -q
+- uv run --extra dev pytest backend/tests/test_academic_profile_deriver.py backend/tests/test_auth_foundation.py -q
 - Result: 13 passed in 4.26s
