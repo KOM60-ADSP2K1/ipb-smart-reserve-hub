@@ -46,6 +46,9 @@ class NotificationModule:
             for notification in self._notification_repository.list_for_user(user.id)
         ]
 
+    def unread_count(self, user: UserAccount) -> int:
+        return sum(1 for notification in self._notification_repository.list_for_user(user.id) if notification.read_at is None)
+
     def mark_read(self, user: UserAccount, notification_id: str) -> UserNotification:
         notification = self._notification_repository.get_for_user(notification_id, user.id)
         if notification is None:
@@ -53,6 +56,14 @@ class NotificationModule:
         if notification.read_at is None:
             notification.read_at = _as_utc(self._clock())
         return _to_user_notification(notification, user)
+
+    def mark_all_read(self, user: UserAccount) -> list[UserNotification]:
+        notifications = self._notification_repository.list_for_user(user.id)
+        now = _as_utc(self._clock())
+        for notification in notifications:
+            if notification.read_at is None:
+                notification.read_at = now
+        return [_to_user_notification(notification, user) for notification in notifications]
 
     def reservation_submitted(self, reservation: Reservation) -> None:
         self._create_student_notification(

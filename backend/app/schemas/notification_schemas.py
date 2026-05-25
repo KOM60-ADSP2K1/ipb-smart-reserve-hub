@@ -18,3 +18,7 @@ class NotificationResponse(BaseModel):
     target: NotificationTargetResponse | None
     created_at: datetime
     read_at: datetime | None = None
+
+
+class NotificationUnreadCountResponse(BaseModel):
+    unread_count: int

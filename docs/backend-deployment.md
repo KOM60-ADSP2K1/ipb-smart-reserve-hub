@@ -7,7 +7,7 @@ This backend is deployed as a FastAPI service on Railway.
 - Start command: `uvicorn app.main:create_app --factory --host 0.0.0.0 --port $PORT`
 - Health check: `GET /health`
 - Environment: `IPB_ENVIRONMENT=production`
-- Approval-letter PDF generation requires the `tectonic` CLI in the backend runtime. The runtime must allow a writable TeX cache, such as `/tmp/tectonic-cache`, or provide the bundle cache during image build.
+- Approval-letter PDF generation uses `tectonic` when available on `PATH` with a writable TeX cache such as `/tmp/tectonic-cache`. If `tectonic` is missing, the backend falls back to a built-in PDF generator so reservation submission still works, but TeX rendering remains the preferred deployment path.
 
 ## Required Variables
 

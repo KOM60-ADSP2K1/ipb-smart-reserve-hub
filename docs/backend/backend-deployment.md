@@ -12,7 +12,7 @@ uvicorn app.main:create_app --factory --host 0.0.0.0 --port $PORT
 
 Railway should run the service with `IPB_ENVIRONMENT=production` so the app refuses unsafe development defaults.
 
-Approval-letter PDF generation requires the `tectonic` CLI in the backend runtime. Configure the deployment image with `tectonic` available on `PATH` and a writable TeX cache such as `/tmp/tectonic-cache`, or prewarm the bundle cache during image build.
+Approval-letter PDF generation uses `tectonic` when it is available on `PATH` and a writable TeX cache such as `/tmp/tectonic-cache`. If `tectonic` is missing, the backend falls back to a built-in PDF generator so reservation submission still works, but TeX rendering remains the preferred deployment path.
 
 ## Required environment variables
 

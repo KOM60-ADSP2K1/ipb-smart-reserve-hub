@@ -143,6 +143,65 @@ async def test_user_cannot_mark_another_users_notification_read():
 
 
 @pytest.mark.anyio
+async def test_user_can_mark_all_notifications_read():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime(2026, 5, 1, tzinfo=UTC),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    organization_unit_id = test_data.create_organization_unit(name="BEM KM IPB")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        student_token = await _register_and_login(client, email="budi@apps.ipb.ac.id")
+        await _create_reservation(
+            client,
+            token=student_token,
+            facility_id=facility_id,
+            organization_unit_id=organization_unit_id,
+        )
+        await client.post(
+            "/notifications/read-all",
+            headers={"Authorization": f"Bearer {student_token}"},
+        )
+        inbox_after_read_all = await client.get(
+            "/notifications",
+            headers={"Authorization": f"Bearer {student_token}"},
+        )
+
+    assert inbox_after_read_all.status_code == 200
+    assert inbox_after_read_all.json()[0]["read_at"] == "2026-05-01T00:00:00Z"
+
+
+@pytest.mark.anyio
+async def test_user_can_view_unread_notification_count():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime(2026, 5, 1, tzinfo=UTC),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    organization_unit_id = test_data.create_organization_unit(name="BEM KM IPB")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        student_token = await _register_and_login(client, email="budi@apps.ipb.ac.id")
+        await _create_reservation(
+            client,
+            token=student_token,
+            facility_id=facility_id,
+            organization_unit_id=organization_unit_id,
+        )
+        count = await client.get("/notifications/unread-count", headers={"Authorization": f"Bearer {student_token}"})
+
+    assert count.status_code == 200
+    assert count.json() == {"unread_count": 1}
+
+
+@pytest.mark.anyio
 async def test_signed_letter_upload_notifies_assigned_staff_and_super_admin_only():
     app = create_app(
         database_url="sqlite+pysqlite:///:memory:",
@@ -181,6 +240,10 @@ async def test_signed_letter_upload_notifies_assigned_staff_and_super_admin_only
             f"/student/reservations/{reservation['id']}/signed-approval-letter",
             headers={"Authorization": f"Bearer {student_token}"},
             files={"file": ("signed-letter.pdf", b"%PDF-1.4 signed letter", "application/pdf")},
+        )
+        await client.post(
+            f"/student/reservations/{reservation['id']}/signed-approval-letter/submit",
+            headers={"Authorization": f"Bearer {student_token}"},
         )
         staff_inbox = await client.get("/notifications", headers={"Authorization": f"Bearer {staff_token}"})
         admin_inbox = await client.get("/notifications", headers={"Authorization": f"Bearer {admin_token}"})
