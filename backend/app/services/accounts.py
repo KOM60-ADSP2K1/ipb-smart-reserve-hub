@@ -33,6 +33,17 @@ class AdminManagedUserCreation:
 
 
 @dataclass(frozen=True)
+class AdminManagedUserUpdate:
+    email: str
+    full_name: str
+
+
+@dataclass(frozen=True)
+class AdminManagedPasswordReset:
+    password: str
+
+
+@dataclass(frozen=True)
 class LoginCredentials:
     email: str
     password: str
@@ -135,6 +146,10 @@ class ManagedUserNotFound(UserAccountError):
     pass
 
 
+class ManagedUserReferenced(UserAccountError):
+    pass
+
+
 class UserAccountModule:
     def __init__(
         self,
@@ -210,6 +225,35 @@ class UserAccountModule:
         if user is None:
             raise ManagedUserNotFound
         return self._to_user_account(user)
+
+    def update_admin_managed_user(self, user_id: str, update: AdminManagedUserUpdate) -> UserAccount:
+        try:
+            user = self._user_repository.update_basic_profile(
+                user_id,
+                email=self._normalize_email(update.email),
+                full_name=update.full_name.strip(),
+            )
+        except DuplicateUserEmail as exc:
+            raise EmailAlreadyRegistered from exc
+        if user is None:
+            raise ManagedUserNotFound
+        return self._to_user_account(user)
+
+    def reset_admin_managed_user_password(self, user_id: str, reset: AdminManagedPasswordReset) -> UserAccount:
+        user = self._user_repository.reset_password(
+            user_id,
+            password_hash=self._password_hasher.hash(reset.password),
+        )
+        if user is None:
+            raise ManagedUserNotFound
+        return self._to_user_account(user)
+
+    def delete_admin_managed_user(self, user_id: str) -> None:
+        if self._user_repository.user_has_references(user_id):
+            raise ManagedUserReferenced
+        user = self._user_repository.delete_user(user_id)
+        if user is None:
+            raise ManagedUserNotFound
 
     def login(self, credentials: LoginCredentials) -> AccountSession:
         user = self._user_repository.find_by_email(self._normalize_email(credentials.email))

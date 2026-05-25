@@ -143,7 +143,7 @@ test.describe("super admin dashboard and users pages", () => {
     await expect(page.getByRole("heading", { name: "Administrator Departemen" })).toBeVisible();
     await expect(page.getByText("Admin IPB").nth(isMobile ? 1 : 0)).toBeVisible();
     await expect(page.getByRole("heading", { name: "Log Aktivitas Sistem" })).toBeVisible();
-    await expect(page.getByText("admin@ipb.ac.id melakukan staff_assignment.created")).toBeVisible();
+    await expect(page.getByText("admin@ipb.ac.id menambahkan penugasan staff")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Tata Kelola Fasilitas" })).toBeVisible();
     await expect(page.getByText("Grand Auditorium").nth(isMobile ? 1 : 0)).toBeVisible();
     await expect(page.getByRole("button", { name: "Ekspor Laporan ditunda" })).toBeVisible();

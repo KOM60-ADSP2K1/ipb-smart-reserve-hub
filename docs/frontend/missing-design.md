@@ -2,7 +2,9 @@
 
 HTML references and screenshots are mandatory source of truth for visual implementation. This file tracks missing page, state, and component references that future design work should add or clarify.
 
-Current open missing references: none. Resolved entries are retained below so future agents can see which references closed the prior gaps.
+Current open missing references:
+
+- `MD-NOTIFICATION-PAGE-02`: full notification history page for student, staff, and super-admin roles.
 
 Severity:
 
@@ -11,6 +13,18 @@ Severity:
 - `future`: not needed for the current MVP implementation slice.
 
 ## Resolved Page References
+
+## Open Page References
+
+### MD-NOTIFICATION-PAGE-02: Full Notification History Page
+
+- Severity: `non-blocking`
+- Type: `page`
+- Affected pages/components: `/student/notifications`, `/staff/notifications`, `/super-admin/notifications`.
+- Needed reference: Desktop and mobile HTML/screenshots for a full notification history page with date separators and bulk actions.
+- Current fallback: `docs/frontend/html-reference/Shared - 01 - Notifications.html` plus the role shell references.
+- Status: `open`
+- Owner action: Add a dedicated full-page notification reference if the visual treatment needs to diverge from the current extrapolated board layout.
 
 ### MD-SUPER-PAGE-01: Super Admin Pengguna Page
 

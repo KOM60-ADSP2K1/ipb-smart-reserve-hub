@@ -68,6 +68,7 @@ Gap statuses:
 | Gap ID | Brief | Status | Label |
 | --- | --- | --- | --- |
 | [BG-SHARED-NOTIFICATIONS-01](per-component-brief/notification-surface.md#bg-shared-notifications-01-notification-category-and-target-contract) | `notification-surface.md` | resolved | Notification category and target contract |
+| [BG-SHARED-NOTIFICATIONS-02](per-page-brief/student-21-notifications.md#bg-shared-notifications-02-paginated-notification-listing) | `student-21-notifications.md` | resolved | Paginated notification listing |
 
 ## Staff Operations
 

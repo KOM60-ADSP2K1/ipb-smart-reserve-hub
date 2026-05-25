@@ -3,6 +3,7 @@ import {
   Briefcase,
   Building2,
   CalendarDays,
+  ChevronRight,
   GraduationCap,
   Menu,
   Plus,
@@ -21,6 +22,14 @@ import {
 import { cn } from "../../utils/cn";
 
 type SuperAdminActive = (typeof superAdminNav)[number]["key"];
+
+const superAdminShellNavIcons: Record<SuperAdminActive, typeof Users> = {
+  dashboard: Users,
+  facilities: Building2,
+  reports: Briefcase,
+  system: Settings,
+  users: GraduationCap,
+};
 
 type SuperAdminDashboardResponse = {
   administrators?: SuperAdminDashboardAdministratorResponse[];
@@ -173,12 +182,20 @@ function reportRangeParams(range: ReportDateRange) {
   };
 }
 
-function auditLogsPath(range?: ReportDateRange) {
+function auditLogsPath(range?: ReportDateRange, limit?: number) {
   if (!range) {
-    return "/admin/audit-logs";
+    const params = new URLSearchParams();
+    if (limit !== undefined) {
+      params.set("limit", String(limit));
+    }
+    const query = params.toString();
+    return query ? `/admin/audit-logs?${query}` : "/admin/audit-logs";
   }
   const rangeParams = reportRangeParams(range);
   const params = new URLSearchParams({ created_from: rangeParams.start, created_to: rangeParams.end });
+  if (limit !== undefined) {
+    params.set("limit", String(limit));
+  }
   return `/admin/audit-logs?${params.toString()}`;
 }
 
@@ -188,8 +205,8 @@ function fetchReportAggregate(range: ReportDateRange) {
   return apiRequest<SuperAdminReportAggregateResponse>(`/admin/reports/aggregate?${params.toString()}`);
 }
 
-function fetchAdminAuditLogs(range?: ReportDateRange) {
-  return apiRequest<AdminAuditLogResponse[]>(auditLogsPath(range));
+function fetchAdminAuditLogs(range?: ReportDateRange, limit?: number) {
+  return apiRequest<AdminAuditLogResponse[]>(auditLogsPath(range, limit));
 }
 
 function fetchAdminReviews() {
@@ -296,6 +313,18 @@ function createAdminUser(body: { email: string; full_name: string; is_active: bo
   return apiRequest<AdminUserResponse>("/admin/users", { body, method: "POST" });
 }
 
+function updateAdminUser(userId: string, body: { email: string; full_name: string }) {
+  return apiRequest<AdminUserResponse>(`/admin/users/${userId}`, { body, method: "PATCH" });
+}
+
+function resetAdminUserPassword(userId: string, body: { password: string }) {
+  return apiRequest<AdminUserResponse>(`/admin/users/${userId}/reset-password`, { body, method: "POST" });
+}
+
+function deleteAdminUser(userId: string) {
+  return apiRequest<void>(`/admin/users/${userId}`, { method: "DELETE" });
+}
+
 function setAdminUserStatus(userId: string, active: boolean) {
   return apiRequest<AdminUserResponse>(`/admin/users/${userId}/${active ? "activate" : "deactivate"}`, {
     method: "POST",
@@ -342,21 +371,24 @@ export function SuperAdminShell({
   active: SuperAdminActive;
   children: ReactNode;
 }) {
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-[#111827]">
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-[#e5e7eb] bg-white">
-        <div className="mx-auto flex h-[72px] w-[1200px] max-w-[95%] items-center justify-between max-md:h-16 max-md:max-w-full max-md:px-4">
-          <div className="flex items-center gap-5">
+    <div className="min-h-screen overflow-x-hidden bg-[#f8fafc] text-[#111827]">
+      <header className="fixed inset-x-0 top-0 z-50 flex h-[72px] justify-center border-b border-[#e5e7eb] bg-white max-md:h-16">
+        <div className="flex h-full w-[1200px] max-w-[95%] items-center justify-between gap-[22px] max-md:max-w-full max-md:px-3.5">
+          <div className="flex min-w-0 items-center gap-[22px] max-md:gap-3.5">
             <button
-              aria-label="Buka navigasi"
+              aria-label="Buka navigasi super admin"
               className="hidden text-[#6b7280] max-md:inline-flex"
               type="button"
+              onClick={() => setIsMobileNavOpen(true)}
             >
               <Menu aria-hidden="true" size={24} />
             </button>
             <a
               aria-label="IPB Smart Reserve Hub"
-              className="font-serif text-2xl font-bold leading-none text-[#1d7667] no-underline max-md:text-[22px]"
+              className="whitespace-nowrap font-serif text-2xl font-bold leading-none text-[#1d7667] no-underline max-md:text-[22px]"
               href="/super-admin"
             >
               <span className="hidden md:inline">
@@ -368,27 +400,11 @@ export function SuperAdminShell({
             </a>
           </div>
 
-          <nav aria-label="Super Admin utama" className="flex items-center gap-10 max-md:hidden">
-            {superAdminNav.map((item) => (
-              <a
-                aria-current={item.key === active ? "page" : undefined}
-                className={cn(
-                  "border-b-2 border-transparent pb-1 text-sm font-bold text-[#6b7280] no-underline",
-                  item.key === active && "border-[#0f9d58] text-[#0f9d58]",
-                )}
-                href={item.href}
-                key={item.key}
-              >
-                {item.label}
-              </a>
-            ))}
-          </nav>
-
           <div className="flex items-center gap-[22px] max-md:gap-3.5">
             <NotificationSurface className="text-[#6b7280]" role="super_admin" />
             <a
               aria-label="Profil Super Admin"
-              className="flex h-[34px] w-[34px] items-center justify-center rounded-full bg-[#0f9d58] text-[13px] font-bold text-white no-underline"
+              className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-[#0f9d58] text-[13px] font-bold text-white no-underline"
               href="/super-admin/profile"
             >
               SA
@@ -396,26 +412,111 @@ export function SuperAdminShell({
           </div>
         </div>
       </header>
-      {children}
-      <footer className="mt-20 border-t border-[#e5e7eb] bg-white">
-        <div className="mx-auto flex min-h-[72px] w-[1200px] max-w-[95%] items-center justify-between gap-8 py-5 max-md:max-w-full max-md:flex-col max-md:gap-3.5 max-md:px-4 max-md:text-center">
-          <div className="flex items-center gap-4 max-md:flex-col max-md:gap-2">
-            <p className="m-0 font-serif text-[30px] font-bold leading-none text-[#4da38b]">
-              IPB SRH
-            </p>
-            <p className="m-0 text-[13px] text-[#6b7280]">
-              © 2026 IPB Smart Reserve Hub. Hak cipta dilindungi.
-            </p>
+
+      <aside
+        aria-label="Navigasi super admin utama"
+        className="group fixed left-0 top-[72px] z-40 hidden h-[calc(100vh-72px)] w-[78px] overflow-hidden border-r border-[#e5e7eb] bg-white/95 shadow-none backdrop-blur transition-[width,box-shadow] duration-200 hover:w-[244px] hover:shadow-[8px_0_28px_rgba(15,23,42,0.08)] max-md:hidden md:flex"
+      >
+        <div className="flex w-full flex-col px-3 py-4">
+          <div className="mb-4 flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-[0.08em] text-[#9ca3af]">
+            <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+              Menu admin
+            </span>
+            <ChevronRight
+              aria-hidden="true"
+              className="shrink-0 text-[#9ca3af] transition-transform duration-200 group-hover:rotate-180"
+              size={16}
+            />
           </div>
-          <nav className="flex flex-wrap justify-end gap-x-[18px] gap-y-2 text-sm font-bold text-[#6b7280] max-md:justify-center">
-            {superAdminNav.map((item) => (
-              <a className="no-underline" href={item.href} key={item.key}>
-                {item.label}
-              </a>
-            ))}
+
+          <nav aria-label="Menu utama super admin" className="flex flex-1 flex-col gap-1.5">
+            {superAdminNav.map((item) => {
+              const Icon = superAdminShellNavIcons[item.key];
+              const isActive = item.key === active;
+
+              return (
+                <a
+                  aria-current={isActive ? "page" : undefined}
+                  className={cn(
+                    "flex items-center gap-3 rounded-[12px] px-3 py-3 text-sm font-bold text-[#6b7280] no-underline transition-colors hover:bg-[#f8fafc] hover:text-[#111827]",
+                    isActive && "bg-[#e8f5e9] text-[#0f9d58]",
+                  )}
+                  href={item.href}
+                  key={item.key}
+                >
+                  <span
+                    className={cn(
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f8fafc] transition-colors group-hover:bg-[#eef7f1]",
+                      isActive && "bg-white",
+                    )}
+                  >
+                    <Icon aria-hidden="true" size={18} />
+                  </span>
+                  <span className="whitespace-nowrap opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100">
+                    {item.label}
+                  </span>
+                </a>
+              );
+            })}
           </nav>
         </div>
-      </footer>
+      </aside>
+
+      {isMobileNavOpen ? (
+        <div className="fixed inset-0 z-[60] bg-slate-950/35 md:hidden" onClick={() => setIsMobileNavOpen(false)}>
+          <aside
+            aria-label="Navigasi super admin mobile"
+            className="flex h-full w-[304px] max-w-[84%] flex-col bg-white px-[18px] py-4 shadow-[0_10px_30px_rgba(15,23,42,0.16)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-[18px] flex items-center justify-between">
+              <div className="flex items-center gap-3 rounded-xl border border-[#e5e7eb] p-3.5">
+                <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-[#0f9d58] text-[13px] font-bold text-white">
+                  SA
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-[#111827]">Super Admin</div>
+                  <div className="truncate text-xs text-[#6b7280]">super_admin@apps.ipb.ac.id</div>
+                </div>
+              </div>
+              <button
+                aria-label="Tutup navigasi super admin"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-[#e5e7eb] text-[#6b7280]"
+                type="button"
+                onClick={() => setIsMobileNavOpen(false)}
+              >
+                <X aria-hidden="true" size={18} />
+              </button>
+            </div>
+
+            <nav className="flex flex-col gap-1.5" aria-label="Navigasi super admin utama">
+              {superAdminNav.map((item) => {
+                const Icon = superAdminShellNavIcons[item.key];
+                const isActive = item.key === active;
+
+                return (
+                  <a
+                    aria-current={isActive ? "page" : undefined}
+                    className={cn(
+                      "flex items-center gap-3 rounded-[10px] px-2.5 py-3 text-sm font-bold text-[#6b7280] no-underline",
+                      isActive && "bg-[#e8f5e9] text-[#0f9d58]",
+                    )}
+                    href={item.href}
+                    key={item.key}
+                  >
+                    <span className="flex w-6 justify-center">
+                      <Icon aria-hidden="true" size={18} />
+                    </span>
+                    {item.label}
+                  </a>
+                );
+              })}
+            </nav>
+          </aside>
+        </div>
+      ) : null}
+
+      <div className="pb-20 md:pl-[78px] max-md:pb-14">{children}</div>
     </div>
   );
 }
@@ -1040,8 +1141,76 @@ function FacilityThumb({ label }: { label: string }) {
   );
 }
 
+function PaginationControls({
+  className,
+  currentPage,
+  onNext,
+  onPageSizeChange,
+  onPrevious,
+  pageSize,
+  pageSizeOptions,
+  summary,
+  totalPages,
+}: {
+  className?: string;
+  currentPage: number;
+  onNext: () => void;
+  onPageSizeChange: (value: number) => void;
+  onPrevious: () => void;
+  pageSize: number;
+  pageSizeOptions: number[];
+  summary: string;
+  totalPages: number;
+}) {
+  return (
+    <div className={cn("flex flex-wrap items-center justify-between gap-3", className)}>
+      <p className="m-0 text-sm font-semibold text-[#6b7280]">{summary}</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-2 text-sm font-semibold text-[#111827]">
+          <span>Tampil</span>
+          <select
+            className="min-h-10 rounded-lg border border-[#dbe2ea] bg-white px-3 text-sm text-[#111827]"
+            onChange={(event) => onPageSizeChange(Number(event.target.value))}
+            value={pageSize}
+          >
+            {pageSizeOptions.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </label>
+        <span className="text-sm font-semibold text-[#6b7280]">
+          Halaman {currentPage} / {totalPages}
+        </span>
+        <div className="flex items-center gap-2">
+          <button
+            className={tableActionButtonClass("secondary")}
+            disabled={currentPage <= 1}
+            onClick={onPrevious}
+            type="button"
+          >
+            Sebelumnya
+          </button>
+          <button
+            className={tableActionButtonClass("secondary")}
+            disabled={currentPage >= totalPages}
+            onClick={onNext}
+            type="button"
+          >
+            Berikutnya
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SuperAdminFacilitiesPage() {
   const queryClient = useQueryClient();
+  const [facilityPage, setFacilityPage] = useState(1);
+  const [facilityPageSize, setFacilityPageSize] = useState(5);
+  const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null);
   const [staffInputs, setStaffInputs] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
   const [formError, setFormError] = useState("");
@@ -1054,6 +1223,13 @@ export function SuperAdminFacilitiesPage() {
     queryKey: ["super-admin", "staff-options"],
   });
   const facilities = governanceQuery.data ?? [];
+  const facilityTotalPages = Math.max(1, Math.ceil(facilities.length / facilityPageSize));
+  const currentFacilityPage = Math.min(facilityPage, facilityTotalPages);
+  const pagedFacilities = facilities.slice(
+    (currentFacilityPage - 1) * facilityPageSize,
+    currentFacilityPage * facilityPageSize,
+  );
+  const selectedFacility = facilities.find((facility) => facility.id === selectedFacilityId) ?? null;
   const staffOptions = staffUsersQuery.data?.items ?? [];
   const activeFacilities = facilities.filter((facility) => facility.is_active).length;
   const needsStaff = facilities.filter((facility) => facility.assignment_coverage === "needs_staff").length;
@@ -1146,7 +1322,7 @@ export function SuperAdminFacilitiesPage() {
                 </tr>
               </thead>
               <tbody>
-                {facilities.map((facility) => (
+                {pagedFacilities.map((facility) => (
                   <tr className="border-t border-[#e5e7eb]" key={facility.id}>
                     <td className="px-5 py-4">
                       <p className="m-0 text-sm font-bold">{facility.name}</p>
@@ -1179,22 +1355,12 @@ export function SuperAdminFacilitiesPage() {
                     <td className="px-5 py-4">
                       <div className="grid gap-2">
                         <button
-                          aria-disabled="true"
-                          aria-label={`Edit detail ${facility.name}`}
-                          className={tableActionButtonClass("secondary")}
-                          disabled
+                          aria-label={`Kelola staff ${facility.name}`}
+                          className={tableActionButtonClass("primary")}
+                          onClick={() => setSelectedFacilityId(facility.id)}
                           type="button"
                         >
-                          Edit detail
-                        </button>
-                        <button
-                          aria-disabled="true"
-                          aria-label={`Arsipkan ${facility.name}`}
-                          className={tableActionButtonClass("secondary")}
-                          disabled
-                          type="button"
-                        >
-                          Arsipkan
+                          Kelola staff
                         </button>
                       </div>
                     </td>
@@ -1203,7 +1369,7 @@ export function SuperAdminFacilitiesPage() {
               </tbody>
             </table>
             <div className="hidden gap-4 max-md:grid">
-              {facilities.map((facility) => (
+              {pagedFacilities.map((facility) => (
                 <article className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)]" key={facility.id}>
                   <UserField label="Fasilitas">
                     <strong>{facility.name}</strong>
@@ -1228,28 +1394,34 @@ export function SuperAdminFacilitiesPage() {
                   <UserField label="Aksi">
                     <div className="grid gap-2">
                       <button
-                        aria-disabled="true"
-                        aria-label={`Edit detail ${facility.name}`}
-                        className={tableActionButtonClass("secondary")}
-                        disabled
+                        aria-label={`Kelola staff ${facility.name}`}
+                        className={tableActionButtonClass("primary")}
+                        onClick={() => setSelectedFacilityId(facility.id)}
                         type="button"
                       >
-                        Edit detail
-                      </button>
-                      <button
-                        aria-disabled="true"
-                        aria-label={`Arsipkan ${facility.name}`}
-                        className={tableActionButtonClass("secondary")}
-                        disabled
-                        type="button"
-                      >
-                        Arsipkan
+                        Kelola staff
                       </button>
                     </div>
                   </UserField>
                 </article>
               ))}
             </div>
+            {facilities.length > facilityPageSize ? (
+              <PaginationControls
+                className="border-t border-[#e5e7eb] px-5 py-4"
+                currentPage={currentFacilityPage}
+                onNext={() => setFacilityPage((current) => Math.min(current + 1, facilityTotalPages))}
+                onPageSizeChange={(value) => {
+                  setFacilityPage(1);
+                  setFacilityPageSize(value);
+                }}
+                onPrevious={() => setFacilityPage((current) => Math.max(current - 1, 1))}
+                pageSize={facilityPageSize}
+                pageSizeOptions={[5, 10, 20]}
+                summary={`Menampilkan ${pagedFacilities.length} dari ${facilities.length} fasilitas`}
+                totalPages={facilityTotalPages}
+              />
+            ) : null}
             {governanceQuery.isLoading ? (
               <div className="border-t border-[#e5e7eb] p-6 text-sm font-semibold text-[#6b7280]">
                 Memuat tata kelola fasilitas...
@@ -1269,117 +1441,147 @@ export function SuperAdminFacilitiesPage() {
             ) : null}
           </SectionCard>
 
-          <section className="rounded-xl border border-[#e5e7eb] bg-white p-6 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)]">
-            <h2 className="m-0 border-b border-[#e5e7eb] pb-3 text-lg font-bold">
-              Penugasan Terbaru
-            </h2>
-            <div className="grid">
-              {facilities.map((facility) => {
-                const staffId = staffInputs[facility.id]?.trim() ?? "";
-                const selectedStaff = staffOptions.find((staff) => staff.id === staffId);
-                const assignedStaff = facility.assigned_staff ?? [];
-                const selectableStaff = [
-                  ...staffOptions,
-                  ...assignedStaff
-                    .filter((staff) => !staffOptions.some((option) => option.id === staff.id))
-                    .map((staff) => ({
-                      ...staff,
-                      academic_profile: null,
-                      nim: null,
-                      phone: null,
-                      role: "staff" as const,
-                    })),
-                ];
-                const selectedStaffName =
-                  selectedStaff?.full_name ?? assignedStaff.find((staff) => staff.id === staffId)?.full_name;
-                const isSelectedStaffAssigned = assignedStaff.some((staff) => staff.id === staffId);
-                return (
-                  <article
-                    className="grid gap-3 border-b border-[#e5e7eb] py-5 last:border-b-0"
-                    key={facility.id}
-                  >
-                    <div className="min-w-0">
-                      <p className="m-0 break-words text-sm font-bold">{facility.name}</p>
-                      <p className="m-0 mt-1 break-words text-xs text-[#6b7280]">
-                        {facility.active_assigned_staff_count}/{facility.assigned_staff_count} aktif
-                      </p>
-                      <div className="mt-3 rounded-lg border border-[#e5e7eb] bg-[#f8fafc] p-3">
-                        <p className="m-0 text-[10px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">
-                          Ditugaskan
-                        </p>
-                        {assignedStaff.length > 0 ? (
-                          <ul className="m-0 mt-2 grid list-none gap-1 p-0">
-                            {assignedStaff.map((staff) => (
-                              <li className="break-words text-xs font-semibold text-[#111827]" key={staff.id}>
-                                {staff.full_name} - {staff.email}
-                                {!staff.is_active ? <span className="text-[#b91c1c]"> (nonaktif)</span> : null}
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="m-0 mt-2 text-xs font-semibold text-[#6b7280]">
-                            Belum ada staff ditugaskan.
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <select
-                      aria-label={`Pilih staff untuk ${facility.name}`}
-                      className="min-h-10 rounded-lg border border-[#dbe2ea] bg-white px-3 text-sm text-[#111827]"
-                      onChange={(event) =>
-                        setStaffInputs((current) => ({ ...current, [facility.id]: event.target.value }))
-                      }
-                      disabled={staffUsersQuery.isLoading}
-                      value={staffInputs[facility.id] ?? ""}
-                    >
-                      <option value="">
-                        {staffUsersQuery.isLoading ? "Memuat staff..." : "Pilih staff aktif"}
-                      </option>
-                      {selectableStaff.map((staff) => (
-                        <option key={staff.id} value={staff.id}>
-                          {staff.full_name} - {staff.email}{staff.is_active ? "" : " (nonaktif)"}
-                        </option>
-                      ))}
-                    </select>
-                    {selectedStaffName ? (
-                      <p className="m-0 text-xs font-semibold text-[#6b7280]">
-                        {isSelectedStaffAssigned
-                          ? `${selectedStaffName} sudah ditugaskan ke fasilitas ini.`
-                          : `${selectedStaffName} belum ditugaskan ke fasilitas ini.`}
-                      </p>
-                    ) : null}
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        aria-label={`Tugaskan staff ke ${facility.name}`}
-                        className="inline-flex min-h-10 items-center justify-center rounded-md bg-[#0f9d58] px-3 text-xs font-bold text-white disabled:opacity-60"
-                        disabled={!staffId || isSelectedStaffAssigned || assignmentMutation.isPending}
-                        onClick={() =>
-                          assignmentMutation.mutate({ action: "assign", facilityId: facility.id, staffId })
-                        }
-                        type="button"
-                      >
-                        Tugaskan
-                      </button>
-                      <button
-                        aria-label={`Hapus staff dari ${facility.name}`}
-                        className="inline-flex min-h-10 items-center justify-center rounded-md border border-[#e5e7eb] bg-white px-3 text-xs font-bold text-[#111827] disabled:opacity-60"
-                        disabled={!staffId || !isSelectedStaffAssigned || assignmentMutation.isPending}
-                        onClick={() =>
-                          assignmentMutation.mutate({ action: "unassign", facilityId: facility.id, staffId })
-                        }
-                        type="button"
-                      >
-                        Hapus
-                      </button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </section>
         </div>
+        {selectedFacility ? (
+          <FacilityAssignmentModal
+            assignmentBusy={assignmentMutation.isPending}
+            facility={selectedFacility}
+            onAssign={(staffId) =>
+              assignmentMutation.mutate({ action: "assign", facilityId: selectedFacility.id, staffId })
+            }
+            onClose={() => setSelectedFacilityId(null)}
+            onSelectStaff={(staffId) => setStaffInputs((current) => ({ ...current, [selectedFacility.id]: staffId }))}
+            onUnassign={(staffId) =>
+              assignmentMutation.mutate({ action: "unassign", facilityId: selectedFacility.id, staffId })
+            }
+            selectedStaffId={staffInputs[selectedFacility.id] ?? ""}
+            staffOptions={staffOptions}
+          />
+        ) : null}
       </main>
     </SuperAdminShell>
+  );
+}
+
+function FacilityAssignmentModal({
+  assignmentBusy,
+  facility,
+  onAssign,
+  onClose,
+  onSelectStaff,
+  onUnassign,
+  selectedStaffId,
+  staffOptions,
+}: {
+  assignmentBusy: boolean;
+  facility: SuperAdminFacilityGovernanceResponse;
+  onAssign: (staffId: string) => void;
+  onClose: () => void;
+  onSelectStaff: (staffId: string) => void;
+  onUnassign: (staffId: string) => void;
+  selectedStaffId: string;
+  staffOptions: AdminUserResponse[];
+}) {
+  const assignedStaff = facility.assigned_staff ?? [];
+  const selectableStaff = [
+    ...staffOptions,
+    ...assignedStaff
+      .filter((staff) => !staffOptions.some((option) => option.id === staff.id))
+      .map((staff) => ({
+        ...staff,
+        academic_profile: null,
+        nim: null,
+        phone: null,
+        role: "staff" as const,
+      })),
+  ];
+  const selectedStaff = selectableStaff.find((staff) => staff.id === selectedStaffId) ?? null;
+  const alreadyAssigned = assignedStaff.some((staff) => staff.id === selectedStaffId);
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/40 px-4" onClick={onClose}>
+      <section
+        aria-label={`Kelola staff ${facility.name}`}
+        className="w-full max-w-[640px] rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-[0_24px_48px_rgba(15,23,42,0.18)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-[#e5e7eb] pb-4">
+          <div className="min-w-0">
+            <h2 className="m-0 text-xl font-bold text-[#111827]">Kelola Staff Fasilitas</h2>
+            <p className="m-0 mt-2 break-words text-sm text-[#6b7280]">
+              {facility.name} - {facility.location}
+            </p>
+          </div>
+          <button className={tableActionButtonClass("secondary")} onClick={onClose} type="button">
+            Tutup
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-5">
+          <div className="rounded-xl border border-[#e5e7eb] bg-[#f8fafc] p-4">
+            <p className="m-0 text-[11px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">Staff Ditugaskan</p>
+            {assignedStaff.length > 0 ? (
+              <ul className="m-0 mt-3 grid list-none gap-2 p-0">
+                {assignedStaff.map((staff) => (
+                  <li className="break-words text-sm font-semibold text-[#111827]" key={staff.id}>
+                    {staff.full_name} - {staff.email}
+                    {!staff.is_active ? <span className="text-[#b91c1c]"> (nonaktif)</span> : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="m-0 mt-3 text-sm font-semibold text-[#6b7280]">Belum ada staff ditugaskan.</p>
+            )}
+          </div>
+
+          <label className="grid gap-2 text-sm font-semibold text-[#111827]">
+            Pilih staff
+            <select
+              aria-label={`Pilih staff untuk ${facility.name}`}
+              className="min-h-11 rounded-lg border border-[#dbe2ea] bg-white px-3 text-sm text-[#111827]"
+              onChange={(event) => onSelectStaff(event.target.value)}
+              value={selectedStaffId}
+            >
+              <option value="">Pilih staff aktif</option>
+              {selectableStaff.map((staff) => (
+                <option key={staff.id} value={staff.id}>
+                  {staff.full_name} - {staff.email}{staff.is_active ? "" : " (nonaktif)"}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <p className="m-0 text-xs font-semibold text-[#6b7280]">
+            {selectedStaff
+              ? alreadyAssigned
+                ? `${selectedStaff.full_name} sudah ditugaskan ke fasilitas ini.`
+                : `${selectedStaff.full_name} belum ditugaskan ke fasilitas ini.`
+              : "Pilih staff untuk menambah atau menghapus penugasan."}
+          </p>
+
+          <div className="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+            <button
+              aria-label={`Tugaskan staff ke ${facility.name}`}
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#0f9d58] px-4 text-sm font-bold text-white disabled:opacity-60"
+              disabled={!selectedStaffId || alreadyAssigned || assignmentBusy}
+              onClick={() => onAssign(selectedStaffId)}
+              type="button"
+            >
+              Tugaskan
+            </button>
+            <button
+              aria-label={`Hapus staff dari ${facility.name}`}
+              className={cn(tableActionButtonClass("danger"), "min-h-11 text-sm")}
+              disabled={!selectedStaffId || !alreadyAssigned || assignmentBusy}
+              onClick={() => onUnassign(selectedStaffId)}
+              type="button"
+            >
+              Hapus penugasan
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
 
@@ -1833,11 +2035,13 @@ export function SuperAdminReportsPage() {
 }
 
 export function SuperAdminAuditLogsPage() {
+  const [auditLimit, setAuditLimit] = useState(20);
   const auditQuery = useQuery({
-    queryFn: () => fetchAdminAuditLogs(),
-    queryKey: ["super-admin", "reports", "audit", "all"],
+    queryFn: () => fetchAdminAuditLogs(undefined, auditLimit),
+    queryKey: ["super-admin", "reports", "audit", "all", auditLimit],
   });
   const auditLogs = auditQuery.data ?? [];
+  const hasMoreAuditLogs = auditLogs.length === auditLimit;
 
   return (
     <SuperAdminShell active="reports">
@@ -1887,6 +2091,17 @@ export function SuperAdminAuditLogsPage() {
               </article>
             ))}
           </div>
+          {hasMoreAuditLogs ? (
+            <div className="border-t border-[#e5e7eb] px-6 py-4 max-md:px-5">
+              <button
+                className="inline-flex min-h-10 w-full items-center justify-center rounded-lg border border-[#d1fae5] bg-[#f0fdf4] px-4 text-sm font-bold text-[#047857] no-underline"
+                onClick={() => setAuditLimit((current) => current + 20)}
+                type="button"
+              >
+                {auditQuery.isFetching ? "Memuat..." : "Muat lebih banyak"}
+              </button>
+            </div>
+          ) : null}
           {auditQuery.isLoading ? (
             <div className="border-t border-[#e5e7eb] p-6 text-sm font-semibold text-[#6b7280]">
               Memuat log audit...
@@ -1936,8 +2151,11 @@ export function SuperAdminDashboardPage() {
   });
   const dashboard = dashboardQuery.data;
   const administrators = dashboard?.administrators ?? [];
+  const administratorsPreview = administrators.slice(0, 5);
   const facilities = dashboard?.facility_governance ?? [];
+  const facilitiesPreview = facilities.slice(0, 5);
   const activity = dashboard?.recent_activity ?? [];
+  const activityPreview = activity.slice(0, 5);
   const kpis = dashboard
     ? [
         {
@@ -2014,7 +2232,7 @@ export function SuperAdminDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {administrators.map((admin) => (
+                {administratorsPreview.map((admin) => (
                   <tr className="border-t border-[#e5e7eb]" key={admin.id}>
                     <td className="px-6 py-4">
                       <p className="m-0 text-sm font-bold">{admin.full_name}</p>
@@ -2033,7 +2251,7 @@ export function SuperAdminDashboardPage() {
               </tbody>
             </table>
             <div className="hidden max-md:grid">
-              {administrators.map((admin) => (
+              {administratorsPreview.map((admin) => (
                 <article className="grid grid-cols-[1fr_auto] gap-4 border-t border-[#e5e7eb] p-4" key={admin.id}>
                   <div className="min-w-0">
                     <h3 className="m-0 break-words text-sm font-bold">{admin.full_name}</h3>
@@ -2060,12 +2278,12 @@ export function SuperAdminDashboardPage() {
           <section className="relative overflow-hidden rounded-xl border border-[#dbeafe] bg-[#f8fafc] shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)]">
             <div className="flex min-h-16 items-center justify-between gap-4 border-b border-[#dbeafe] px-6 max-md:px-5">
               <h2 className="m-0 text-lg font-bold text-[#111827] max-md:max-w-[180px]">Log Aktivitas Sistem</h2>
-              <a className="text-sm font-bold text-[#0f9d58] no-underline" href="/super-admin/reports">
-                Log Lengkap
+              <a className="text-sm font-bold text-[#0f9d58] no-underline" href="/super-admin/reports/logs">
+                Lihat Semua
               </a>
             </div>
             <ul className="m-0 list-none p-0">
-              {activity.map((item) => (
+              {activityPreview.map((item) => (
                 <li className="flex gap-4 border-t border-[#dbeafe] px-6 py-4 first:border-t-0 max-md:px-5" key={item.id}>
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-[#0f766e]">
                     <SuperIcon name="settings" size={17} />
@@ -2088,7 +2306,7 @@ export function SuperAdminDashboardPage() {
         </div>
 
         <div className="mt-8">
-        <SectionCard link="Kelola Fasilitas" linkHref="/super-admin/facilities" title="Tata Kelola Fasilitas">
+        <SectionCard link="Lihat Semua" linkHref="/super-admin/facilities" title="Tata Kelola Fasilitas">
           <table className="w-full border-collapse max-md:hidden">
             <thead className="bg-[#f9fafb] text-left text-[11px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">
               <tr>
@@ -2097,9 +2315,9 @@ export function SuperAdminDashboardPage() {
                 <th className="px-6 py-3">Staff</th>
                 <th className="px-6 py-3">Status</th>
               </tr>
-            </thead>
-            <tbody>
-              {facilities.map((facility) => (
+              </thead>
+              <tbody>
+              {facilitiesPreview.map((facility) => (
                 <tr className="border-t border-[#e5e7eb]" key={facility.id}>
                   <td className="px-6 py-4">
                     <p className="m-0 text-sm font-bold">{facility.name}</p>
@@ -2119,7 +2337,7 @@ export function SuperAdminDashboardPage() {
             </tbody>
           </table>
           <div className="hidden max-md:grid">
-            {facilities.map((facility) => (
+            {facilitiesPreview.map((facility) => (
               <article className="grid grid-cols-[1fr_auto] gap-4 border-t border-[#e5e7eb] p-4" key={facility.id}>
                 <div className="min-w-0">
                   <h3 className="m-0 break-words text-sm font-bold">{facility.name}</h3>
@@ -2165,11 +2383,16 @@ export function SuperAdminUsersPage() {
   });
   const [message, setMessage] = useState("");
   const [formError, setFormError] = useState("");
+  const [selectedUser, setSelectedUser] = useState<AdminUserResponse | null>(null);
+  const [userForm, setUserForm] = useState({ email: "", fullName: "", password: "" });
+  const [userDeleteConfirm, setUserDeleteConfirm] = useState(false);
+  const [userStatusDraft, setUserStatusDraft] = useState(true);
   const usersQuery = useQuery({
     queryFn: () => fetchAdminUsers(filters),
     queryKey: ["super-admin", "users", filters],
   });
   const users = usersQuery.data?.items ?? [];
+  const totalUserPages = Math.max(1, Math.ceil((usersQuery.data?.total ?? 0) / filters.pageSize));
   const activeCount = users.filter((user) => user.is_active).length;
   const studentCount = users.filter((user) => user.role === "student").length;
   const staffCount = users.filter((user) => user.role === "staff").length;
@@ -2207,7 +2430,51 @@ export function SuperAdminUsersPage() {
       await queryClient.invalidateQueries({ queryKey: ["super-admin", "users"] });
     },
   });
-  const busy = createMutation.isPending || statusMutation.isPending;
+  const updateUserMutation = useMutation({
+    mutationFn: ({ email, fullName, userId }: { email: string; fullName: string; userId: string }) =>
+      updateAdminUser(userId, { email, full_name: fullName }),
+    onError: (error) => {
+      setMessage("");
+      setFormError(errorMessage(error, "Data pengguna belum dapat diperbarui."));
+    },
+    onSuccess: async () => {
+      setFormError("");
+      setMessage("Data pengguna diperbarui.");
+      await queryClient.invalidateQueries({ queryKey: ["super-admin", "users"] });
+    },
+  });
+  const resetPasswordMutation = useMutation({
+    mutationFn: ({ password, userId }: { password: string; userId: string }) =>
+      resetAdminUserPassword(userId, { password }),
+    onError: (error) => {
+      setMessage("");
+      setFormError(errorMessage(error, "Password belum dapat diperbarui."));
+    },
+    onSuccess: async () => {
+      setFormError("");
+      setMessage("Password pengguna diperbarui.");
+      await queryClient.invalidateQueries({ queryKey: ["super-admin", "users"] });
+    },
+  });
+  const deleteUserMutation = useMutation({
+    mutationFn: (userId: string) => deleteAdminUser(userId),
+    onError: (error) => {
+      setMessage("");
+      setFormError(errorMessage(error, "Pengguna belum dapat dihapus."));
+    },
+    onSuccess: async () => {
+      setFormError("");
+      setMessage("Pengguna dihapus.");
+      setSelectedUser(null);
+      await queryClient.invalidateQueries({ queryKey: ["super-admin", "users"] });
+    },
+  });
+  const busy =
+    createMutation.isPending ||
+    statusMutation.isPending ||
+    updateUserMutation.isPending ||
+    resetPasswordMutation.isPending ||
+    deleteUserMutation.isPending;
 
   return (
     <SuperAdminShell active="users">
@@ -2353,13 +2620,18 @@ export function SuperAdminUsersPage() {
                   <td className="px-5 py-4"><StatusBadge status={activeLabel(user.is_active)} /></td>
                   <td className="px-5 py-4">
                     <button
-                      aria-label={`Ubah status ${user.full_name}`}
-                      className={tableActionButtonClass(user.is_active ? "danger" : "primary")}
+                      aria-label={`Kelola akun ${user.full_name}`}
+                      className={tableActionButtonClass("secondary")}
                       disabled={busy}
-                      onClick={() => statusMutation.mutate({ active: !user.is_active, userId: user.id })}
+                      onClick={() => {
+                        setSelectedUser(user);
+                        setUserForm({ email: user.email, fullName: user.full_name, password: "" });
+                        setUserStatusDraft(user.is_active);
+                        setUserDeleteConfirm(false);
+                      }}
                       type="button"
                     >
-                      Ubah status
+                      Kelola akun
                     </button>
                   </td>
                 </tr>
@@ -2379,18 +2651,36 @@ export function SuperAdminUsersPage() {
                 <UserField label="Status"><StatusBadge status={activeLabel(user.is_active)} /></UserField>
                 <UserField label="Aksi">
                   <button
-                    aria-label={`Ubah status ${user.full_name}`}
-                    className={tableActionButtonClass(user.is_active ? "danger" : "primary")}
+                    aria-label={`Kelola akun ${user.full_name}`}
+                    className={tableActionButtonClass("secondary")}
                     disabled={busy}
-                    onClick={() => statusMutation.mutate({ active: !user.is_active, userId: user.id })}
+                    onClick={() => {
+                      setSelectedUser(user);
+                      setUserForm({ email: user.email, fullName: user.full_name, password: "" });
+                      setUserStatusDraft(user.is_active);
+                      setUserDeleteConfirm(false);
+                    }}
                     type="button"
                   >
-                    Ubah status
+                    Kelola akun
                   </button>
                 </UserField>
               </article>
             ))}
           </div>
+          {usersQuery.isSuccess && users.length > 0 ? (
+            <PaginationControls
+              className="border-t border-[#e5e7eb] px-5 py-4 max-md:mt-4 max-md:rounded-xl max-md:border max-md:bg-white"
+              currentPage={filters.page}
+              onNext={() => setFilters((current) => ({ ...current, page: Math.min(current.page + 1, totalUserPages) }))}
+              onPageSizeChange={(value) => setFilters((current) => ({ ...current, page: 1, pageSize: value }))}
+              onPrevious={() => setFilters((current) => ({ ...current, page: Math.max(current.page - 1, 1) }))}
+              pageSize={filters.pageSize}
+              pageSizeOptions={[10, 20, 50]}
+              summary={`Menampilkan ${users.length} dari ${usersQuery.data?.total ?? 0} pengguna`}
+              totalPages={totalUserPages}
+            />
+          ) : null}
           {usersQuery.isLoading ? (
             <div className="border-t border-[#e5e7eb] p-6 text-sm font-semibold text-[#6b7280]">
               Memuat pengguna...
@@ -2409,8 +2699,189 @@ export function SuperAdminUsersPage() {
             </div>
           ) : null}
         </section>
+        {selectedUser ? (
+          <UserManagementModal
+            busy={busy}
+            onClose={() => setSelectedUser(null)}
+            onDelete={() => deleteUserMutation.mutate(selectedUser.id)}
+            onResetPassword={() => {
+              if (!userForm.password.trim()) {
+                setFormError("Isi password baru sebelum menyimpan.");
+                return;
+              }
+              resetPasswordMutation.mutate({ password: userForm.password.trim(), userId: selectedUser.id });
+            }}
+            onSave={async () => {
+              if (!userForm.email.trim() || !userForm.fullName.trim()) {
+                setFormError("Email dan nama lengkap wajib diisi.");
+                return;
+              }
+              if (userForm.email.trim() !== selectedUser.email || userForm.fullName.trim() !== selectedUser.full_name) {
+                await updateUserMutation.mutateAsync({
+                  email: userForm.email.trim(),
+                  fullName: userForm.fullName.trim(),
+                  userId: selectedUser.id,
+                });
+              }
+              if (userStatusDraft !== selectedUser.is_active) {
+                await statusMutation.mutateAsync({ active: userStatusDraft, userId: selectedUser.id });
+              }
+              if (userForm.password.trim()) {
+                await resetPasswordMutation.mutateAsync({ password: userForm.password.trim(), userId: selectedUser.id });
+              }
+              setSelectedUser(null);
+            }}
+            onStatusChange={setUserStatusDraft}
+            onToggleDeleteConfirm={() => setUserDeleteConfirm((current) => !current)}
+            roleDisplay={roleLabel(selectedUser.role)}
+            statusDraft={userStatusDraft}
+            user={selectedUser}
+            userDeleteConfirm={userDeleteConfirm}
+            userForm={userForm}
+            setUserForm={setUserForm}
+          />
+        ) : null}
       </main>
     </SuperAdminShell>
+  );
+}
+
+function UserManagementModal({
+  busy,
+  onClose,
+  onDelete,
+  onResetPassword,
+  onSave,
+  onStatusChange,
+  onToggleDeleteConfirm,
+  roleDisplay,
+  statusDraft,
+  user,
+  userDeleteConfirm,
+  userForm,
+  setUserForm,
+}: {
+  busy: boolean;
+  onClose: () => void;
+  onDelete: () => void;
+  onResetPassword: () => void;
+  onSave: () => Promise<void>;
+  onStatusChange: (value: boolean) => void;
+  onToggleDeleteConfirm: () => void;
+  roleDisplay: string;
+  statusDraft: boolean;
+  user: AdminUserResponse;
+  userDeleteConfirm: boolean;
+  userForm: { email: string; fullName: string; password: string };
+  setUserForm: React.Dispatch<React.SetStateAction<{ email: string; fullName: string; password: string }>>;
+}) {
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/40 px-4" onClick={onClose}>
+      <section
+        aria-label={`Kelola akun ${user.full_name}`}
+        className="w-full max-w-[680px] rounded-2xl border border-[#e5e7eb] bg-white p-6 shadow-[0_24px_48px_rgba(15,23,42,0.18)]"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-[#e5e7eb] pb-4">
+          <div className="min-w-0">
+            <h2 className="m-0 text-xl font-bold text-[#111827]">Kelola Akun</h2>
+            <p className="m-0 mt-2 break-words text-sm text-[#6b7280]">
+              {user.full_name} - {roleDisplay}
+            </p>
+          </div>
+          <button className={tableActionButtonClass("secondary")} onClick={onClose} type="button">
+            Tutup
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-5">
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="grid gap-2 text-sm font-semibold text-[#111827]">
+              Email
+              <input
+                className="min-h-11 rounded-lg border border-[#dbe2ea] bg-white px-3 text-sm text-[#111827]"
+                onChange={(event) => setUserForm((current) => ({ ...current, email: event.target.value }))}
+                type="email"
+                value={userForm.email}
+              />
+            </label>
+            <label className="grid gap-2 text-sm font-semibold text-[#111827]">
+              Nama lengkap
+              <input
+                className="min-h-11 rounded-lg border border-[#dbe2ea] bg-white px-3 text-sm text-[#111827]"
+                onChange={(event) => setUserForm((current) => ({ ...current, fullName: event.target.value }))}
+                value={userForm.fullName}
+              />
+            </label>
+          </div>
+
+          <div className="rounded-xl border border-[#e5e7eb] bg-[#f8fafc] p-4">
+            <p className="m-0 text-[11px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">Status Akses</p>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <StatusBadge status={activeLabel(statusDraft)} />
+              <button
+                className={tableActionButtonClass(statusDraft ? "danger" : "primary")}
+                disabled={busy}
+                onClick={() => onStatusChange(!statusDraft)}
+                type="button"
+              >
+                {statusDraft ? "Set nonaktif" : "Set aktif"}
+              </button>
+            </div>
+          </div>
+
+          <div className="grid gap-3 rounded-xl border border-[#e5e7eb] bg-[#f8fafc] p-4">
+            <label className="grid gap-2 text-sm font-semibold text-[#111827]">
+              Password baru
+              <input
+                className="min-h-11 rounded-lg border border-[#dbe2ea] bg-white px-3 text-sm text-[#111827]"
+                onChange={(event) => setUserForm((current) => ({ ...current, password: event.target.value }))}
+                placeholder="Kosongkan jika tidak diganti"
+                type="password"
+                value={userForm.password}
+              />
+            </label>
+            <button
+              className={tableActionButtonClass("secondary")}
+              disabled={busy || !userForm.password.trim()}
+              onClick={onResetPassword}
+              type="button"
+            >
+              Simpan password saja
+            </button>
+          </div>
+
+          <div className="rounded-xl border border-[#fecaca] bg-[#fef2f2] p-4">
+            <label className="flex items-start gap-3 text-sm font-semibold text-[#991b1b]">
+              <input checked={userDeleteConfirm} onChange={onToggleDeleteConfirm} type="checkbox" />
+              <span>Saya paham penghapusan akun hanya bisa dilakukan jika akun belum dipakai data lain.</span>
+            </label>
+            <button
+              className={cn(tableActionButtonClass("danger"), "mt-4")}
+              disabled={busy || !userDeleteConfirm}
+              onClick={onDelete}
+              type="button"
+            >
+              Hapus akun
+            </button>
+          </div>
+
+          <div className="flex flex-wrap justify-end gap-3">
+            <button className={tableActionButtonClass("secondary")} disabled={busy} onClick={onClose} type="button">
+              Batal
+            </button>
+            <button
+              className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#0f9d58] px-4 text-sm font-bold text-white disabled:opacity-60"
+              disabled={busy}
+              onClick={() => void onSave()}
+              type="button"
+            >
+              Simpan perubahan
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
   );
 }
 

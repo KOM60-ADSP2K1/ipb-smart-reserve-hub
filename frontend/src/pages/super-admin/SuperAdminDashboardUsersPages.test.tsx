@@ -230,6 +230,19 @@ const auditLogResponse = [
   })),
 ];
 
+const auditLogPaginationResponse = Array.from({ length: 25 }, (_, index) => ({
+  action_type: "review.admin_deleted",
+  actor_email: "admin@ipb.ac.id",
+  actor_id: "admin-1",
+  created_at: `2026-05-${String(Math.min(index + 1, 30)).padStart(2, "0")}T04:30:00Z`,
+  facility_id: "facility-1",
+  id: `audit-page-${index + 1}`,
+  reservation_id: "reservation-1",
+  student_id: "student-1",
+  target_id: `review-page-${index + 1}`,
+  target_type: "review",
+}));
+
 const adminReviewResponse = [
   {
     admin_removal_reason: null,
@@ -324,6 +337,8 @@ describe("SuperAdminDashboardPage", () => {
     expect(await screen.findByText("128")).toBeVisible();
     expect(screen.getByText("8")).toBeVisible();
     expect(screen.getByText("42")).toBeVisible();
+    expect(screen.getByRole("complementary", { name: "Navigasi super admin utama" })).toBeVisible();
+    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument();
     expect(screen.getAllByText("Degraded")[0]).toBeVisible();
     expect(screen.getAllByText("Admin IPB")[0]).toBeVisible();
     expect(screen.getAllByText("Admin Nonaktif")[0]).toBeVisible();
@@ -358,6 +373,69 @@ describe("SuperAdminDashboardPage", () => {
     expect(await screen.findByText("Belum ada administrator untuk ditampilkan.")).toBeVisible();
     expect(screen.getByText("Belum ada data tata kelola fasilitas.")).toBeVisible();
     expect(screen.getByText("Belum ada aktivitas sistem terbaru.")).toBeVisible();
+  });
+
+  it("caps dashboard previews at five items and links to the full pages", async () => {
+    const administrators = Array.from({ length: 6 }, (_, index) => ({
+      email: `admin-${index + 1}@ipb.ac.id`,
+      full_name: `Admin ${index + 1}`,
+      id: `admin-${index + 1}`,
+      is_active: index % 2 === 0,
+      role: "super_admin",
+    }));
+    const facilityGovernance = Array.from({ length: 6 }, (_, index) => ({
+      active_assigned_staff_count: index,
+      assigned_staff_count: index + 1,
+      assignment_coverage: "covered",
+      capacity: 100 + index,
+      category: "Auditorium",
+      id: `facility-${index + 1}`,
+      is_active: true,
+      issue_flags: [],
+      location: `Lokasi ${index + 1}`,
+      name: `Fasilitas ${index + 1}`,
+    }));
+    const recentActivity = Array.from({ length: 6 }, (_, index) => ({
+      action_type: "staff_assignment.created",
+      actor_email: "admin@ipb.ac.id",
+      actor_id: "admin-1",
+      created_at: `2026-05-${String(index + 1).padStart(2, "0")}T03:00:00Z`,
+      facility_id: `facility-${index + 1}`,
+      id: `activity-${index + 1}`,
+      reservation_id: null,
+      student_id: null,
+      target_id: `facility-${index + 1}`,
+      target_type: "facility_staff_assignment",
+    }));
+
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const url = String(input);
+
+      if (url === "http://localhost:8000/admin/dashboard") {
+        return jsonResponse({
+          ...dashboardResponse,
+          administrators,
+          facility_governance: facilityGovernance,
+          recent_activity: recentActivity,
+        });
+      }
+
+      return jsonResponse({ detail: `Unhandled ${url}` }, 404);
+    });
+
+    renderDashboard();
+
+    expect(await screen.findAllByText("Admin 1")).toHaveLength(2);
+    expect(screen.getAllByText("Fasilitas 1")).toHaveLength(2);
+    expect(screen.getAllByText("Admin 5")).toHaveLength(2);
+    expect(screen.getAllByText("Fasilitas 5")).toHaveLength(2);
+    expect(screen.queryByText("Admin 6")).not.toBeInTheDocument();
+    expect(screen.queryByText("Fasilitas 6")).not.toBeInTheDocument();
+    expect(screen.getAllByText(/menambahkan penugasan staff/)).toHaveLength(5);
+    expect(screen.getAllByRole("link", { name: "Lihat Semua" })).toHaveLength(3);
+    expect(
+      Array.from(screen.getAllByRole("link", { name: "Lihat Semua" })).map((link) => link.getAttribute("href")),
+    ).toEqual(["/super-admin/users", "/super-admin/reports/logs", "/super-admin/facilities"]);
   });
 
   it("shows recoverable dashboard errors", async () => {
@@ -400,6 +478,26 @@ describe("SuperAdminDashboardPage", () => {
     expect(screen.getByRole("button", { name: "Tambah Admin ditunda" })).toHaveAttribute("aria-disabled", "true");
   });
 
+  it("renders the super admin shell as a sidebar layout without a footer", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const url = String(input);
+
+      if (url === "http://localhost:8000/admin/dashboard") {
+        return jsonResponse(dashboardResponse);
+      }
+
+      return jsonResponse({ detail: `Unhandled ${url}` }, 404);
+    });
+
+    renderDashboard();
+
+    expect(await screen.findByRole("complementary", { name: "Navigasi super admin utama" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Dashboard" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Pengguna" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Fasilitas" })).toBeVisible();
+    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument();
+  });
+
   it("loads users, renders academic profile fields, and sends supported filters", async () => {
     const user = userEvent.setup();
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
@@ -420,7 +518,7 @@ describe("SuperAdminDashboardPage", () => {
     expect(screen.getAllByText("Staff Fasilitas")[0]).toBeVisible();
     expect(screen.getAllByText("Nonaktif")[0]).toBeVisible();
     expect(screen.queryByRole("button", { name: "Tambah Pengguna" })).not.toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /^Ubah status / }).length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByRole("button", { name: /^Kelola akun / }).length).toBeGreaterThanOrEqual(2);
     expect(
       screen.getByLabelText("Email pengguna baru").compareDocumentPosition(screen.getByLabelText("Cari pengguna")) &
         Node.DOCUMENT_POSITION_FOLLOWING,
@@ -483,6 +581,60 @@ describe("SuperAdminDashboardPage", () => {
     expect(await screen.findByText("Email sudah terdaftar.")).toBeVisible();
   });
 
+  it("updates managed user profile data and resets password from the account modal", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+      const url = String(input);
+
+      if (url.startsWith("http://localhost:8000/admin/users") && !init?.method) {
+        return jsonResponse(usersResponse);
+      }
+
+      if (url === "http://localhost:8000/admin/users/staff-1" && init?.method === "PATCH") {
+        expect(init.body).toBe(
+          JSON.stringify({
+            email: "staff.updated@ipb.ac.id",
+            full_name: "Staff Fasilitas Baru",
+          }),
+        );
+        return jsonResponse({
+          ...usersResponse.items[1],
+          email: "staff.updated@ipb.ac.id",
+          full_name: "Staff Fasilitas Baru",
+        });
+      }
+
+      if (url === "http://localhost:8000/admin/users/staff-1/reset-password" && init?.method === "POST") {
+        expect(init.body).toBe(JSON.stringify({ password: "password-baru-123" }));
+        return jsonResponse(usersResponse.items[1]);
+      }
+
+      return jsonResponse({ detail: `Unhandled ${url}` }, 404);
+    });
+
+    renderUsers();
+
+    await user.click((await screen.findAllByRole("button", { name: "Kelola akun Staff Fasilitas" }))[0]);
+    await user.clear(screen.getByDisplayValue("staff@ipb.ac.id"));
+    await user.type(screen.getByLabelText("Email"), "staff.updated@ipb.ac.id");
+    await user.clear(screen.getByDisplayValue("Staff Fasilitas"));
+    await user.type(screen.getByLabelText("Nama lengkap"), "Staff Fasilitas Baru");
+    await user.type(screen.getByLabelText("Password baru"), "password-baru-123");
+    await user.click(screen.getByRole("button", { name: "Simpan perubahan" }));
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://localhost:8000/admin/users/staff-1",
+        expect.objectContaining({ method: "PATCH" }),
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://localhost:8000/admin/users/staff-1/reset-password",
+        expect.objectContaining({ method: "POST" }),
+      );
+    });
+    expect(await screen.findByText("Password pengguna diperbarui.")).toBeVisible();
+  });
+
   it("activates and deactivates users, and shows empty/error recovery states", async () => {
     const user = userEvent.setup();
     let listCalls = 0;
@@ -517,8 +669,12 @@ describe("SuperAdminDashboardPage", () => {
     expect(await screen.findByText("Tidak ada pengguna untuk filter ini.")).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Muat ulang pengguna" }));
-    await user.click((await screen.findAllByRole("button", { name: "Ubah status Staff Fasilitas" }))[0]);
-    await user.click(screen.getAllByRole("button", { name: "Ubah status Student Aktif" })[0]);
+    await user.click((await screen.findAllByRole("button", { name: "Kelola akun Staff Fasilitas" }))[0]);
+    await user.click(await screen.findByRole("button", { name: "Set aktif" }));
+    await user.click(screen.getByRole("button", { name: "Simpan perubahan" }));
+    await user.click((await screen.findAllByRole("button", { name: "Kelola akun Student Aktif" }))[0]);
+    await user.click(await screen.findByRole("button", { name: "Set nonaktif" }));
+    await user.click(screen.getByRole("button", { name: "Simpan perubahan" }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -557,16 +713,9 @@ describe("SuperAdminDashboardPage", () => {
     expect(screen.getAllByText("Lab Arsip")[0]).toBeVisible();
     expect(screen.getAllByText("Butuh Staff")[0]).toBeVisible();
     expect(screen.getAllByText("Nonaktif")[0]).toBeVisible();
-    expect(screen.getAllByRole("button", { name: "Edit detail Grand Auditorium" })[0]).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
-    expect(screen.getAllByRole("button", { name: "Arsipkan Grand Auditorium" })[0]).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
+    expect(screen.getAllByRole("button", { name: "Kelola staff Grand Auditorium" })[0]).toBeEnabled();
+    expect(screen.getAllByRole("button", { name: "Kelola staff Lab Arsip" })[0]).toBeEnabled();
     expect(screen.getByRole("button", { name: "Impor Data ditunda" })).toHaveAttribute("aria-disabled", "true");
-    expect(screen.getByRole("button", { name: "Tambah Fasilitas ditunda" })).toHaveAttribute("aria-disabled", "true");
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -608,6 +757,7 @@ describe("SuperAdminDashboardPage", () => {
 
     renderFacilities();
 
+    await user.click((await screen.findAllByRole("button", { name: "Kelola staff Lab Arsip" }))[0]);
     await user.selectOptions(await screen.findByLabelText("Pilih staff untuk Lab Arsip"), "staff-9");
     expect(await screen.findByText("Staff Arsip belum ditugaskan ke fasilitas ini.")).toBeVisible();
     expect(screen.getByRole("button", { name: "Hapus staff dari Lab Arsip" })).toBeDisabled();
@@ -724,7 +874,7 @@ describe("SuperAdminDashboardPage", () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
       const url = String(input);
 
-      if (url === "http://localhost:8000/admin/audit-logs") {
+      if (url === "http://localhost:8000/admin/audit-logs?limit=20") {
         return jsonResponse(auditLogResponse);
       }
 
@@ -742,7 +892,36 @@ describe("SuperAdminDashboardPage", () => {
       "/super-admin/reports",
     );
 
-    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/admin/audit-logs", expect.any(Object));
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/admin/audit-logs?limit=20", expect.any(Object));
+  });
+
+  it("loads more audit logs from the dedicated page when available", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const url = String(input);
+
+      if (url.startsWith("http://localhost:8000/admin/audit-logs")) {
+        const parsed = new URL(url);
+        const limit = Number(parsed.searchParams.get("limit") ?? "20");
+        return jsonResponse(auditLogPaginationResponse.slice(0, limit));
+      }
+
+      return jsonResponse({ detail: `Unhandled ${url}` }, 404);
+    });
+
+    renderReports("/super-admin/reports/logs");
+
+    expect(await screen.findByRole("heading", { name: "Log Audit" })).toBeVisible();
+    expect(await screen.findByText("20 log")).toBeVisible();
+    expect(screen.getAllByText("admin@ipb.ac.id - review admin deleted")).toHaveLength(20);
+    expect(screen.getByRole("button", { name: "Muat lebih banyak" })).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: "Muat lebih banyak" }));
+
+    expect(await screen.findByText("25 log")).toBeVisible();
+    expect(screen.getAllByText("admin@ipb.ac.id - review admin deleted")).toHaveLength(25);
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/admin/audit-logs?limit=20", expect.any(Object));
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/admin/audit-logs?limit=40", expect.any(Object));
   });
 
   it("deletes and restores moderated reviews", async () => {

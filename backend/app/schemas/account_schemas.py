@@ -24,6 +24,15 @@ class AdminCreateUserRequest(BaseModel):
     is_active: bool = True
 
 
+class AdminUpdateUserRequest(BaseModel):
+    email: str
+    full_name: str = Field(min_length=1)
+
+
+class AdminResetPasswordRequest(BaseModel):
+    password: str = Field(min_length=8)
+
+
 class AcademicProfileResponse(BaseModel):
     program_studi: str | None
     faculty: str | None

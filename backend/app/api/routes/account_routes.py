@@ -8,10 +8,13 @@ from app.services.accounts import (
     AccountInactive,
     AccountTokenInvalid,
     AdminManagedUserCreation,
+    AdminManagedPasswordReset,
+    AdminManagedUserUpdate,
     EmailAlreadyRegistered,
     EmailDomainNotAllowed,
     InvalidCredentials,
     LoginCredentials,
+    ManagedUserReferenced,
     ManagedUserNotFound,
     StudentMustSelfRegister,
     StudentRegistration,
@@ -20,6 +23,8 @@ from app.services.accounts import (
 )
 from app.schemas.account_schemas import (
     AdminCreateUserRequest,
+    AdminResetPasswordRequest,
+    AdminUpdateUserRequest,
     LoginRequest,
     StudentRegistrationRequest,
     TokenResponse,
@@ -157,6 +162,54 @@ def register_account_routes(
             return user_accounts.set_user_active_status(user_id, is_active=True)
         except ManagedUserNotFound:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pengguna tidak ditemukan.")
+
+    @app.patch("/admin/users/{user_id}", response_model=UserResponse)
+    async def update_admin_managed_user(
+        user_id: str,
+        payload: AdminUpdateUserRequest,
+        user_accounts: UserAccountModule = Depends(get_user_accounts),
+        _: UserAccount = Depends(require_access(AccessPolicyAction.manage_user_accounts)),
+    ) -> UserAccount:
+        try:
+            return user_accounts.update_admin_managed_user(
+                user_id,
+                AdminManagedUserUpdate(email=payload.email, full_name=payload.full_name),
+            )
+        except ManagedUserNotFound:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pengguna tidak ditemukan.")
+        except EmailAlreadyRegistered:
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email sudah terdaftar.")
+
+    @app.post("/admin/users/{user_id}/reset-password", response_model=UserResponse)
+    async def reset_admin_managed_user_password(
+        user_id: str,
+        payload: AdminResetPasswordRequest,
+        user_accounts: UserAccountModule = Depends(get_user_accounts),
+        _: UserAccount = Depends(require_access(AccessPolicyAction.manage_user_accounts)),
+    ) -> UserAccount:
+        try:
+            return user_accounts.reset_admin_managed_user_password(
+                user_id,
+                AdminManagedPasswordReset(password=payload.password),
+            )
+        except ManagedUserNotFound:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pengguna tidak ditemukan.")
+
+    @app.delete("/admin/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+    async def delete_admin_managed_user(
+        user_id: str,
+        user_accounts: UserAccountModule = Depends(get_user_accounts),
+        _: UserAccount = Depends(require_access(AccessPolicyAction.manage_user_accounts)),
+    ) -> None:
+        try:
+            user_accounts.delete_admin_managed_user(user_id)
+        except ManagedUserNotFound:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Pengguna tidak ditemukan.")
+        except ManagedUserReferenced:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Pengguna masih dipakai data lain dan tidak dapat dihapus.",
+            )
 
     @app.get("/student/shell")
     async def student_shell(

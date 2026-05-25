@@ -1,10 +1,10 @@
 from typing import Protocol
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import User, UserRole
+from app.models import AuditLog, FacilityReview, FacilityStaffAssignment, Notification, Reservation, User, UserRole
 
 
 class UserRepositoryError(Exception):
@@ -37,6 +37,18 @@ class UserRepository(Protocol):
         raise NotImplementedError
 
     def set_active_status(self, user_id: str, *, is_active: bool) -> User | None:
+        raise NotImplementedError
+
+    def update_basic_profile(self, user_id: str, *, email: str, full_name: str) -> User | None:
+        raise NotImplementedError
+
+    def reset_password(self, user_id: str, *, password_hash: str) -> User | None:
+        raise NotImplementedError
+
+    def delete_user(self, user_id: str) -> User | None:
+        raise NotImplementedError
+
+    def user_has_references(self, user_id: str) -> bool:
         raise NotImplementedError
 
 
@@ -99,3 +111,43 @@ class SqlAlchemyUserRepository:
         user.is_active = is_active
         self._session.flush()
         return user
+
+    def update_basic_profile(self, user_id: str, *, email: str, full_name: str) -> User | None:
+        user = self._session.get(User, user_id)
+        if user is None:
+            return None
+        user.email = email
+        user.full_name = full_name
+        try:
+            self._session.flush()
+        except IntegrityError as exc:
+            raise DuplicateUserEmail from exc
+        return user
+
+    def reset_password(self, user_id: str, *, password_hash: str) -> User | None:
+        user = self._session.get(User, user_id)
+        if user is None:
+            return None
+        user.password_hash = password_hash
+        self._session.flush()
+        return user
+
+    def delete_user(self, user_id: str) -> User | None:
+        user = self._session.get(User, user_id)
+        if user is None:
+            return None
+        self._session.delete(user)
+        self._session.flush()
+        return user
+
+    def user_has_references(self, user_id: str) -> bool:
+        return any(
+            self._session.scalar(statement)
+            for statement in (
+                select(Reservation.id).where(Reservation.student_id == user_id).limit(1),
+                select(FacilityReview.id).where(FacilityReview.student_id == user_id).limit(1),
+                select(FacilityStaffAssignment.id).where(FacilityStaffAssignment.staff_id == user_id).limit(1),
+                select(Notification.id).where(Notification.recipient_id == user_id).limit(1),
+                select(AuditLog.id).where(or_(AuditLog.actor_id == user_id, AuditLog.student_id == user_id)).limit(1),
+            )
+        )

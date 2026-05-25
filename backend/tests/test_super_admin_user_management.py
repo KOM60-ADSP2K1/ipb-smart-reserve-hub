@@ -146,3 +146,101 @@ async def test_student_and_staff_cannot_access_super_admin_user_management_endpo
     assert staff_list.status_code == 403
     assert student_list.status_code == 403
     assert staff_deactivate.status_code == 403
+
+
+@pytest.mark.anyio
+async def test_super_admin_updates_basic_user_profile_and_resets_password():
+    app = create_app(database_url="sqlite+pysqlite:///:memory:")
+    test_data = DataBuilder(app)
+    test_data.create_user(email="admin@ipb.ac.id", role=UserRole.super_admin)
+    staff_id = test_data.create_user(email="staff@ipb.ac.id", role=UserRole.staff)
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        admin_token = await _login(client, email="admin@ipb.ac.id")
+
+        updated = await client.patch(
+            f"/admin/users/{staff_id}",
+            json={"email": "staff.baru@ipb.ac.id", "full_name": "Staff Baru"},
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        reset = await client.post(
+            f"/admin/users/{staff_id}/reset-password",
+            json={"password": "newsecret123"},
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        old_login = await client.post(
+            "/auth/login",
+            json={"email": "staff.baru@ipb.ac.id", "password": "secret123"},
+        )
+        new_login = await client.post(
+            "/auth/login",
+            json={"email": "staff.baru@ipb.ac.id", "password": "newsecret123"},
+        )
+
+    assert updated.status_code == 200
+    assert updated.json()["email"] == "staff.baru@ipb.ac.id"
+    assert updated.json()["full_name"] == "Staff Baru"
+    assert reset.status_code == 200
+    assert reset.json()["email"] == "staff.baru@ipb.ac.id"
+    assert old_login.status_code == 401
+    assert new_login.status_code == 200
+
+
+@pytest.mark.anyio
+async def test_super_admin_cannot_update_user_to_duplicate_email():
+    app = create_app(database_url="sqlite+pysqlite:///:memory:")
+    test_data = DataBuilder(app)
+    test_data.create_user(email="admin@ipb.ac.id", role=UserRole.super_admin)
+    target_user_id = test_data.create_user(email="staff-1@ipb.ac.id", role=UserRole.staff)
+    test_data.create_user(email="staff-2@ipb.ac.id", role=UserRole.staff)
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        admin_token = await _login(client, email="admin@ipb.ac.id")
+
+        duplicate = await client.patch(
+            f"/admin/users/{target_user_id}",
+            json={"email": "staff-2@ipb.ac.id", "full_name": "Staff Satu"},
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+
+    assert duplicate.status_code == 409
+    assert duplicate.json()["detail"] == "Email sudah terdaftar."
+
+
+@pytest.mark.anyio
+async def test_super_admin_deletes_unreferenced_user_but_rejects_referenced_user():
+    app = create_app(database_url="sqlite+pysqlite:///:memory:")
+    test_data = DataBuilder(app)
+    test_data.create_user(email="admin@ipb.ac.id", role=UserRole.super_admin)
+    deletable_staff_id = test_data.create_user(email="staff-hapus@ipb.ac.id", role=UserRole.staff)
+    referenced_staff_id = test_data.create_user(email="staff-terpakai@ipb.ac.id", role=UserRole.staff)
+    facility_id = test_data.create_facility(name="Auditorium Hapus")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        admin_token = await _login(client, email="admin@ipb.ac.id")
+        assigned = await client.put(
+            f"/admin/facilities/{facility_id}/staff-assignments/{referenced_staff_id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+
+        deleted = await client.delete(
+            f"/admin/users/{deletable_staff_id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        missing_login = await client.post(
+            "/auth/login",
+            json={"email": "staff-hapus@ipb.ac.id", "password": "secret123"},
+        )
+        conflict = await client.delete(
+            f"/admin/users/{referenced_staff_id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+
+    assert assigned.status_code == 200
+    assert deleted.status_code == 204
+    assert missing_login.status_code == 401
+    assert conflict.status_code == 409
+    assert conflict.json()["detail"] == "Pengguna masih dipakai data lain dan tidak dapat dihapus."
