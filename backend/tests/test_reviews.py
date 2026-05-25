@@ -504,6 +504,11 @@ async def test_super_admin_views_immutable_audit_logs_with_filters_for_review_an
             headers={"Authorization": f"Bearer {admin_token}"},
             params={"actor_id": admin_id, "created_from": "2026-06-01T00:00:00+00:00"},
         )
+        limited_admin_logs = await client.get(
+            "/admin/audit-logs",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            params={"limit": 1},
+        )
         student_forbidden = await client.get(
             "/admin/audit-logs",
             headers={"Authorization": f"Bearer {student_token}"},
@@ -533,5 +538,7 @@ async def test_super_admin_views_immutable_audit_logs_with_filters_for_review_an
         "review.admin_deleted",
         "staff_assignment.created",
     }
+    assert len(limited_admin_logs.json()) == 1
+    assert isinstance(limited_admin_logs.json()[0]["action_type"], str)
     assert student_forbidden.status_code == 403
     assert edit_attempt.status_code == 404

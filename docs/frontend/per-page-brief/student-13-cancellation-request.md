@@ -55,6 +55,7 @@
 - Endpoints consumed: `GET /student/reservations/:reservationId`, `POST /student/reservations/:reservationId/cancellation-request`.
 - Page-needed fields: reservation summary, cancellation eligibility, cancellation status/reason when present.
 - Auth/session assumptions: student-owned reservation only.
+- Validation notes: cancellation reason still returns `400` for blank/whitespace payloads; frontend must require a real reason group selection before submit.
 - Source files: `backend/app/api/routes/reservation_routes.py`, `backend/app/schemas/reservation_schemas.py`.
 
 ### BG-STUDENT-13-01: Student Cancellation Request

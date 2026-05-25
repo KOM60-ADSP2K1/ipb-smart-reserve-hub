@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from pathlib import PurePath
 from typing import Protocol
 import uuid
 
@@ -59,19 +60,21 @@ class ReservationPrivateFileModule:
         allowed_extensions: tuple[str, ...],
         max_size_bytes: int,
     ) -> PrivateFileMetadata:
-        if not _is_allowed_file(upload, allowed_content_types, allowed_extensions):
+        sanitized_upload = _sanitize_upload_filename(upload)
+
+        if not _is_allowed_file(sanitized_upload, allowed_content_types, allowed_extensions):
             raise UnsupportedPrivateFileType
-        if len(upload.content) > max_size_bytes:
+        if len(sanitized_upload.content) > max_size_bytes:
             raise PrivateFileTooLarge
 
         uploaded_at = _as_utc(self._clock())
-        storage_key = f"{folder}/{reservation_id}/{uuid.uuid4().hex}-{upload.filename}"
-        self._storage.put(storage_key, upload.content, content_type=upload.content_type)
+        storage_key = f"{folder}/{reservation_id}/{uuid.uuid4().hex}-{sanitized_upload.filename}"
+        self._storage.put(storage_key, sanitized_upload.content, content_type=sanitized_upload.content_type)
         return PrivateFileMetadata(
             storage_key=storage_key,
-            filename=upload.filename,
-            content_type=upload.content_type,
-            size_bytes=len(upload.content),
+            filename=sanitized_upload.filename,
+            content_type=sanitized_upload.content_type,
+            size_bytes=len(sanitized_upload.content),
             uploaded_at=uploaded_at,
         )
 
@@ -90,6 +93,16 @@ def _is_allowed_file(
 ) -> bool:
     return upload.content_type.lower() in allowed_content_types and upload.filename.lower().endswith(
         allowed_extensions
+    )
+
+
+def _sanitize_upload_filename(upload: PrivateFileUpload) -> PrivateFileUpload:
+    normalized = upload.filename.replace("\\", "/")
+    filename = PurePath(normalized).name or "upload"
+    return PrivateFileUpload(
+        filename=filename,
+        content_type=upload.content_type,
+        content=upload.content,
     )
 
 

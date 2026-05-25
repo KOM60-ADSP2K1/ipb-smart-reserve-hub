@@ -70,6 +70,30 @@ def test_reservation_private_file_module_rejects_invalid_type_and_size_before_st
         )
 
 
+def test_reservation_private_file_module_sanitizes_uploaded_filename_before_building_storage_key():
+    private_files = ReservationPrivateFileModule(
+        storage=InMemoryPrivateStorage(),
+        clock=lambda: datetime(2026, 5, 1, 3, tzinfo=UTC),
+    )
+
+    metadata = private_files.store_upload(
+        reservation_id="reservation-1",
+        folder="payment-receipts",
+        upload=PrivateFileUpload(
+            filename="../../nested/receipt.png",
+            content_type="image/png",
+            content=b"payment receipt image",
+        ),
+        allowed_content_types={"image/png"},
+        allowed_extensions=(".png",),
+        max_size_bytes=5 * 1024 * 1024,
+    )
+
+    assert metadata.filename == "receipt.png"
+    assert metadata.storage_key.count("..") == 0
+    assert metadata.storage_key.endswith("-receipt.png")
+
+
 def test_local_private_storage_persists_private_file_bytes_across_instances(tmp_path):
     first_storage = LocalPrivateStorage(tmp_path)
     first_storage.put("signed-approval-letters/reservation-1/file.pdf", b"%PDF-1.4", content_type="application/pdf")

@@ -57,6 +57,40 @@ const baseReservation: Record<string, any> = {
   status: "approved",
 };
 
+async function authenticateStudent(page: Page) {
+  await page.route("http://localhost:8000/auth/me", async (route) => {
+    await route.fulfill({
+      json: {
+        email: "student@apps.ipb.ac.id",
+        full_name: "Student Aktif",
+        id: "student-1",
+        is_active: true,
+        role: "student",
+      },
+    });
+  });
+
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem("ipb-srh-token", "e2e-student-token");
+  });
+
+  await page.route("http://localhost:8000/notifications", async (route) => {
+    await route.fulfill({ json: [] });
+  });
+  await page.route("http://localhost:8000/notifications?**", async (route) => {
+    await route.fulfill({ json: [] });
+  });
+  await page.route("http://localhost:8000/notifications/unread-count", async (route) => {
+    await route.fulfill({ json: { unread_count: 0 } });
+  });
+  await page.route("http://localhost:8000/notifications/*/read", async (route) => {
+    await route.fulfill({ json: { id: "notification-1", read_at: "2026-05-26T00:00:00Z" } });
+  });
+  await page.route("http://localhost:8000/notifications/read-all", async (route) => {
+    await route.fulfill({ json: [] });
+  });
+}
+
 async function mockDetailApi(page: Page, reservation: Record<string, any>) {
   await page.route(`http://localhost:8000/student/reservations/${reservation.id}`, async (route) => {
     await route.fulfill({ json: reservation });
@@ -79,6 +113,7 @@ test.describe("student reservation detail pages", () => {
   test("matches the accepted reservation detail reference", async ({ page }, testInfo) => {
     const isMobile = testInfo.project.name.includes("mobile");
     await page.setViewportSize(isMobile ? screenshotViewports.mobile : screenshotViewports.desktop);
+    await authenticateStudent(page);
     await mockDetailApi(page, baseReservation);
     await page.goto("/student/reservations/RSV-FIXTURE-001");
 
@@ -113,6 +148,7 @@ test.describe("student reservation detail pages", () => {
   test("matches the completed reservation detail reference", async ({ page }, testInfo) => {
     const isMobile = testInfo.project.name.includes("mobile");
     await page.setViewportSize(isMobile ? screenshotViewports.mobile : screenshotViewports.desktop);
+    await authenticateStudent(page);
     await mockDetailApi(page, {
       ...baseReservation,
       id: "RSV-FIXTURE-010",

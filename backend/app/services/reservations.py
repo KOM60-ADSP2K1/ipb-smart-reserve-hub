@@ -39,6 +39,10 @@ class ReservationTimeUnavailable(ReservationError):
     pass
 
 
+class ParticipantCountExceedsFacilityCapacity(ReservationError):
+    pass
+
+
 class ReservationSubmissionConflict(ReservationError):
     pass
 
@@ -152,6 +156,9 @@ class ReservationModule:
         )
         if organization_unit is None:
             raise OrganizationUnitNotFound
+
+        if submission.participant_count > facility.capacity:
+            raise ParticipantCountExceedsFacilityCapacity
 
         time_selection = self._reservation_time_selection.validate_time_selection(
             submission.facility_id,

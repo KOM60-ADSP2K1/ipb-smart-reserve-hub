@@ -23,6 +23,40 @@ const calendarResponse = [
   },
 ];
 
+async function authenticateStudent(page: Page) {
+  await page.route("http://localhost:8000/auth/me", async (route) => {
+    await route.fulfill({
+      json: {
+        email: "student@apps.ipb.ac.id",
+        full_name: "Student Aktif",
+        id: "student-1",
+        is_active: true,
+        role: "student",
+      },
+    });
+  });
+
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem("ipb-srh-token", "e2e-student-token");
+  });
+
+  await page.route("http://localhost:8000/notifications", async (route) => {
+    await route.fulfill({ json: [] });
+  });
+  await page.route("http://localhost:8000/notifications?**", async (route) => {
+    await route.fulfill({ json: [] });
+  });
+  await page.route("http://localhost:8000/notifications/unread-count", async (route) => {
+    await route.fulfill({ json: { unread_count: 0 } });
+  });
+  await page.route("http://localhost:8000/notifications/*/read", async (route) => {
+    await route.fulfill({ json: { id: "notification-1", read_at: "2026-05-26T00:00:00Z" } });
+  });
+  await page.route("http://localhost:8000/notifications/read-all", async (route) => {
+    await route.fulfill({ json: [] });
+  });
+}
+
 async function mockReservationTimeApi(page: Page) {
   await page.route("http://localhost:8000/facilities/grand-auditorium/calendar?**", async (route) => {
     await route.fulfill({ json: calendarResponse });
@@ -48,6 +82,7 @@ test.describe("student reservation creation pages", () => {
   test("matches the reservation time form reference", async ({ page }, testInfo) => {
     const isMobile = testInfo.project.name.includes("mobile");
     await page.setViewportSize(isMobile ? screenshotViewports.mobile : screenshotViewports.desktop);
+    await authenticateStudent(page);
     await mockReservationTimeApi(page);
     await page.goto("/student/facilities/grand-auditorium/reserve/time");
 
@@ -85,6 +120,7 @@ test.describe("student reservation creation pages", () => {
   test("matches the reservation detail form reference", async ({ page }, testInfo) => {
     const isMobile = testInfo.project.name.includes("mobile");
     await page.setViewportSize(isMobile ? screenshotViewports.mobile : screenshotViewports.desktop);
+    await authenticateStudent(page);
     await mockReservationDetailApi(page);
     await page.goto("/student/facilities/grand-auditorium/reserve/details");
 
@@ -99,7 +135,7 @@ test.describe("student reservation creation pages", () => {
     await expect(page.getByLabel("Nomor Kontak")).toBeVisible();
     await expect(page.getByLabel("Dukungan AV & mikrofon")).toBeVisible();
     await expect(page.getByLabel("Catatan Tambahan")).toBeVisible();
-    await expect(page.getByText("Total Biaya")).toBeVisible();
+    await expect(page.getByText("Total Biaya", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Lanjutkan" })).toBeVisible();
 
     if (isMobile) {

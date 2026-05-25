@@ -67,11 +67,7 @@ async function mockReservationApi(page: Page, reservation: Record<string, any>) 
   });
 }
 
-async function mockProfileApi(page: Page) {
-  await page.addInitScript(() => {
-    sessionStorage.setItem("ipb-srh-token", "visual-token");
-  });
-
+async function authenticateStudent(page: Page) {
   await page.route("http://localhost:8000/auth/me", async (route) => {
     await route.fulfill({
       json: {
@@ -91,10 +87,35 @@ async function mockProfileApi(page: Page) {
       },
     });
   });
+
+  await page.addInitScript(() => {
+    sessionStorage.setItem("ipb-srh-token", "visual-token");
+  });
+
+  await page.route("http://localhost:8000/notifications", async (route) => {
+    await route.fulfill({ json: [] });
+  });
+  await page.route("http://localhost:8000/notifications?**", async (route) => {
+    await route.fulfill({ json: [] });
+  });
+  await page.route("http://localhost:8000/notifications/unread-count", async (route) => {
+    await route.fulfill({ json: { unread_count: 0 } });
+  });
+  await page.route("http://localhost:8000/notifications/*/read", async (route) => {
+    await route.fulfill({ json: { id: "notification-1", read_at: "2026-05-26T00:00:00Z" } });
+  });
+  await page.route("http://localhost:8000/notifications/read-all", async (route) => {
+    await route.fulfill({ json: [] });
+  });
+}
+
+async function mockProfileApi(page: Page) {
+  await authenticateStudent(page);
 }
 
 test.describe("student review, cancellation, and profile pages", () => {
   test("redirects the deprecated reservation review route to detail", async ({ page }) => {
+    await authenticateStudent(page);
     await mockReservationApi(page, baseReservation);
     await page.goto("/student/reservations/RSV-FIXTURE-010/review");
 
@@ -105,6 +126,7 @@ test.describe("student review, cancellation, and profile pages", () => {
   test("matches the cancellation request reference", async ({ page }, testInfo) => {
     const isMobile = testInfo.project.name.includes("mobile");
     await page.setViewportSize(isMobile ? screenshotViewports.mobile : screenshotViewports.desktop);
+    await authenticateStudent(page);
     await mockReservationApi(page, {
       ...baseReservation,
       id: "RSV-FIXTURE-001",

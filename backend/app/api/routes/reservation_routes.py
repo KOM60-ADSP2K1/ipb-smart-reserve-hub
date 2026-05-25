@@ -21,6 +21,7 @@ from app.services.reservations import (
     ReservationCancellationReasonRequired,
     ReservationNotFound,
     ReservationExtraRequirements,
+    ParticipantCountExceedsFacilityCapacity,
     ReservationSubmission,
     ReservationTimeUnavailable,
     StaffCancellationReviewAccessDenied,
@@ -69,6 +70,11 @@ def register_reservation_routes(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fasilitas tidak ditemukan.")
         except OrganizationUnitNotFound:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Unit organisasi tidak aktif.")
+        except ParticipantCountExceedsFacilityCapacity:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Jumlah peserta melebihi kapasitas fasilitas.",
+            )
         except ReservationTimeUnavailable:
             raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Waktu reservasi tidak tersedia.")
 

@@ -133,8 +133,9 @@ describe("StudentReviewCancellationProfilePages", () => {
 
     renderWorkflowRoutes("/student/reservations/reservation-1/cancellation");
 
+    await user.selectOptions(await screen.findByLabelText("Alasan Pembatalan"), "Jadwal kegiatan berubah");
     await user.type(
-      await screen.findByLabelText("Detail Alasan"),
+      screen.getByLabelText("Detail Alasan"),
       "Kegiatan organisasi dipindahkan ke jadwal lain setelah koordinasi fakultas.",
     );
     await user.click(screen.getByRole("button", { name: "Kirim Pengajuan" }));
@@ -186,10 +187,36 @@ describe("StudentReviewCancellationProfilePages", () => {
 
     renderWorkflowRoutes("/student/reservations/reservation-1/cancellation");
 
+    await user.selectOptions(await screen.findByLabelText("Alasan Pembatalan"), "Jadwal kegiatan berubah");
     await user.type(await screen.findByLabelText("Detail Alasan"), "Reservasi ini perlu dibatalkan karena agenda berubah.");
     await user.click(screen.getByRole("button", { name: "Kirim Pengajuan" }));
 
     expect(await screen.findByText("Pembatalan hanya dapat diajukan untuk reservasi yang sudah disetujui.")).toBeVisible();
+  });
+
+  it("requires a real cancellation reason group instead of submitting the placeholder option", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const url = String(input);
+
+      if (url === "http://localhost:8000/student/reservations/reservation-1") {
+        return jsonResponse(reservation({ status: "approved" }));
+      }
+
+      return jsonResponse({ detail: `Unhandled ${url}` }, 404);
+    });
+
+    renderWorkflowRoutes("/student/reservations/reservation-1/cancellation");
+
+    await user.selectOptions(await screen.findByLabelText("Alasan Pembatalan"), "Pilih alasan utama");
+    await user.type(screen.getByLabelText("Detail Alasan"), "Agenda dipindahkan setelah rapat koordinasi fakultas.");
+    await user.click(screen.getByRole("button", { name: "Kirim Pengajuan" }));
+
+    expect(await screen.findByText("Pilih alasan utama pembatalan.")).toBeVisible();
+    expect(fetchMock).not.toHaveBeenCalledWith(
+      "http://localhost:8000/student/reservations/reservation-1/cancellation-request",
+      expect.anything(),
+    );
   });
 
   it("renders current user identity and partial academic profile from /auth/me", async () => {

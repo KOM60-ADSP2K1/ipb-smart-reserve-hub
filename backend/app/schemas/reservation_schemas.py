@@ -1,6 +1,12 @@
 from datetime import datetime
+from typing import Annotated
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, StringConstraints, field_validator
+
+
+ReservationTitle = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=255)]
+ReservationText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+ReservationContactPhone = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=32)]
 
 
 class ReservationExtraRequirementsRequest(BaseModel):
@@ -10,13 +16,25 @@ class ReservationExtraRequirementsRequest(BaseModel):
     security_personnel: bool = False
     notes: str | None = None
 
+    @field_validator("notes")
+    @classmethod
+    def normalize_notes(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = value.strip()
+        if not normalized:
+            return None
+        if len(normalized) > 180:
+            raise ValueError("String should have at most 180 characters")
+        return normalized
+
 
 class ReservationSubmissionRequest(BaseModel):
-    activity_title: str
-    event_description: str
-    participant_count: int
+    activity_title: ReservationTitle
+    event_description: ReservationText
+    participant_count: int = Field(gt=0)
     organization_unit_id: str
-    contact_phone: str
+    contact_phone: ReservationContactPhone
     starts_at: datetime
     ends_at: datetime
     extra_requirements: ReservationExtraRequirementsRequest = ReservationExtraRequirementsRequest()

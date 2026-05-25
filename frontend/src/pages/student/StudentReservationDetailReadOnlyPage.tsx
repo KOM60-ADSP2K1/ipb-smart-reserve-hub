@@ -3,7 +3,7 @@ import { Building2, CalendarDays, FileText, Info, MapPin, Menu, Star } from "luc
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
-import { ApiError, apiDownload, apiRequest } from "../../api/http";
+import { ApiError, apiDownload, apiPreview, apiRequest } from "../../api/http";
 import { NotificationSurface } from "../../components/NotificationSurface";
 import { StudentHeaderSearch } from "../../components/layout/StudentHeaderSearch";
 import { studentHomeSession } from "../../fixtures/studentHome";
@@ -13,10 +13,11 @@ import {
 } from "../../reservations/studentReservationWorkflow";
 
 type ReservationDocument = {
-  actionLabel: string;
   downloadPath: string;
   fileName: string;
   metadata: string;
+  previewLabel: string;
+  previewPath: string;
   stampLabel?: string;
   statusLabel: string;
 };
@@ -65,13 +66,15 @@ function metadataLabel(
 
 function buildDocuments(reservation: StudentReservationWorkflowProjection): ReservationDocument[] {
   const documents: ReservationDocument[] = [];
+  const hideTemplateDocument = reservation.status === "rejected";
 
-  if (reservation.document.approval_letter && reservation.status !== "approved") {
+  if (reservation.document.approval_letter && reservation.status !== "approved" && !hideTemplateDocument) {
     documents.push({
-      actionLabel: "Unduh",
       downloadPath: `/student/reservations/${reservation.id}/approval-letter/download`,
       fileName: reservation.document.approval_letter.filename,
       metadata: metadataLabel(reservation.document.approval_letter),
+      previewLabel: "Lihat Dokumen",
+      previewPath: `/student/reservations/${reservation.id}/approval-letter/download`,
       stampLabel: "Template",
       statusLabel: "Terverifikasi",
     });
@@ -79,10 +82,11 @@ function buildDocuments(reservation: StudentReservationWorkflowProjection): Rese
 
   if (reservation.document.signed_approval_letter) {
     documents.push({
-      actionLabel: "Lihat Dokumen",
       downloadPath: `/student/reservations/${reservation.id}/signed-approval-letter/download`,
       fileName: reservation.document.signed_approval_letter.filename,
       metadata: metadataLabel(reservation.document.signed_approval_letter),
+      previewLabel: "Lihat Dokumen",
+      previewPath: `/student/reservations/${reservation.id}/signed-approval-letter/download`,
       stampLabel: reservation.status === "approved" ? "Disetujui" : "Terkirim",
       statusLabel: "Terverifikasi",
     });
@@ -90,10 +94,11 @@ function buildDocuments(reservation: StudentReservationWorkflowProjection): Rese
 
   if (reservation.payment.receipt) {
     documents.push({
-      actionLabel: "Lihat Bukti",
       downloadPath: `/student/reservations/${reservation.id}/payment-receipt/download`,
       fileName: reservation.payment.receipt.filename,
       metadata: metadataLabel(reservation.payment.receipt),
+      previewLabel: "Lihat Bukti",
+      previewPath: `/student/reservations/${reservation.id}/payment-receipt/download`,
       statusLabel: reservation.payment.review_status === "approved" ? "Terverifikasi" : "Menunggu Review",
     });
   }
@@ -156,6 +161,10 @@ function noticeForReservation(reservation: StudentReservationWorkflowProjection)
 }
 
 function shouldRedirectDetail(reservation: StudentReservationWorkflowProjection) {
+  if (reservation.status === "rejected" && (reservation.rejection?.source === "document" || reservation.rejection?.source === "payment")) {
+    return mapStudentReservationWorkflow(reservation).primaryHref;
+  }
+
   if (["approved", "completed", "cancelled", "expired", "rejected"].includes(reservation.status)) {
     return null;
   }
@@ -323,6 +332,9 @@ function DocumentRow({ document }: { document: ReservationDocument }) {
   const downloadMutation = useMutation({
     mutationFn: () => apiDownload(document.downloadPath),
   });
+  const previewMutation = useMutation({
+    mutationFn: () => apiPreview(document.previewPath),
+  });
 
   return (
     <div className="relative grid grid-cols-[48px_1fr_auto] items-center gap-4 rounded-xl border border-[#e5e7eb] bg-[#f8fafc] p-4 max-md:grid-cols-[48px_1fr]">
@@ -344,16 +356,24 @@ function DocumentRow({ document }: { document: ReservationDocument }) {
         </span>
         <button
           className="rounded-lg border border-[#e5e7eb] bg-white px-4 py-2 text-sm font-bold text-[#0f9d58] no-underline"
+          disabled={previewMutation.isPending}
+          onClick={() => previewMutation.mutate()}
+          type="button"
+        >
+          {previewMutation.isPending ? "Membuka..." : document.previewLabel}
+        </button>
+        <button
+          className="rounded-lg border border-[#e5e7eb] bg-white px-4 py-2 text-sm font-bold text-[#0f9d58] no-underline"
           disabled={downloadMutation.isPending}
           onClick={() => downloadMutation.mutate()}
           type="button"
         >
-          {downloadMutation.isPending ? "Mengunduh..." : document.actionLabel}
+          {downloadMutation.isPending ? "Mengunduh..." : document.previewLabel.startsWith("Lihat") ? `Unduh ${document.previewLabel.replace("Lihat ", "")}` : "Unduh"}
         </button>
       </div>
-      {downloadMutation.isError ? (
+      {downloadMutation.isError || previewMutation.isError ? (
         <p className="m-0 text-xs font-semibold text-[#b91c1c] max-md:col-span-2">
-          {(downloadMutation.error as ApiError).message}
+          {((previewMutation.error ?? downloadMutation.error) as ApiError).message}
         </p>
       ) : null}
     </div>
@@ -482,7 +502,12 @@ function DetailContent({ detail }: { detail: StudentReservationWorkflowProjectio
   const documents = buildDocuments(detail);
   const actions = actionsForReservation(detail);
   const notice = noticeForReservation(detail);
-  const statusLabel = mapStudentReservationWorkflow(detail).statusLabel;
+  const mappedDetail = mapStudentReservationWorkflow(detail);
+  const statusLabel = mappedDetail.statusLabel;
+  const statusToneClasses =
+    mappedDetail.tone === "rejected"
+      ? "bg-[#fee2e2] text-[#991b1b]"
+      : "bg-[#dcfce7] text-[#047857]";
 
   return (
     <div className="rounded-xl border border-[#e5e7eb] bg-white p-10 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)] max-md:p-7">
@@ -490,7 +515,7 @@ function DetailContent({ detail }: { detail: StudentReservationWorkflowProjectio
         <a className="text-sm font-bold text-[#0f9d58] no-underline" href="/student/reservations">
           ← Kembali
         </a>
-        <span className="rounded-full bg-[#dcfce7] px-3 py-1.5 text-xs font-bold text-[#047857]">
+        <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${statusToneClasses}`}>
           {statusLabel}
         </span>
       </div>

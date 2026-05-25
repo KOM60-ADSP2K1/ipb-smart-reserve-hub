@@ -33,7 +33,7 @@ class StubReservationRepository:
         self.added_reservations: list[Reservation] = []
 
     def get_active_facility(self, facility_id: str) -> ReservationFacilityRecord | None:
-        return ReservationFacilityRecord(id=facility_id, name="Auditorium Andi Hakim Nasoetion", price_rupiah=0)
+        return ReservationFacilityRecord(id=facility_id, name="Auditorium Andi Hakim Nasoetion", capacity=120, price_rupiah=0)
 
     def get_active_organization_unit(self, organization_unit_id: str) -> ReservationOrganizationUnitRecord | None:
         return ReservationOrganizationUnitRecord(id=organization_unit_id, name="BEM KM IPB")
@@ -174,6 +174,147 @@ async def test_student_submits_reservation_details_and_views_held_reservation():
 
     assert detail.status_code == 200
     assert detail.json() == created_body
+
+
+@pytest.mark.anyio
+async def test_student_cannot_submit_reservation_with_participant_count_above_facility_capacity():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime(2026, 5, 1, tzinfo=UTC),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Ruang Rapat Senat", capacity=50)
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    organization_unit_id = test_data.create_organization_unit(name="BEM KM IPB")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        await client.post(
+            "/auth/register",
+            json={
+                "email": "budi@apps.ipb.ac.id",
+                "password": "secret123",
+                "full_name": "Budi Santoso",
+                "nim": "G64190001",
+                "phone": "08123456789",
+            },
+        )
+        login = await client.post("/auth/login", json={"email": "budi@apps.ipb.ac.id", "password": "secret123"})
+        token = login.json()["access_token"]
+
+        created = await client.post(
+            f"/facilities/{facility_id}/reservations",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "activity_title": "Rapat Kerja",
+                "event_description": "Rapat evaluasi tengah semester.",
+                "participant_count": 51,
+                "organization_unit_id": organization_unit_id,
+                "contact_phone": "08123456789",
+                "starts_at": "2026-06-01T02:00:00+00:00",
+                "ends_at": "2026-06-01T04:00:00+00:00",
+            },
+        )
+
+        reservation_list = await client.get("/student/reservations", headers={"Authorization": f"Bearer {token}"})
+
+    assert created.status_code == 400
+    assert created.json()["detail"] == "Jumlah peserta melebihi kapasitas fasilitas."
+    assert reservation_list.status_code == 200
+    assert reservation_list.json() == []
+
+
+@pytest.mark.anyio
+async def test_student_cannot_submit_reservation_with_whitespace_only_required_text_fields():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime(2026, 5, 1, tzinfo=UTC),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    organization_unit_id = test_data.create_organization_unit(name="BEM KM IPB")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        await client.post(
+            "/auth/register",
+            json={
+                "email": "budi@apps.ipb.ac.id",
+                "password": "secret123",
+                "full_name": "Budi Santoso",
+                "nim": "G64190001",
+                "phone": "08123456789",
+            },
+        )
+        login = await client.post("/auth/login", json={"email": "budi@apps.ipb.ac.id", "password": "secret123"})
+        token = login.json()["access_token"]
+
+        created = await client.post(
+            f"/facilities/{facility_id}/reservations",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "activity_title": "   ",
+                "event_description": "\n\t  ",
+                "participant_count": 80,
+                "organization_unit_id": organization_unit_id,
+                "contact_phone": "   ",
+                "starts_at": "2026-06-01T02:00:00+00:00",
+                "ends_at": "2026-06-01T04:00:00+00:00",
+            },
+        )
+
+    assert created.status_code == 422
+    details = created.json()["detail"]
+    assert any(issue["loc"][-1] == "activity_title" for issue in details)
+    assert any(issue["loc"][-1] == "event_description" for issue in details)
+    assert any(issue["loc"][-1] == "contact_phone" for issue in details)
+
+
+@pytest.mark.anyio
+async def test_student_cannot_submit_reservation_when_title_or_contact_phone_exceed_model_limits():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime(2026, 5, 1, tzinfo=UTC),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_open_hour(facility_id, day_of_week=0, opens_at="08:00", closes_at="16:00")
+    organization_unit_id = test_data.create_organization_unit(name="BEM KM IPB")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        await client.post(
+            "/auth/register",
+            json={
+                "email": "budi@apps.ipb.ac.id",
+                "password": "secret123",
+                "full_name": "Budi Santoso",
+                "nim": "G64190001",
+                "phone": "08123456789",
+            },
+        )
+        login = await client.post("/auth/login", json={"email": "budi@apps.ipb.ac.id", "password": "secret123"})
+        token = login.json()["access_token"]
+
+        created = await client.post(
+            f"/facilities/{facility_id}/reservations",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "activity_title": "A" * 256,
+                "event_description": "Deskripsi valid untuk reservasi.",
+                "participant_count": 80,
+                "organization_unit_id": organization_unit_id,
+                "contact_phone": "0" * 33,
+                "starts_at": "2026-06-01T02:00:00+00:00",
+                "ends_at": "2026-06-01T04:00:00+00:00",
+            },
+        )
+
+    assert created.status_code == 422
+    details = created.json()["detail"]
+    assert any(issue["loc"][-1] == "activity_title" for issue in details)
+    assert any(issue["loc"][-1] == "contact_phone" for issue in details)
 
 
 @pytest.mark.anyio

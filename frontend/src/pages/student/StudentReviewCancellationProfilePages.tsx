@@ -239,7 +239,7 @@ export function StudentReviewPage() {
 export function StudentCancellationRequestPage() {
   const { reservationId = "" } = useParams();
   const navigate = useNavigate();
-  const [reasonGroup, setReasonGroup] = useState("Jadwal kegiatan berubah");
+  const [reasonGroup, setReasonGroup] = useState("");
   const [reasonDetail, setReasonDetail] = useState("");
   const [validationError, setValidationError] = useState<string | null>(null);
   const reservationQuery = useQuery({
@@ -280,6 +280,11 @@ export function StudentCancellationRequestPage() {
     event.preventDefault();
     setValidationError(null);
 
+    if (!reasonGroup) {
+      setValidationError("Pilih alasan utama pembatalan.");
+      return;
+    }
+
     if (reasonDetail.trim().length < 20) {
       setValidationError("Detail alasan minimal 20 karakter.");
       return;
@@ -314,7 +319,7 @@ export function StudentCancellationRequestPage() {
                 onChange={(event) => setReasonGroup(event.target.value)}
                 value={reasonGroup}
               >
-                <option>Pilih alasan utama</option>
+                <option value="">Pilih alasan utama</option>
                 <option>Jadwal kegiatan berubah</option>
                 <option>Fasilitas tidak lagi dibutuhkan</option>
                 <option>Kesalahan data reservasi</option>

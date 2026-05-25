@@ -10,6 +10,32 @@ const organizationUnits = [
   { code: "HIMALKOM", id: "org-2", name: "Himalkom", type: "student_organization" },
 ];
 
+const facilityDetail = {
+  capacity: 300,
+  category: "Auditorium",
+  contact: {
+    email: "facility@example.test",
+    name: "TU Fasilitas",
+    phone: "0251-8620000",
+  },
+  description: "Auditorium utama untuk kegiatan akademik besar.",
+  id: "facility-uuid-1",
+  images: [],
+  location: "Kampus Timur",
+  name: "Auditorium Backend",
+  open_hours_summary: "Senin-Jumat 08:00-18:00",
+  price: {
+    amount_rupiah: 250000,
+    is_free: false,
+    summary: "Rp250.000",
+  },
+  review_summary: {
+    rating_average: 4.9,
+    review_count: 124,
+  },
+  reviews: [],
+};
+
 const reservationResponse = {
   id: "reservation-uuid-1",
   reservation_code: "RSV-001",
@@ -39,17 +65,33 @@ function renderDetailPage() {
   );
 }
 
+function renderDetailPageAt(initialEntry: string) {
+  return renderWithProviders(
+    <Routes>
+      <Route element={<StudentReservationDetailPage />} path="/student/facilities/:facilityId/reserve/details" />
+      <Route element={<h1>Approval Letter</h1>} path="/student/reservations/:reservationId/letter" />
+    </Routes>,
+    { initialEntries: [initialEntry] },
+  );
+}
+
 function mockReservationSubmitFetch({
+  facility = facilityDetail,
   organizations = organizationUnits,
   submit = reservationResponse,
   submitStatus = 201,
 }: {
+  facility?: unknown;
   organizations?: unknown;
   submit?: unknown;
   submitStatus?: number;
 } = {}) {
   return vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
     const url = String(input);
+
+    if (url === "http://localhost:8000/facilities/facility-uuid-1") {
+      return jsonResponse(facility);
+    }
 
     if (url === "http://localhost:8000/organization-units") {
       return jsonResponse(organizations);
@@ -116,6 +158,19 @@ describe("StudentReservationDetailPage", () => {
     });
   });
 
+  it("renders reservation summary from backend facility data without fixture admin fees", async () => {
+    mockReservationSubmitFetch();
+
+    renderDetailPage();
+
+    expect(await screen.findByText("Auditorium Backend")).toBeVisible();
+    expect(screen.getByText("Kapasitas: 300 orang")).toBeVisible();
+    expect(screen.getAllByText("Rp250.000")).toHaveLength(2);
+    expect(screen.getByText("Total Biaya")).toBeVisible();
+    expect(screen.queryByText("Biaya admin")).not.toBeInTheDocument();
+    expect(screen.queryByText("Rp 115.000,00")).not.toBeInTheDocument();
+  });
+
   it("renders an inline state when no organization units are available", async () => {
     mockReservationSubmitFetch({ organizations: [] });
 
@@ -125,7 +180,7 @@ describe("StudentReservationDetailPage", () => {
     expect(screen.getByRole("button", { name: "Lanjutkan" })).toBeDisabled();
   });
 
-  it("validates required fields, participant count, contact phone, and extra notes", async () => {
+  it("validates required fields and participant count", async () => {
     const user = userEvent.setup();
     mockReservationSubmitFetch();
 
@@ -136,10 +191,27 @@ describe("StudentReservationDetailPage", () => {
     expect(screen.getByText("Jumlah peserta harus lebih dari 0.")).toBeVisible();
     expect(screen.getByText("Nomor kontak wajib diisi.")).toBeVisible();
     expect(screen.getByText("Deskripsi kegiatan wajib diisi.")).toBeVisible();
+  });
 
-    await user.type(screen.getByLabelText("Catatan Tambahan"), "x".repeat(181));
-    await user.click(screen.getByRole("button", { name: "Lanjutkan" }));
-    expect(screen.getByText("Catatan tambahan maksimal 180 karakter.")).toBeVisible();
+  it("caps title, contact, and extra notes at the intended input lengths", async () => {
+    const user = userEvent.setup();
+    mockReservationSubmitFetch();
+
+    renderDetailPage();
+    const titleInput = await screen.findByLabelText("Nama Kegiatan");
+    const contactInput = screen.getByLabelText("Nomor Kontak");
+    const notesInput = screen.getByLabelText("Catatan Tambahan");
+
+    await user.type(titleInput, "A".repeat(256));
+    await user.type(contactInput, "0".repeat(33));
+    await user.type(notesInput, "x".repeat(181));
+
+    expect(titleInput).toHaveAttribute("maxlength", "255");
+    expect(contactInput).toHaveAttribute("maxlength", "32");
+    expect(notesInput).toHaveAttribute("maxlength", "180");
+    expect(titleInput).toHaveValue("A".repeat(255));
+    expect(contactInput).toHaveValue("0".repeat(32));
+    expect(notesInput).toHaveValue("x".repeat(180));
   });
 
   it("shows conflict feedback and keeps the form actionable", async () => {
@@ -155,6 +227,78 @@ describe("StudentReservationDetailPage", () => {
 
     expect(await screen.findByText("Waktu reservasi tidak tersedia.")).toBeVisible();
     expect(screen.getByRole("button", { name: "Lanjutkan" })).toBeEnabled();
+  });
+
+  it("falls back to the default reservation time window when query params are invalid", async () => {
+    const fetchMock = mockReservationSubmitFetch();
+    const user = userEvent.setup();
+
+    renderDetailPageAt("/student/facilities/facility-uuid-1/reserve/details?starts_at=invalid&ends_at=also-invalid");
+    await fillValidForm(user);
+    await user.click(screen.getByRole("button", { name: "Lanjutkan" }));
+
+    expect(await screen.findByRole("heading", { name: "Approval Letter" })).toBeVisible();
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://localhost:8000/facilities/facility-uuid-1/reservations",
+        expect.objectContaining({
+          body: JSON.stringify({
+            activity_title: "Simposium Etika AI",
+            contact_phone: "08123456789",
+            ends_at: "2026-06-24T13:00:00+07:00",
+            event_description: "Diskusi akademik lintas fakultas.",
+            extra_requirements: {
+              av_support: true,
+              extra_cleaning: false,
+              logistics_coordination: true,
+              notes: "Butuh dua mikrofon nirkabel.",
+              security_personnel: false,
+            },
+            organization_unit_id: "org-1",
+            participant_count: 80,
+            starts_at: "2026-06-24T09:00:00+07:00",
+          }),
+          method: "POST",
+        }),
+      );
+    });
+  });
+
+  it("falls back to the default reservation time window when query params are reversed", async () => {
+    const fetchMock = mockReservationSubmitFetch();
+    const user = userEvent.setup();
+
+    renderDetailPageAt(
+      "/student/facilities/facility-uuid-1/reserve/details?starts_at=2026-06-24T13%3A00%3A00%2B07%3A00&ends_at=2026-06-24T09%3A00%3A00%2B07%3A00",
+    );
+    await fillValidForm(user);
+    await user.click(screen.getByRole("button", { name: "Lanjutkan" }));
+
+    expect(await screen.findByRole("heading", { name: "Approval Letter" })).toBeVisible();
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://localhost:8000/facilities/facility-uuid-1/reservations",
+        expect.objectContaining({
+          body: JSON.stringify({
+            activity_title: "Simposium Etika AI",
+            contact_phone: "08123456789",
+            ends_at: "2026-06-24T13:00:00+07:00",
+            event_description: "Diskusi akademik lintas fakultas.",
+            extra_requirements: {
+              av_support: true,
+              extra_cleaning: false,
+              logistics_coordination: true,
+              notes: "Butuh dua mikrofon nirkabel.",
+              security_personnel: false,
+            },
+            organization_unit_id: "org-1",
+            participant_count: 80,
+            starts_at: "2026-06-24T09:00:00+07:00",
+          }),
+          method: "POST",
+        }),
+      );
+    });
   });
 
   it("disables submit while reservation creation is loading", async () => {

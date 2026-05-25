@@ -139,6 +139,8 @@ describe("StudentReservationDetailReadOnlyPage", () => {
   it("loads an accepted reservation detail from the backend, hides the template, and highlights the signed letter", async () => {
     const user = userEvent.setup();
     const fetchMock = mockReservationFetch(reservation());
+    const openMock = vi.spyOn(window, "open").mockImplementation(() => null);
+    const createObjectURLMock = vi.spyOn(URL, "createObjectURL").mockImplementation(() => "blob:http://localhost/signed-letter");
 
     renderDetail();
 
@@ -152,6 +154,7 @@ describe("StudentReservationDetailReadOnlyPage", () => {
     expect(screen.getByText("bukti-pembayaran.jpg")).toBeVisible();
     expect(screen.getAllByText("Disetujui")).toHaveLength(2);
     expect(screen.getByRole("button", { name: "Lihat Dokumen" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Unduh Dokumen" })).toBeVisible();
 
     await user.click(screen.getByRole("button", { name: "Lihat Dokumen" }));
 
@@ -161,6 +164,8 @@ describe("StudentReservationDetailReadOnlyPage", () => {
         expect.any(Object),
       );
     });
+    expect(createObjectURLMock).toHaveBeenCalledWith(expect.any(Blob));
+    expect(openMock).toHaveBeenCalledWith("blob:http://localhost/signed-letter", "_blank", "noopener,noreferrer");
   });
 
   it("offers payment continuation when a paid reservation document is accepted but payment is still due", async () => {
@@ -258,6 +263,39 @@ describe("StudentReservationDetailReadOnlyPage", () => {
       ),
     ).toBeVisible();
     expect(screen.queryByRole("link", { name: "Ajukan Pembatalan" })).not.toBeInTheDocument();
+  });
+
+  it("redirects document-rejected reservation detail to the declined state so the rejection reason stays visible", async () => {
+    mockReservationFetch(reservation({
+      document: {
+        approval_letter: {
+          content_type: "application/pdf",
+          filename: "surat-persetujuan.pdf",
+          generated_at: "2026-06-01T03:00:00Z",
+          size_bytes: 128000,
+        },
+        rejection_reason: "Tanda tangan pembina belum terlihat jelas.",
+        review_status: "rejected",
+        signed_approval_letter: {
+          content_type: "application/pdf",
+          filename: "surat-persetujuan-ditandatangani.pdf",
+          size_bytes: 1200000,
+          uploaded_at: "2026-06-02T03:00:00Z",
+        },
+      },
+      rejection: { reason: "Tanda tangan pembina belum terlihat jelas.", source: "document" },
+      status: "rejected",
+    }));
+
+    renderWithProviders(
+      <Routes>
+        <Route element={<StudentReservationDetailReadOnlyPage />} path="/student/reservations/:reservationId" />
+        <Route element={<p>Document declined route</p>} path="/student/reservations/:reservationId/verification/declined" />
+      </Routes>,
+      { initialEntries: ["/student/reservations/reservation-1"] },
+    );
+
+    expect(await screen.findByText("Document declined route")).toBeVisible();
   });
 
   it("redirects stale detail states to the canonical workflow route", async () => {

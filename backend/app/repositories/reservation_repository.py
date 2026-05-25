@@ -13,6 +13,7 @@ from app.services.facility_availability import BLOCKING_RESERVATION_STATUSES
 class ReservationFacilityRecord:
     id: str
     name: str
+    capacity: int
     price_rupiah: int
 
 
@@ -65,6 +66,7 @@ class SqlAlchemyReservationRepository:
         return ReservationFacilityRecord(
             id=facility.id,
             name=facility.name,
+            capacity=facility.capacity,
             price_rupiah=facility.price_rupiah,
         )
 

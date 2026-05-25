@@ -37,6 +37,17 @@ type OrganizationUnitResponse = {
   type?: string;
 };
 
+type FacilityReservationSummaryResponse = {
+  capacity: number;
+  id: string;
+  name: string;
+  price: {
+    amount_rupiah: number;
+    is_free: boolean;
+    summary: string;
+  };
+};
+
 type StudentReservationResponse = {
   id: string;
 };
@@ -111,6 +122,34 @@ function calendarPath(facilityId: string, year: number, monthIndex: number) {
 
 function selectedDateTime(selectedDateKey: string, time: string) {
   return `${selectedDateKey}T${time}:00${jakartaOffset}`;
+}
+
+const RESERVATION_ACTIVITY_TITLE_MAX_LENGTH = 255;
+const RESERVATION_CONTACT_PHONE_MAX_LENGTH = 32;
+const RESERVATION_EXTRA_NOTES_MAX_LENGTH = 180;
+
+function isValidReservationDateTime(value: string | null) {
+  if (!value) {
+    return false;
+  }
+  return !Number.isNaN(Date.parse(value));
+}
+
+function normalizedReservationRange(searchParams: URLSearchParams) {
+  const fallbackStartsAt = selectedDateTime(defaultSelectedDateKey, reservationCreateFixture.startTime);
+  const fallbackEndsAt = selectedDateTime(defaultSelectedDateKey, reservationCreateFixture.endTime);
+  const startsAt = searchParams.get("starts_at");
+  const endsAt = searchParams.get("ends_at");
+
+  if (!isValidReservationDateTime(startsAt) || !isValidReservationDateTime(endsAt)) {
+    return { startsAt: fallbackStartsAt, endsAt: fallbackEndsAt };
+  }
+
+  if (Date.parse(endsAt) <= Date.parse(startsAt)) {
+    return { startsAt: fallbackStartsAt, endsAt: fallbackEndsAt };
+  }
+
+  return { startsAt, endsAt };
 }
 
 function formatJakartaTime(value: string) {
@@ -230,6 +269,10 @@ async function validateTimeSelection({
 
 async function fetchOrganizationUnits() {
   return apiRequest<OrganizationUnitResponse[]>("/organization-units");
+}
+
+async function fetchFacilityReservationSummary(facilityId: string) {
+  return apiRequest<FacilityReservationSummaryResponse>(`/facilities/${facilityId}`);
 }
 
 async function submitReservation({
@@ -661,25 +704,34 @@ function SummaryMedia() {
   );
 }
 
+function formatParticipantCapacity(value: number) {
+  return `${new Intl.NumberFormat("id-ID").format(value)} orang`;
+}
+
 function ReservationSummary({
+  facility,
   dateLabel = reservationCreateFixture.selectedDate,
-  duration = reservationCreateFixture.duration,
   endTime = reservationCreateFixture.endTime,
   startTime = reservationCreateFixture.startTime,
 }: {
+  facility?: FacilityReservationSummaryResponse;
   dateLabel?: string;
-  duration?: string;
   endTime?: string;
   startTime?: string;
 }) {
+  const facilityName = facility?.name ?? reservationCreateFixture.facilityName;
+  const summaryTitle = facility ? `Reservasi ${facility.name}` : reservationCreateFixture.summaryTitle;
+  const capacityLabel = facility ? formatParticipantCapacity(facility.capacity) : reservationCreateFixture.capacity;
+  const totalCostLabel = facility ? facility.price.summary : reservationCreateFixture.total;
+
   return (
     <div className="overflow-hidden rounded-xl bg-white shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)]">
       <SummaryMedia />
       <div className="p-6">
         <p className="m-0 mb-1 text-[10px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">
-          {reservationCreateFixture.facilityName}
+          {facilityName}
         </p>
-        <h3 className="m-0 mb-6 text-xl font-bold">{reservationCreateFixture.summaryTitle}</h3>
+        <h3 className="m-0 mb-6 text-xl font-bold">{summaryTitle}</h3>
         <p className="m-0 mb-3 flex gap-3 text-sm text-[#6b7280]">
           <CalendarDays aria-hidden="true" className="text-[#0f9d58]" size={18} />
           {dateLabel}
@@ -690,7 +742,7 @@ function ReservationSummary({
         </p>
         <p className="m-0 mb-6 flex gap-3 text-sm text-[#6b7280]">
           <Users aria-hidden="true" className="text-[#0f9d58]" size={18} />
-          Kapasitas: {reservationCreateFixture.capacity}
+          Kapasitas: {capacityLabel}
         </p>
         <div className="border-t border-[#e5e7eb] pt-5">
           <h4 className="m-0 mb-4 text-[10px] font-bold uppercase tracking-[0.05em] text-[#6b7280]">
@@ -698,16 +750,12 @@ function ReservationSummary({
           </h4>
           <div className="space-y-3 text-sm text-[#6b7280]">
             <p className="m-0 flex justify-between gap-4">
-              <span>Biaya fasilitas ({duration.toLowerCase()})</span>
-              <strong>{reservationCreateFixture.facilityCost}</strong>
-            </p>
-            <p className="m-0 flex justify-between gap-4">
-              <span>Biaya admin</span>
-              <strong>{reservationCreateFixture.adminCost}</strong>
+              <span>Total biaya reservasi</span>
+              <strong>{totalCostLabel}</strong>
             </p>
             <p className="m-0 flex justify-between gap-4 border-t border-[#e5e7eb] pt-4 text-base font-bold text-[#111827]">
               <span>Total Biaya</span>
-              <span>{reservationCreateFixture.total}</span>
+              <span>{totalCostLabel}</span>
             </p>
           </div>
         </div>
@@ -887,8 +935,7 @@ export function StudentReservationDetailPage() {
   const { facilityId = reservationCreateFixture.facilityId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const startsAt = searchParams.get("starts_at") ?? selectedDateTime(defaultSelectedDateKey, reservationCreateFixture.startTime);
-  const endsAt = searchParams.get("ends_at") ?? selectedDateTime(defaultSelectedDateKey, reservationCreateFixture.endTime);
+  const { startsAt, endsAt } = useMemo(() => normalizedReservationRange(searchParams), [searchParams]);
   const [activityTitle, setActivityTitle] = useState("");
   const [participantCount, setParticipantCount] = useState("");
   const [organizationUnitId, setOrganizationUnitId] = useState("");
@@ -905,6 +952,11 @@ export function StudentReservationDetailPage() {
   const organizationUnitsQuery = useQuery({
     queryFn: fetchOrganizationUnits,
     queryKey: ["organization-units"],
+  });
+  const facilitySummaryQuery = useQuery({
+    enabled: facilityId.length > 0,
+    queryFn: () => fetchFacilityReservationSummary(facilityId),
+    queryKey: ["facility-reservation-summary", facilityId],
   });
   const organizationUnits = organizationUnitsQuery.data ?? [];
   const organizationsUnavailable = organizationUnitsQuery.isSuccess && organizationUnits.length === 0;
@@ -936,13 +988,21 @@ export function StudentReservationDetailPage() {
   function validateForm() {
     const nextErrors: ReservationFormErrors = {};
     if (!activityTitle.trim()) nextErrors.activityTitle = "Nama kegiatan wajib diisi.";
+    if (activityTitle.trim().length > RESERVATION_ACTIVITY_TITLE_MAX_LENGTH) {
+      nextErrors.activityTitle = "Nama kegiatan maksimal 255 karakter.";
+    }
     if (!participantCount || Number(participantCount) <= 0) {
       nextErrors.participantCount = "Jumlah peserta harus lebih dari 0.";
     }
     if (!organizationUnitId) nextErrors.organizationUnitId = "Organisasi wajib dipilih.";
     if (!contactPhone.trim()) nextErrors.contactPhone = "Nomor kontak wajib diisi.";
+    if (contactPhone.trim().length > RESERVATION_CONTACT_PHONE_MAX_LENGTH) {
+      nextErrors.contactPhone = "Nomor kontak maksimal 32 karakter.";
+    }
     if (!eventDescription.trim()) nextErrors.eventDescription = "Deskripsi kegiatan wajib diisi.";
-    if (extraNotes.length > 180) nextErrors.extraNotes = "Catatan tambahan maksimal 180 karakter.";
+    if (extraNotes.length > RESERVATION_EXTRA_NOTES_MAX_LENGTH) {
+      nextErrors.extraNotes = "Catatan tambahan maksimal 180 karakter.";
+    }
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   }
@@ -985,6 +1045,7 @@ export function StudentReservationDetailPage() {
               <input
                 aria-label="Nama Kegiatan"
                 className="h-[52px] w-full rounded-lg border border-[#e5e7eb] bg-[#f8fafc] px-4 text-sm"
+                maxLength={RESERVATION_ACTIVITY_TITLE_MAX_LENGTH}
                 onChange={(event) => setActivityTitle(event.target.value)}
                 placeholder="Contoh: Simposium Etika AI"
                 value={activityTitle}
@@ -1029,6 +1090,7 @@ export function StudentReservationDetailPage() {
               <input
                 aria-label="Nomor Kontak"
                 className="h-[52px] w-full rounded-lg border border-[#e5e7eb] bg-[#f8fafc] px-4 text-sm"
+                maxLength={RESERVATION_CONTACT_PHONE_MAX_LENGTH}
                 onChange={(event) => setContactPhone(event.target.value)}
                 placeholder="08123456789"
                 value={contactPhone}
@@ -1078,6 +1140,7 @@ export function StudentReservationDetailPage() {
               <textarea
                 aria-label="Catatan Tambahan"
                 className="min-h-[86px] w-full rounded-lg border border-[#e5e7eb] bg-[#f8fafc] px-4 py-3 text-sm"
+                maxLength={RESERVATION_EXTRA_NOTES_MAX_LENGTH}
                 onChange={(event) => setExtraNotes(event.target.value)}
                 placeholder="Opsional, maksimal 180 karakter"
                 value={extraNotes}
@@ -1093,7 +1156,7 @@ export function StudentReservationDetailPage() {
         </form>
 
         <aside className="flex w-[400px] flex-col gap-6 max-lg:w-full">
-          <ReservationSummary />
+          <ReservationSummary facility={facilitySummaryQuery.data} />
           <PolicyBox />
           <button
             className="flex min-h-[52px] w-full items-center justify-center rounded-lg bg-[#0f9d58] px-6 text-[15px] font-semibold text-white shadow-[0_4px_6px_rgba(15,157,88,0.18)] disabled:cursor-not-allowed disabled:bg-[#d1d5db]"

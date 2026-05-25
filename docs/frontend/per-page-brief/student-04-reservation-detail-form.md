@@ -55,6 +55,7 @@
 - Endpoints consumed: `GET /organization-units`, `POST /facilities/:facilityId/reservations`.
 - Page-needed fields: organization unit `id`, `name`; request fields from `ReservationSubmissionRequest`; response `StudentReservationResponse.id`, `status`, `document`, `payment`, `extra_requirements`.
 - Auth/session assumptions: reservation submission requires student bearer token.
+- Validation notes: backend trims and rejects whitespace-only `activity_title`, `event_description`, and `contact_phone`; backend also enforces `activity_title <= 255`, `contact_phone <= 32`, and `participant_count > 0`.
 - Source files: `backend/app/api/routes/organization_unit_routes.py`, `backend/app/api/routes/reservation_routes.py`, `backend/app/schemas/reservation_schemas.py`.
 
 ### BG-STUDENT-04-01: Reservation Submission Extra Requirements
@@ -63,7 +64,7 @@
 - Domain area: Reservation Workflow
 - Affected UI: detail form, extra requirement checkboxes, confirmation routing.
 - Contract needed: create reservation with structured `extra_requirements` and return saved projection.
-- Evidence: `ReservationSubmissionRequest` includes `extra_requirements`; `POST /facilities/{facility_id}/reservations` exists and returns `StudentReservationResponse`.
+- Evidence: `ReservationSubmissionRequest` includes `extra_requirements` plus trimmed required-text validation and model-aligned title/contact length guards; `POST /facilities/{facility_id}/reservations` exists and returns `StudentReservationResponse`.
 - Source issue/PRD: `docs/issues/ISSUE-0007-reservation-details-submission-and-conflict-protected-hold.md`, `docs/issues/ISSUE-0026-reservation-extra-requirements.md`.
 
 ## Shared Components

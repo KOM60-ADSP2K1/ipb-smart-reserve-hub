@@ -168,7 +168,7 @@ export function mapStudentReservationWorkflow(
       primaryAction: "Lihat Detail",
       primaryHref: route(reservation, "/verification/declined"),
       statusLabel: "Dokumen Ditolak",
-      tone: "pending",
+      tone: "rejected",
     });
   }
 
