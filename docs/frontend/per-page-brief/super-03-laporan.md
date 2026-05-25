@@ -32,7 +32,7 @@
 ## UX Behavior
 
 - Primary actions: moderate review. Export report remains deferred unless a backend export contract is added.
-- Secondary actions: date range, trend granularity (`Mingguan`, `Bulanan`, `Tahunan`), full audit log link when more than 10 logs exist.
+- Secondary actions: date range, trend granularity (`Mingguan`, `Bulanan`, `Tahunan`), and a full audit log page that can progressively load more rows when the list is long.
 - Loading state: KPI/chart/log skeletons.
 - Empty state: no audit rows or no moderation items.
 - Error state: retry panel.
@@ -55,7 +55,7 @@
 - Endpoints consumed: `GET /admin/reports/aggregate`, `GET /admin/audit-logs`, `GET /admin/reviews`, review delete/restore endpoints.
 - Page-needed fields: reservation counts/trends, revenue totals, audit log rows, moderation rows.
 - Trend behavior: backend daily trend points stay daily in `Mingguan`, group by week in `Bulanan`, and group by month in `Tahunan`; the line/area chart uses sparse axis labels plus hover/focus point detail.
-- Audit behavior: `/super-admin/reports` filters audit preview by the selected report date range and renders a maximum of 10 rows. `/super-admin/reports/logs` consumes the same audit endpoint without the report date range to show the complete administrative log list.
+- Audit behavior: `/super-admin/reports` filters audit preview by the selected report date range and renders a maximum of 10 rows. `/super-admin/reports/logs` consumes the same audit endpoint, starting with a bounded batch and loading more rows on demand until the complete administrative log list is visible.
 - Auth/session assumptions: super-admin bearer token.
 - Source files: `backend/app/api/routes/audit_log_routes.py`, `backend/app/api/routes/review_routes.py`.
 
@@ -97,7 +97,7 @@
 ## Acceptance Checks
 
 - Desktop and mobile screenshots match references.
-- Integration checks: moderation actions update row status, audit preview is capped at 10 rows, full audit log route renders the complete list, and trend line points expose dates/counts/revenue through labels and hover/focus text.
+- Integration checks: moderation actions update row status, audit preview is capped at 10 rows, full audit log route can progressively reveal the complete list, and trend line points expose dates/counts/revenue through labels and hover/focus text.
 
 ## Open Questions
 

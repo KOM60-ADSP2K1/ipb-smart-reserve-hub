@@ -125,6 +125,21 @@ describe("StudentFacilityCatalogPage", () => {
     });
   });
 
+  it("normalizes invalid page and minimum capacity query params before calling the backend", async () => {
+    const fetchMock = mockCatalogFetch();
+
+    renderCatalog("/student/facilities?min_capacity=abc&page=-2");
+
+    expect(await screen.findByLabelText("Min. Kapasitas")).toHaveValue(null);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://localhost:8000/facilities?sort=name_asc&page=1&page_size=12",
+        expect.any(Object),
+      );
+    });
+  });
+
   it("renders backend category options and supported sort values", async () => {
     mockCatalogFetch();
 

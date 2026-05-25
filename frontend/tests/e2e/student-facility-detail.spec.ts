@@ -103,6 +103,7 @@ test.describe("student facility detail page", () => {
     const calendarBox = await page.getByRole("heading", { name: "Kalender Publik" }).boundingBox();
     const reviewsBox = await page.getByRole("heading", { name: "Ulasan Peminjam" }).boundingBox();
     expect(calendarBox?.y).toBeLessThan(reviewsBox?.y ?? 0);
+    await page.getByRole("button", { name: "Pilih 19 Mei 2026" }).click();
     await expect(page.getByText("Waktu sudah dipesan").first()).toBeVisible();
     await expect(page.getByText("Detail kegiatan tidak ditampilkan pada kalender publik.").first()).toBeVisible();
     await expect(page.getByText("Simposium Etika AI 2024")).toHaveCount(0);

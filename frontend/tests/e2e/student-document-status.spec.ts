@@ -47,6 +47,40 @@ const baseReservation: Record<string, any> = {
   status: "pending_document_upload",
 };
 
+async function authenticateStudent(page: Page) {
+  await page.route("http://localhost:8000/auth/me", async (route) => {
+    await route.fulfill({
+      json: {
+        email: "student@apps.ipb.ac.id",
+        full_name: "Student Aktif",
+        id: "student-1",
+        is_active: true,
+        role: "student",
+      },
+    });
+  });
+
+  await page.addInitScript(() => {
+    window.sessionStorage.setItem("ipb-srh-token", "e2e-student-token");
+  });
+
+  await page.route("http://localhost:8000/notifications", async (route) => {
+    await route.fulfill({ json: [] });
+  });
+  await page.route("http://localhost:8000/notifications?**", async (route) => {
+    await route.fulfill({ json: [] });
+  });
+  await page.route("http://localhost:8000/notifications/unread-count", async (route) => {
+    await route.fulfill({ json: { unread_count: 0 } });
+  });
+  await page.route("http://localhost:8000/notifications/*/read", async (route) => {
+    await route.fulfill({ json: { id: "notification-1", read_at: "2026-05-26T00:00:00Z" } });
+  });
+  await page.route("http://localhost:8000/notifications/read-all", async (route) => {
+    await route.fulfill({ json: [] });
+  });
+}
+
 async function mockDocumentApi(page: Page, reservation = baseReservation) {
   await page.route("http://localhost:8000/student/reservations/RSV-FIXTURE-001", async (route) => {
     await route.fulfill({ json: reservation });
@@ -70,6 +104,7 @@ test.describe("student document workflow pages", () => {
   test("matches the approval letter upload reference", async ({ page }, testInfo) => {
     const isMobile = testInfo.project.name.includes("mobile");
     await page.setViewportSize(isMobile ? screenshotViewports.mobile : screenshotViewports.desktop);
+    await authenticateStudent(page);
     await mockDocumentApi(page);
     await page.goto("/student/reservations/RSV-FIXTURE-001/letter");
 
@@ -87,10 +122,7 @@ test.describe("student document workflow pages", () => {
     await expect(page.getByLabel("Pilih file surat persetujuan")).toBeVisible();
     await expect(page.getByText("Belum ada file dipilih")).toBeVisible();
     await expect(page.getByRole("button", { name: "Unggah" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Kirim" })).toHaveAttribute(
-      "href",
-      "/student/reservations/RSV-FIXTURE-001/verification/waiting",
-    );
+    await expect(page.getByRole("button", { name: "Kirim" })).toBeVisible();
 
     if (isMobile) {
       await expectNoHorizontalOverflow(page);
@@ -105,6 +137,7 @@ test.describe("student document workflow pages", () => {
   test("matches the document verification waiting reference", async ({ page }, testInfo) => {
     const isMobile = testInfo.project.name.includes("mobile");
     await page.setViewportSize(isMobile ? screenshotViewports.mobile : screenshotViewports.desktop);
+    await authenticateStudent(page);
     await mockDocumentApi(page, {
       ...baseReservation,
       document: {
@@ -145,6 +178,7 @@ test.describe("student document workflow pages", () => {
   test("matches the document verification declined reference", async ({ page }, testInfo) => {
     const isMobile = testInfo.project.name.includes("mobile");
     await page.setViewportSize(isMobile ? screenshotViewports.mobile : screenshotViewports.desktop);
+    await authenticateStudent(page);
     await mockDocumentApi(page, {
       ...baseReservation,
       document: {

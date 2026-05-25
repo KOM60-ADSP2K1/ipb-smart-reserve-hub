@@ -700,7 +700,7 @@ export function StudentApprovalLetterPage() {
             <>
               <button
                 className="flex min-h-[52px] w-full items-center justify-center rounded-lg bg-[#0f9d58] px-5 text-base font-semibold text-white disabled:bg-[#9ca3af]"
-                disabled={submitMutation.isPending}
+                disabled={submitMutation.isPending || uploadMutation.isPending}
                 onClick={handleSubmit}
                 type="button"
               >
@@ -933,7 +933,7 @@ function PaymentUploadPage() {
             <>
               <button
                 className="flex min-h-[52px] w-full items-center justify-center rounded-lg bg-[#0f9d58] px-5 text-base font-semibold text-white disabled:bg-[#9ca3af]"
-                disabled={submitMutation.isPending}
+                disabled={submitMutation.isPending || uploadMutation.isPending}
                 onClick={handleSubmit}
                 type="button"
               >

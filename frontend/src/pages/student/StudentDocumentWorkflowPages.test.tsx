@@ -443,6 +443,60 @@ describe("StudentDocumentWorkflowPages", () => {
     expect(screen.getAllByText("signed-letter.pdf").length).toBeGreaterThanOrEqual(1);
   });
 
+  it("disables document submit while signed letter upload is still pending", async () => {
+    const user = userEvent.setup();
+    let resolveUpload: (response: Response) => void = () => undefined;
+
+    vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+      const url = String(input);
+
+      if (url === "http://localhost:8000/student/reservations/reservation-1") {
+        return jsonResponse(baseReservation);
+      }
+
+      if (url === "http://localhost:8000/student/reservations/reservation-1/approval-letter") {
+        return jsonResponse(approvalLetter);
+      }
+
+      if (url === "http://localhost:8000/student/reservations/reservation-1/signed-approval-letter" && init?.method === "POST") {
+        return new Promise((resolve) => {
+          resolveUpload = resolve;
+        });
+      }
+
+      return jsonResponse({ detail: `Unhandled ${url}` }, 404);
+    });
+
+    renderDocumentRoutes("/student/reservations/reservation-1/letter");
+
+    await user.upload(
+      await screen.findByLabelText("Pilih file surat persetujuan"),
+      new File(["pdf"], "signed-letter.pdf", { type: "application/pdf" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Unggah" }));
+
+    expect(screen.getByRole("button", { name: "Mengunggah..." })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Kirim" })).toBeDisabled();
+    expect(screen.queryByText("Unggah surat bertanda tangan terlebih dahulu.")).not.toBeInTheDocument();
+
+    resolveUpload(
+      new Response(JSON.stringify({
+        content_type: "application/pdf",
+        filename: "signed-letter.pdf",
+        reservation_id: "reservation-1",
+        size_bytes: 1200,
+        uploaded_at: "2026-06-01T04:00:00Z",
+      }), {
+        headers: { "Content-Type": "application/json" },
+        status: 201,
+      }),
+    );
+
+    expect(
+      await screen.findByText("signed-letter.pdf berhasil diunggah. Klik Kirim untuk mengajukan verifikasi."),
+    ).toBeVisible();
+  });
+
   it("renders waiting and declined state from reservation projection", async () => {
     mockDocumentFetch({
       reservationBody: reservation({
@@ -558,6 +612,65 @@ describe("StudentDocumentWorkflowPages", () => {
 
     expect(await screen.findByText("Bukti pembayaran harus berupa JPG, JPEG, atau PNG.")).toBeVisible();
     expect(screen.getAllByText("receipt.jpg").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("disables payment submit while receipt upload is still pending", async () => {
+    const user = userEvent.setup();
+    let resolveUpload: (response: Response) => void = () => undefined;
+
+    vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+      const url = String(input);
+
+      if (url === "http://localhost:8000/student/reservations/reservation-1") {
+        return jsonResponse(paidReservation());
+      }
+
+      if (url === "http://localhost:8000/student/reservations/reservation-1/payment") {
+        return jsonResponse({
+          amount_rupiah: 250000,
+          payment_instructions: "Transfer ke BNI 123456789 a.n. IPB",
+          reservation_code: "RSV-001",
+          reservation_id: "reservation-1",
+        });
+      }
+
+      if (url === "http://localhost:8000/student/reservations/reservation-1/payment-receipt" && init?.method === "POST") {
+        return new Promise((resolve) => {
+          resolveUpload = resolve;
+        });
+      }
+
+      return jsonResponse({ detail: `Unhandled ${url}` }, 404);
+    });
+
+    renderDocumentRoutes("/student/reservations/reservation-1/payment");
+
+    await user.upload(
+      await screen.findByLabelText("Pilih file bukti pembayaran"),
+      new File(["jpg"], "receipt.jpg", { type: "image/jpeg" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Unggah" }));
+
+    expect(screen.getByRole("button", { name: "Mengunggah..." })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Kirim" })).toBeDisabled();
+    expect(screen.queryByText("Unggah bukti pembayaran terlebih dahulu.")).not.toBeInTheDocument();
+
+    resolveUpload(
+      new Response(JSON.stringify({
+        content_type: "image/jpeg",
+        filename: "receipt.jpg",
+        reservation_id: "reservation-1",
+        size_bytes: 1400,
+        uploaded_at: "2026-06-01T04:00:00Z",
+      }), {
+        headers: { "Content-Type": "application/json" },
+        status: 201,
+      }),
+    );
+
+    expect(
+      await screen.findByText("receipt.jpg berhasil diunggah. Klik Kirim untuk melanjutkan verifikasi pembayaran."),
+    ).toBeVisible();
   });
 
   it("renders payment declined reason from the backend projection", async () => {

@@ -154,6 +154,31 @@ function categoryOptions(categories: FacilityCategoryResponse[]) {
   ];
 }
 
+function normalizeMinCapacity(value: string) {
+  if (!value) {
+    return "";
+  }
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) {
+    return "";
+  }
+  if (parsed < 0) {
+    return "0";
+  }
+  return String(parsed);
+}
+
+function normalizePage(value: string | null) {
+  if (!value) {
+    return "1";
+  }
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    return "1";
+  }
+  return String(parsed);
+}
+
 function catalogPath({
   category,
   minCapacity,
@@ -168,12 +193,12 @@ function catalogPath({
   sort: string;
 }) {
   const params = new URLSearchParams();
-  const normalizedMinCapacity = minCapacity && Number(minCapacity) < 0 ? "0" : minCapacity;
+  const normalizedMinCapacity = normalizeMinCapacity(minCapacity);
   if (query) params.set("q", query);
   if (category) params.set("category", category);
   if (normalizedMinCapacity) params.set("min_capacity", normalizedMinCapacity);
   params.set("sort", sort);
-  params.set("page", page);
+  params.set("page", normalizePage(page));
   params.set("page_size", String(pageSize));
   return `/facilities?${params.toString()}`;
 }
@@ -281,10 +306,10 @@ export function StudentFacilityCatalogPage() {
   const query = searchParams.get("q") ?? "";
   const category = searchParams.get("category") ?? "";
   const requestedMinCapacity = searchParams.get("min_capacity") ?? "";
-  const minCapacity = requestedMinCapacity && Number(requestedMinCapacity) < 0 ? "0" : requestedMinCapacity;
+  const minCapacity = normalizeMinCapacity(requestedMinCapacity);
   const requestedSort = searchParams.get("sort") ?? defaultSort;
   const sort = supportedSorts.has(requestedSort) ? requestedSort : defaultSort;
-  const page = searchParams.get("page") ?? "1";
+  const page = normalizePage(searchParams.get("page"));
   const invalidSort = requestedSort !== sort;
   const categoriesQuery = useQuery({
     queryFn: fetchCategories,
