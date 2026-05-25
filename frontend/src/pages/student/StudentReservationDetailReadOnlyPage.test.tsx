@@ -136,7 +136,7 @@ describe("StudentReservationDetailReadOnlyPage", () => {
     sessionStorage.clear();
   });
 
-  it("loads an accepted reservation detail from the backend and exposes only real private files", async () => {
+  it("loads an accepted reservation detail from the backend, hides the template, and highlights the signed letter", async () => {
     const user = userEvent.setup();
     const fetchMock = mockReservationFetch(reservation());
 
@@ -147,15 +147,17 @@ describe("StudentReservationDetailReadOnlyPage", () => {
       "href",
       "/student/reservations/reservation-1/cancellation",
     );
-    expect(screen.getByText("surat-persetujuan.pdf")).toBeVisible();
+    expect(screen.queryByText("surat-persetujuan.pdf")).not.toBeInTheDocument();
     expect(screen.getByText("surat-persetujuan-ditandatangani.pdf")).toBeVisible();
     expect(screen.getByText("bukti-pembayaran.jpg")).toBeVisible();
+    expect(screen.getAllByText("Disetujui")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Lihat Dokumen" })).toBeVisible();
 
-    await user.click(screen.getByRole("button", { name: "Unduh" }));
+    await user.click(screen.getByRole("button", { name: "Lihat Dokumen" }));
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
-        "http://localhost:8000/student/reservations/reservation-1/approval-letter/download",
+        "http://localhost:8000/student/reservations/reservation-1/signed-approval-letter/download",
         expect.any(Object),
       );
     });

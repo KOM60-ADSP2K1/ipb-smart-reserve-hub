@@ -25,7 +25,8 @@ Provide the staff operational shell while preserving Admin visual copy from refe
 
 ## Anatomy
 
-- Fixed header with brand, rounded search, `Beranda`, `Reservasi`, and `Fasilitas` nav, notification, profile.
+- Fixed header with brand, notification, and profile.
+- Left sidebar navigation that expands on hover on desktop, with `Beranda`, `Reservasi`, and `Fasilitas`.
 - Main operational container.
 
 ## Variants
@@ -50,14 +51,14 @@ Provide the staff operational shell while preserving Admin visual copy from refe
 
 ## Design Rules
 
-- Desktop: `72px` fixed shared shell header, dense operational content.
-- Mobile: `64px` header, hidden desktop nav/search, cards instead of horizontal tables.
+- Desktop: `72px` fixed shared shell header, dense operational content, hover-expand sidebar nav.
+- Mobile: `64px` header, hidden desktop nav/search, off-canvas menu drawer, cards instead of horizontal tables.
 - Color: green operational accent.
 - Overflow: mobile tables must convert to cards.
 
 ## Implementation Notes
 
-- Use internal `staff` route/code language while preserving user-facing Admin/staff reference copy. Footer mirrors the shared shell with compact brand/copyright and horizontal links on desktop.
+- Use internal `staff` route/code language while preserving user-facing Admin/staff reference copy. Footer is intentionally omitted in the staff shell to keep the layout focused on operational navigation.
 
 ## Acceptance Checks
 

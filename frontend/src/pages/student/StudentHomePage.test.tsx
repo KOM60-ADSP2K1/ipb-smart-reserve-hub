@@ -1,7 +1,9 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { Route, Routes } from "react-router-dom";
 import { renderWithProviders } from "../../test/render";
+import { StudentFacilityCatalogPage } from "./StudentFacilityCatalogPage";
 import { StudentHomePage } from "./StudentHomePage";
 
 const categoriesResponse = [
@@ -42,6 +44,27 @@ const featuredResponse = {
   total_pages: 1,
 };
 
+const catalogResponse = {
+  items: [
+    {
+      capacity: 1200,
+      category: "Auditorium / Seminar",
+      cover_image_url: null,
+      id: "facility-uuid-1",
+      location: "Kampus Timur",
+      name: "Grand Auditorium",
+      open_hours_summary: "Senin-Jumat 08:00-18:00",
+      price_summary: "Rp100.000 / sesi",
+      rating_average: 4.8,
+      review_count: 128,
+    },
+  ],
+  page: 1,
+  page_size: 12,
+  total_items: 1,
+  total_pages: 1,
+};
+
 function jsonResponse(body: unknown, status = 200) {
   return Promise.resolve(
     new Response(JSON.stringify(body), {
@@ -67,6 +90,10 @@ function mockDiscoveryFetch({
 
     if (url === "http://localhost:8000/facilities?featured=true&limit=8") {
       return jsonResponse(featured);
+    }
+
+    if (url.startsWith("http://localhost:8000/facilities?")) {
+      return jsonResponse(catalogResponse);
     }
 
     return jsonResponse({ detail: `Unhandled ${url}` }, 404);
@@ -129,6 +156,30 @@ describe("StudentHomePage", () => {
 
     await user.type(capacityInput, "-1");
     expect(capacityInput).toHaveValue(0);
+  });
+
+  it("navigates from the header search to the facilities catalog", async () => {
+    const user = userEvent.setup();
+    const fetchMock = mockDiscoveryFetch();
+
+    renderWithProviders(
+      <Routes>
+        <Route element={<StudentHomePage />} path="/student" />
+        <Route element={<StudentFacilityCatalogPage />} path="/student/facilities" />
+      </Routes>,
+      { initialEntries: ["/student"] },
+    );
+
+    const searchInput = screen.getByRole("searchbox", { name: "Cari fasilitas" });
+    await user.type(searchInput, "auditorium{enter}");
+
+    expect(await screen.findByRole("heading", { name: "Katalog Fasilitas" })).toBeVisible();
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://localhost:8000/facilities?q=auditorium&sort=name_asc&page=1&page_size=12",
+        expect.any(Object),
+      );
+    });
   });
 
   it("keeps the category section stable when no categories are returned", async () => {

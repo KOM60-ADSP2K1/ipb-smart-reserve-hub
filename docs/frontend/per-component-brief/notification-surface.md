@@ -17,7 +17,7 @@
 
 ## Purpose
 
-Display recent system/reservation notifications from the header notification action.
+Display recent system/reservation notifications from the header notification action and expose an unread counter without opening the popover.
 
 ## Anatomy
 
@@ -38,7 +38,9 @@ Display recent system/reservation notifications from the header notification act
 ## Behavior
 
 - Opens from the header bell action.
+- Shows an unread badge on the bell trigger before opening the popover.
 - Supports marking notifications read when opened or through an explicit action.
+- Supports marking all unread notifications read from the popover header.
 - Links route to the relevant reservation, facility, or admin surface.
 
 ## Accessibility
@@ -49,7 +51,7 @@ Display recent system/reservation notifications from the header notification act
 
 ## Data Contract
 
-- Props/data fields: id, title, body/message, timestamp/created_at, read/unread/read_at, category, target descriptor, optional badge.
+- Props/data fields: id, title, body/message, timestamp/created_at, read/unread/read_at, category, target descriptor, unread count badge, optional badge.
 - Events: open, mark read, select notification.
 
 ## Backend Gaps
@@ -57,7 +59,7 @@ Display recent system/reservation notifications from the header notification act
 ### BG-SHARED-NOTIFICATIONS-01: Notification Category And Target Contract
 
 - Status: resolved
-- Contract evidence: `GET /notifications` and `POST /notifications/{notification_id}/read` return notification rows with `category`, `target`, `read_at`, and existing message fields.
+- Contract evidence: `GET /notifications`, `GET /notifications/unread-count`, `POST /notifications/{notification_id}/read`, and `POST /notifications/read-all` return or mutate notification state with `category`, `target`, `read_at`, `unread_count`, and existing message fields.
 - Target shape: `target.type`, `target.reservation_id`, and `target.route` provide a stable descriptor for role shell routing without parsing notification title or message text.
 - Ownership behavior: authenticated users only list their own notifications, and marking another user's notification read returns not found.
 

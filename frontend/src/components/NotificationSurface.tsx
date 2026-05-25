@@ -45,8 +45,16 @@ function fetchNotifications() {
   return apiRequest<NotificationItem[]>("/notifications");
 }
 
+function fetchUnreadNotificationCount() {
+  return apiRequest<{ unread_count: number }>("/notifications/unread-count");
+}
+
 function markNotificationRead(notificationId: string) {
   return apiRequest<NotificationItem>(`/notifications/${notificationId}/read`, { method: "POST" });
+}
+
+function markAllNotificationsRead() {
+  return apiRequest<NotificationItem[]>("/notifications/read-all", { method: "POST" });
 }
 
 function fillRouteTemplate(route: string, reservationId: string | null) {
@@ -101,19 +109,31 @@ export function NotificationSurface({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const queryClient = useQueryClient();
+  const unreadCountQuery = useQuery({
+    queryFn: fetchUnreadNotificationCount,
+    queryKey: ["notifications", "unread-count"],
+  });
   const notificationsQuery = useQuery({
-    enabled: isOpen,
     queryFn: fetchNotifications,
     queryKey: ["notifications"],
+    enabled: isOpen,
   });
   const markReadMutation = useMutation({
     mutationFn: markNotificationRead,
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      await queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
+    },
+  });
+  const markAllReadMutation = useMutation({
+    mutationFn: markAllNotificationsRead,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      await queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
     },
   });
   const notifications = notificationsQuery.data ?? [];
-  const unreadCount = notifications.filter((notification) => notification.read_at === null).length;
+  const unreadCount = unreadCountQuery.data?.unread_count ?? 0;
 
   return (
     <div className={cn("relative inline-flex", className)}>
@@ -140,9 +160,22 @@ export function NotificationSurface({
         >
           <div className="flex items-center justify-between border-b border-[#e5e7eb] px-4 py-3">
             <p className="m-0 text-sm font-bold text-[#111827]">Notifikasi</p>
-            <span className="rounded-full bg-[#f3f4f6] px-2.5 py-1 text-[11px] font-bold text-[#4b5563]">
-              {unreadCount} belum dibaca
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-[#f3f4f6] px-2.5 py-1 text-[11px] font-bold text-[#4b5563]">
+                {unreadCount} belum dibaca
+              </span>
+              {unreadCount > 0 ? (
+                <button
+                  className="inline-flex h-8 items-center gap-1 rounded-full border border-[#dbe2ea] bg-white px-2.5 text-[11px] font-bold text-[#111827] transition-colors hover:bg-[#f8fafc] disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={markAllReadMutation.isPending}
+                  type="button"
+                  onClick={() => markAllReadMutation.mutate()}
+                >
+                  <CheckCircle2 aria-hidden="true" size={13} />
+                  <span>Tandai semua</span>
+                </button>
+              ) : null}
+            </div>
           </div>
 
           <div className="max-h-[420px] overflow-y-auto">
@@ -184,11 +217,27 @@ export function NotificationSurface({
                             {notification.message}
                           </p>
                         </div>
-                        {isUnread ? (
-                          <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-[#dc2626]" aria-hidden="true" />
-                        ) : (
-                          <CheckCircle2 aria-hidden="true" className="mt-0.5 shrink-0 text-[#0f9d58]" size={16} />
-                        )}
+                        <div className="flex shrink-0 items-start gap-1.5 pt-0.5">
+                          {isUnread ? (
+                            <span
+                              aria-hidden="true"
+                              className="mt-1 h-2.5 w-2.5 rounded-full bg-[#dc2626]"
+                            />
+                          ) : (
+                            <CheckCircle2 aria-hidden="true" className="mt-0.5 text-[#0f9d58]" size={16} />
+                          )}
+                          {isUnread ? (
+                            <button
+                              aria-label={`Tandai dibaca ${notification.title}`}
+                              className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-[#dbe2ea] bg-white text-[#0f9d58] transition-colors hover:bg-[#ecfdf5] disabled:cursor-not-allowed disabled:opacity-60"
+                              disabled={markReadMutation.isPending}
+                              type="button"
+                              onClick={() => markReadMutation.mutate(notification.id)}
+                            >
+                              <CheckCircle2 aria-hidden="true" size={14} />
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold text-[#6b7280]">
                         <span className="rounded-full bg-[#f3f4f6] px-2 py-1">{categoryLabel(notification.category)}</span>
@@ -202,16 +251,6 @@ export function NotificationSurface({
                         >
                           Buka {notification.title}
                         </a>
-                        {isUnread ? (
-                          <button
-                            className="rounded-lg bg-[#111827] px-3 py-2 text-xs font-bold text-white disabled:opacity-60"
-                            disabled={markReadMutation.isPending}
-                            type="button"
-                            onClick={() => markReadMutation.mutate(notification.id)}
-                          >
-                            Tandai dibaca {notification.title}
-                          </button>
-                        ) : null}
                       </div>
                     </article>
                   );

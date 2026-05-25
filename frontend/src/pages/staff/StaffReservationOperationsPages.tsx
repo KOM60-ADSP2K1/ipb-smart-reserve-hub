@@ -1,10 +1,12 @@
 import {
   Check,
+  Building2,
+  ChevronRight,
   Clock,
   FileText,
   Filter,
+  Home,
   Menu,
-  Search,
   Upload,
   X,
 } from "lucide-react";
@@ -26,9 +28,9 @@ import {
 import { cn } from "../../utils/cn";
 
 const navItems = [
-  { href: "/staff", key: "home", label: "Beranda" },
-  { href: "/staff/reservations", key: "reservations", label: "Reservasi" },
-  { href: "/staff/facilities", key: "facilities", label: "Fasilitas" },
+  { href: "/staff", icon: Home, key: "home", label: "Beranda" },
+  { href: "/staff/reservations", icon: FileText, key: "reservations", label: "Reservasi" },
+  { href: "/staff/facilities", icon: Building2, key: "facilities", label: "Fasilitas" },
 ] as const;
 
 const badgeClasses: Record<StaffBadgeTone, string> = {
@@ -90,6 +92,8 @@ export function StaffShell({
   active: "facilities" | "home" | "reservations";
   children: ReactNode;
 }) {
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#f8fafc] text-[#111827]">
       <header className="fixed inset-x-0 top-0 z-50 flex h-[72px] justify-center border-b border-[#e5e7eb] bg-white max-md:h-16">
@@ -99,6 +103,7 @@ export function StaffShell({
               aria-label="Buka navigasi staff"
               className="hidden text-[#6b7280] max-md:inline-flex"
               type="button"
+              onClick={() => setIsMobileNavOpen(true)}
             >
               <Menu aria-hidden="true" size={24} />
             </button>
@@ -114,32 +119,7 @@ export function StaffShell({
               </span>
               <span className="md:hidden">IPB SRH</span>
             </a>
-            <label className="relative flex h-10 min-w-[232px] items-center text-[#6b7280] max-md:hidden">
-              <span className="sr-only">Cari reservasi</span>
-              <Search aria-hidden="true" className="absolute left-4 text-slate-400" size={18} />
-              <input
-                className="h-10 w-[250px] rounded-full border border-[#dbe2ea] bg-gradient-to-b from-white to-slate-50 py-2.5 pl-[42px] pr-4 text-[13px] font-medium leading-5 outline-none focus:border-[#0f9d58] focus:bg-white"
-                placeholder="Cari reservasi..."
-                type="search"
-              />
-            </label>
           </div>
-
-          <nav aria-label="Navigasi staff" className="flex items-center gap-10 max-md:hidden">
-            {navItems.map((item) => (
-              <a
-                aria-current={active === item.key ? "page" : undefined}
-                className={cn(
-                  "border-b-2 border-transparent pb-1 text-sm font-bold text-[#6b7280] no-underline",
-                  active === item.key && "border-[#0f9d58] text-[#0f9d58]",
-                )}
-                href={item.href}
-                key={item.key}
-              >
-                {item.label}
-              </a>
-            ))}
-          </nav>
 
           <div className="flex items-center gap-[22px] max-md:gap-3.5">
             <NotificationSurface className="text-[#6b7280]" label="Notifikasi staff" role="staff" />
@@ -154,30 +134,110 @@ export function StaffShell({
         </div>
       </header>
 
-      {children}
-
-      <footer className="mt-20 flex justify-center border-t border-[#e5e7eb] bg-white py-[22px] max-md:mt-16">
-        <div className="flex w-[1200px] max-w-[95%] items-center justify-between gap-6 max-md:flex-col max-md:gap-3.5 max-md:text-center">
-          <div className="flex min-w-0 items-center gap-4 max-md:flex-col max-md:gap-2">
-            <p className="m-0 whitespace-nowrap font-serif text-[30px] font-bold leading-none text-[#4da38b]">
-              IPB SRH
-            </p>
-            <p className="m-0 text-[13px] leading-5 text-[#6b7280]">
-              © 2026 IPB Smart Reserve Hub. Hak cipta dilindungi.
-            </p>
+      <aside
+        aria-label="Navigasi staff utama"
+        className="group fixed left-0 top-[72px] z-40 hidden h-[calc(100vh-72px)] w-[78px] overflow-hidden border-r border-[#e5e7eb] bg-white/95 shadow-none backdrop-blur transition-[width,box-shadow] duration-200 hover:w-[244px] hover:shadow-[8px_0_28px_rgba(15,23,42,0.08)] max-md:hidden md:flex"
+      >
+        <div className="flex w-full flex-col px-3 py-4">
+          <div className="mb-4 flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-[0.08em] text-[#9ca3af]">
+            <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+              Menu staff
+            </span>
+            <ChevronRight
+              aria-hidden="true"
+              className="shrink-0 text-[#9ca3af] transition-transform duration-200 group-hover:rotate-180"
+              size={16}
+            />
           </div>
-          <nav
-            aria-label="Navigasi footer staff"
-            className="flex flex-wrap justify-end gap-x-[18px] gap-y-2.5 text-sm font-semibold text-[#6b7280] max-md:justify-center"
-          >
-            {navItems.map((item) => (
-              <a className="whitespace-nowrap no-underline" href={item.href} key={item.key}>
-                {item.label}
-              </a>
-            ))}
+
+          <nav aria-label="Menu utama staff" className="flex flex-1 flex-col gap-1.5">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = active === item.key;
+
+              return (
+                <a
+                  aria-current={isActive ? "page" : undefined}
+                  className={cn(
+                    "flex items-center gap-3 rounded-[12px] px-3 py-3 text-sm font-bold text-[#6b7280] no-underline transition-colors hover:bg-[#f8fafc] hover:text-[#111827]",
+                    isActive && "bg-[#e8f5e9] text-[#0f9d58]",
+                  )}
+                  href={item.href}
+                  key={item.key}
+                >
+                  <span
+                    className={cn(
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#f8fafc] transition-colors group-hover:bg-[#eef7f1]",
+                      isActive && "bg-white",
+                    )}
+                  >
+                    <Icon aria-hidden="true" size={18} />
+                  </span>
+                  <span className="whitespace-nowrap opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100">
+                    {item.label}
+                  </span>
+                </a>
+              );
+            })}
           </nav>
         </div>
-      </footer>
+      </aside>
+
+      {isMobileNavOpen ? (
+        <div className="fixed inset-0 z-[60] bg-slate-950/35 md:hidden" onClick={() => setIsMobileNavOpen(false)}>
+          <aside
+            aria-label="Navigasi staff mobile"
+            className="flex h-full w-[304px] max-w-[84%] flex-col bg-white px-[18px] py-4 shadow-[0_10px_30px_rgba(15,23,42,0.16)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-[18px] flex items-center justify-between">
+              <div className="flex items-center gap-3 rounded-xl border border-[#e5e7eb] p-3.5">
+                <div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-[#0f9d58] text-[13px] font-bold text-white">
+                  BS
+                </div>
+                <div className="min-w-0">
+                  <div className="text-sm font-bold text-[#111827]">Bagus Saputra</div>
+                  <div className="truncate text-xs text-[#6b7280]">staff@ipb.ac.id</div>
+                </div>
+              </div>
+              <button
+                aria-label="Tutup navigasi staff"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-[#e5e7eb] text-[#6b7280]"
+                type="button"
+                onClick={() => setIsMobileNavOpen(false)}
+              >
+                <X aria-hidden="true" size={18} />
+              </button>
+            </div>
+
+            <nav className="flex flex-col gap-1.5" aria-label="Navigasi staff utama">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = active === item.key;
+
+                return (
+                  <a
+                    aria-current={isActive ? "page" : undefined}
+                    className={cn(
+                      "flex items-center gap-3 rounded-[10px] px-2.5 py-3 text-sm font-bold text-[#6b7280] no-underline",
+                      isActive && "bg-[#e8f5e9] text-[#0f9d58]",
+                    )}
+                    href={item.href}
+                    key={item.key}
+                  >
+                    <span className="flex w-6 justify-center">
+                      <Icon aria-hidden="true" size={18} />
+                    </span>
+                    {item.label}
+                  </a>
+                );
+              })}
+            </nav>
+          </aside>
+        </div>
+      ) : null}
+
+      <div className="md:pl-[78px]">{children}</div>
     </div>
   );
 }

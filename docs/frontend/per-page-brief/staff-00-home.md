@@ -22,7 +22,7 @@
 
 ## Design Contract
 
-- Layout: staff/admin shell with fixed header, queue-focused content, verification actions.
+- Layout: staff/admin shell with fixed header, hover-expand sidebar navigation, queue-focused content, and verification actions.
 - Desktop behavior: dense operational list/table/card layout.
 - Mobile behavior: table-like data converts to readable cards.
 - Required copy/status labels: preserve reference use of `Reservasi`, `Fasilitas`, `Verifikasi`.

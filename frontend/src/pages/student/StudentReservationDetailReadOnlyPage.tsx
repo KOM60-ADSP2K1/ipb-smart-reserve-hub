@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Building2, CalendarDays, FileText, Info, MapPin, Menu, Search, Star } from "lucide-react";
+import { Building2, CalendarDays, FileText, Info, MapPin, Menu, Star } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
 import { ApiError, apiDownload, apiRequest } from "../../api/http";
 import { NotificationSurface } from "../../components/NotificationSurface";
+import { StudentHeaderSearch } from "../../components/layout/StudentHeaderSearch";
 import { studentHomeSession } from "../../fixtures/studentHome";
 import {
   mapStudentReservationWorkflow,
@@ -16,6 +17,7 @@ type ReservationDocument = {
   downloadPath: string;
   fileName: string;
   metadata: string;
+  stampLabel?: string;
   statusLabel: string;
 };
 
@@ -64,12 +66,13 @@ function metadataLabel(
 function buildDocuments(reservation: StudentReservationWorkflowProjection): ReservationDocument[] {
   const documents: ReservationDocument[] = [];
 
-  if (reservation.document.approval_letter) {
+  if (reservation.document.approval_letter && reservation.status !== "approved") {
     documents.push({
       actionLabel: "Unduh",
       downloadPath: `/student/reservations/${reservation.id}/approval-letter/download`,
       fileName: reservation.document.approval_letter.filename,
       metadata: metadataLabel(reservation.document.approval_letter),
+      stampLabel: "Template",
       statusLabel: "Terverifikasi",
     });
   }
@@ -80,6 +83,7 @@ function buildDocuments(reservation: StudentReservationWorkflowProjection): Rese
       downloadPath: `/student/reservations/${reservation.id}/signed-approval-letter/download`,
       fileName: reservation.document.signed_approval_letter.filename,
       metadata: metadataLabel(reservation.document.signed_approval_letter),
+      stampLabel: reservation.status === "approved" ? "Disetujui" : "Terkirim",
       statusLabel: "Terverifikasi",
     });
   }
@@ -190,15 +194,7 @@ function StudentHeader() {
             </span>
             <span className="md:hidden">IPB SRH</span>
           </a>
-          <label className="relative flex h-10 min-w-[232px] items-center text-slate-500 max-md:hidden">
-            <span className="sr-only">Cari fasilitas</span>
-            <Search aria-hidden="true" className="absolute left-4 text-slate-400" size={18} />
-            <input
-              className="h-10 w-[250px] rounded-full border border-[#dbe2ea] bg-gradient-to-b from-white to-slate-50 py-2.5 pl-[42px] pr-4 text-[13px] font-medium leading-5 outline-none focus:border-[#0f9d58] focus:bg-white"
-              placeholder="Cari fasilitas..."
-              type="search"
-            />
-          </label>
+          <StudentHeaderSearch />
         </div>
 
         <nav
@@ -329,7 +325,12 @@ function DocumentRow({ document }: { document: ReservationDocument }) {
   });
 
   return (
-    <div className="grid grid-cols-[48px_1fr_auto] items-center gap-4 rounded-xl border border-[#e5e7eb] bg-[#f8fafc] p-4 max-md:grid-cols-[48px_1fr]">
+    <div className="relative grid grid-cols-[48px_1fr_auto] items-center gap-4 rounded-xl border border-[#e5e7eb] bg-[#f8fafc] p-4 max-md:grid-cols-[48px_1fr]">
+      {document.stampLabel ? (
+        <span className="absolute -right-1 -top-3 rotate-12 rounded-full border-2 border-[#0f9d58] bg-[#ecfdf5] px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#047857] shadow-[0_2px_4px_rgba(0,0,0,0.08)] max-md:right-3 max-md:top-3 max-md:rotate-0">
+          {document.stampLabel}
+        </span>
+      ) : null}
       <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#ecfdf5] text-xs font-bold text-[#0f9d58]">
         {fileBadge}
       </span>

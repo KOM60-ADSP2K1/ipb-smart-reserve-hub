@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Route, Routes } from "react-router-dom";
@@ -170,6 +170,16 @@ describe("StaffReservationOperationsPages", () => {
     mockStaffFetch();
 
     renderStaffHome();
+
+    const staffNav = screen.getByRole("complementary", { name: "Navigasi staff utama" });
+    expect(within(staffNav).getByRole("link", { name: "Beranda" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(within(staffNav).getByRole("link", { name: "Reservasi" })).toBeVisible();
+    expect(within(staffNav).getByRole("link", { name: "Fasilitas" })).toBeVisible();
+    expect(screen.queryByRole("searchbox", { name: "Cari reservasi" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Navigasi footer staff")).not.toBeInTheDocument();
 
     expect(await screen.findByRole("columnheader", { name: "Pemohon" })).toBeVisible();
     expect(screen.getByRole("columnheader", { name: "Fasilitas" })).toBeVisible();

@@ -4,7 +4,6 @@ import {
   Clock,
   Info,
   Menu,
-  Search,
   Users,
 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -13,6 +12,7 @@ import { useMemo, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ApiError, apiRequest } from "../../api/http";
 import { NotificationSurface } from "../../components/NotificationSurface";
+import { StudentHeaderSearch } from "../../components/layout/StudentHeaderSearch";
 import { reservationCreateFixture } from "../../fixtures/studentReservationCreate";
 import { studentHomeSession } from "../../fixtures/studentHome";
 
@@ -306,15 +306,7 @@ function StudentHeader() {
             </span>
             <span className="md:hidden">IPB SRH</span>
           </a>
-          <label className="relative flex h-10 min-w-[232px] items-center text-slate-500 max-md:hidden">
-            <span className="sr-only">Cari fasilitas</span>
-            <Search aria-hidden="true" className="absolute left-4 text-slate-400" size={18} />
-            <input
-              className="h-10 w-[250px] rounded-full border border-[#dbe2ea] bg-gradient-to-b from-white to-slate-50 py-2.5 pl-[42px] pr-4 text-[13px] font-medium leading-5 outline-none focus:border-[#0f9d58] focus:bg-white"
-              placeholder="Cari fasilitas..."
-              type="search"
-            />
-          </label>
+          <StudentHeaderSearch />
         </div>
 
         <nav

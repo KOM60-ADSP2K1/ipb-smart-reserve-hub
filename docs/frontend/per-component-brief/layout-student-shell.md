@@ -21,7 +21,7 @@ Provide consistent student header, navigation, content container, and footer.
 
 - Fixed header.
 - Brand `IPB SRH`.
-- Desktop search/nav/profile/notification.
+- Desktop search that routes to the facilities catalog, nav/profile/notification.
 - Mobile hamburger, inline brand, notification, profile.
 - Main content container.
 - Footer.
@@ -34,6 +34,7 @@ Provide consistent student header, navigation, content container, and footer.
 ## Behavior
 
 - Header links route internally.
+- Header search submits to the facilities catalog and carries `q` to the catalog route.
 - Mobile menu follows `Shared - 04 - Mobile Navigation Drawer.html`; page shells follow `Shared - 05 - Layout Shells.html`.
 
 ## Accessibility
@@ -45,7 +46,7 @@ Provide consistent student header, navigation, content container, and footer.
 ## Data Contract
 
 - Props/data fields: current user initials, active nav key, notification state, children.
-- Events: nav, notification, profile, mobile menu.
+- Events: nav, search, notification, profile, mobile menu.
 
 ## Design Rules
 

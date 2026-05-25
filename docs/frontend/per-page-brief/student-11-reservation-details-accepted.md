@@ -26,6 +26,7 @@
 - Desktop behavior: asymmetric gallery and information cards.
 - Mobile behavior: stacked gallery, wrapped document rows, full-width actions.
 - Required copy/status labels: preserve `Ajukan Pembatalan`, `Dokumen Reservasi`, `Terverifikasi`.
+- When the reservation is approved, hide the generated template approval letter row from the document list and emphasize the signed approval letter as the visible proof document with a clear stamped/verified treatment.
 - Source-of-truth notes: document rows use shared `doc-row` anatomy and must not overflow on mobile.
 
 ## UX Behavior

@@ -32,11 +32,19 @@ afterEach(() => {
 
 describe("NotificationSurface", () => {
   it("loads notifications from the backend when the shell action opens", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse([unreadNotification]));
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(jsonResponse({ unread_count: 1 }))
+      .mockResolvedValueOnce(jsonResponse([unreadNotification]));
 
     renderWithProviders(<NotificationSurface role="student" />);
+    expect(await screen.findByText("1", { selector: "span" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Notifikasi" }));
 
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/notifications/unread-count",
+      expect.any(Object),
+    );
     expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/notifications", expect.any(Object));
     expect(await screen.findByText("Reservasi diterima")).toBeInTheDocument();
     expect(screen.getByText("Belum dibaca")).toBeInTheDocument();
@@ -53,11 +61,14 @@ describe("NotificationSurface", () => {
     };
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(jsonResponse({ unread_count: 1 }))
       .mockResolvedValueOnce(jsonResponse([unreadNotification]))
       .mockResolvedValueOnce(jsonResponse(readNotification))
+      .mockResolvedValueOnce(jsonResponse({ unread_count: 0 }))
       .mockResolvedValueOnce(jsonResponse([readNotification]));
 
     renderWithProviders(<NotificationSurface role="student" />);
+    expect(await screen.findByText("1", { selector: "span" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Notifikasi" }));
     await userEvent.click(await screen.findByRole("button", { name: "Tandai dibaca Reservasi diterima" }));
 
@@ -68,36 +79,71 @@ describe("NotificationSurface", () => {
     expect(await screen.findByText("Sudah dibaca")).toBeInTheDocument();
   });
 
-  it("resolves role-safe target routes and falls back from unsupported routes", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      jsonResponse([
-        {
-          ...unreadNotification,
-          id: "notification-2",
-          target: {
-            reservation_id: "reservation-2",
-            route: "/staff/reservations/{reservation_id}",
-            type: "staff_reservation",
-          },
-          title: "Review reservasi",
-        },
-        {
-          ...unreadNotification,
-          id: "notification-3",
-          target: {
-            reservation_id: "reservation-3",
-            route: "/student/legacy/{reservation_id}",
-            type: "legacy_route",
-          },
-          title: "Target lama",
-        },
-      ]),
+  it("marks all unread notifications read from the header action", async () => {
+    const unreadNotificationTwo = {
+      ...unreadNotification,
+      id: "notification-2",
+      title: "Pembayaran disetujui",
+      message: "Pembayaran Penutupan ISAC disetujui dan reservasi aktif.",
+    };
+    const readNotifications = [
+      { ...unreadNotification, read_at: "2026-05-01T00:00:00Z" },
+      { ...unreadNotificationTwo, read_at: "2026-05-01T00:00:00Z" },
+    ];
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(jsonResponse({ unread_count: 2 }))
+      .mockResolvedValueOnce(jsonResponse([unreadNotification, unreadNotificationTwo]))
+      .mockResolvedValueOnce(jsonResponse(readNotifications))
+      .mockResolvedValueOnce(jsonResponse({ unread_count: 0 }))
+      .mockResolvedValueOnce(jsonResponse(readNotifications));
+
+    renderWithProviders(<NotificationSurface role="student" />);
+    expect(await screen.findByText("2", { selector: "span" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Notifikasi" }));
+    await userEvent.click(screen.getByRole("button", { name: "Tandai semua" }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/notifications/read-all",
+      expect.objectContaining({ method: "POST" }),
     );
+    expect(await screen.findByText("0 belum dibaca")).toBeInTheDocument();
+  });
+
+  it("resolves role-safe target routes and falls back from unsupported routes", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(jsonResponse({ unread_count: 0 }))
+      .mockResolvedValueOnce(
+        jsonResponse([
+          {
+            ...unreadNotification,
+            id: "notification-2",
+            target: {
+              reservation_id: "reservation-2",
+              route: "/staff/reservations/{reservation_id}",
+              type: "staff_reservation",
+            },
+            title: "Review reservasi",
+          },
+          {
+            ...unreadNotification,
+            id: "notification-3",
+            target: {
+              reservation_id: "reservation-3",
+              route: "/student/legacy/{reservation_id}",
+              type: "legacy_route",
+            },
+            title: "Target lama",
+          },
+        ]),
+      );
 
     renderWithProviders(<NotificationSurface role="staff" />);
     await userEvent.click(screen.getByRole("button", { name: "Notifikasi" }));
 
-    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(await screen.findByRole("link", { name: "Buka Review reservasi" })).toHaveAttribute(
       "href",
       "/staff/reservations/reservation-2",
@@ -108,6 +154,7 @@ describe("NotificationSurface", () => {
   it("shows empty, error, and retry states", async () => {
     const fetchMock = vi
       .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(jsonResponse({ unread_count: 0 }))
       .mockRejectedValueOnce(new Error("Network error"))
       .mockResolvedValueOnce(jsonResponse([]));
 
@@ -116,7 +163,7 @@ describe("NotificationSurface", () => {
 
     expect(await screen.findByText("Notifikasi belum bisa dimuat.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Muat ulang notifikasi" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3));
     expect(await screen.findByText("Belum ada notifikasi.")).toBeInTheDocument();
   });
 });
