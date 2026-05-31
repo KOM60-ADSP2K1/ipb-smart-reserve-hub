@@ -1,0 +1,82 @@
+# Student 07 Payment
+
+## Reference
+
+- HTML: `docs/frontend/html-reference/Student - 07 - Payment.html`
+- Desktop screenshot: `docs/frontend/screenshots/student-07-payment-desktop.png`
+- Mobile screenshot: `docs/frontend/screenshots/student-07-payment-mobile.png`
+- Reference label: `Student - 07 - Payment`
+
+## Route Contract
+
+- Proposed route: `/student/reservations/:reservationId/payment`
+- Auth/role: `student`
+- Unauthorized behavior: redirect to login.
+- Redirect behavior: after receipt upload, stay on the payment page and show the stored receipt; after `Kirim`, route to payment waiting page.
+
+## Purpose
+
+- User job: view payment instructions and upload payment receipt.
+- Entry points: approved document on paid reservation, reservation list/detail.
+- Exit points: payment waiting page, reservation detail.
+
+## Design Contract
+
+- Layout: reservation workflow stepper with payment instructions, upload card, and reservation summary.
+- Desktop behavior: two-column workflow rhythm.
+- Mobile behavior: stack instructions, upload, summary; full-width submit action.
+- Required copy/status labels: preserve `Menunggu Pembayaran`; use `Pilih File`, upload button `Unggah`, submit/continue action `Kirim`, and Indonesian selected-file/empty-file text for receipt upload.
+- Source-of-truth notes: upload uses shared `upload`/`button-row`; transfer destination/instructions appear before amount/summary context and selected receipt rows should not show redundant `valid` badges.
+
+## UX Behavior
+
+- Primary actions: upload receipt, then submit/continue to waiting review with `Kirim`.
+- Secondary actions: view reservation detail/back.
+- Loading state: upload pending keeps file visible.
+- Empty state: not applicable for paid pending-payment route.
+- Error state: file validation and upload failures.
+- Disabled state: upload disabled while uploading; submit shows an error until an uploaded receipt exists.
+
+## Accessibility
+
+- Payment instructions should be real text.
+- File input has visible label and error association.
+- Payment receipt validation copy accepts only JPG, JPEG, or PNG images; PDF remains valid for approval letters but not payment receipts.
+- Amount text must not rely on color or icon.
+
+## Data And Fixture Contract
+
+- Deterministic fixture requirements: paid reservation, payment instructions, receipt image file states.
+- Real entities: Student payment response and reservation payment projection.
+- Fixture media: none.
+
+## Backend Integration And Gaps
+
+- Endpoints consumed: `GET /student/reservations/:reservationId/payment`, `POST /student/reservations/:reservationId/payment-receipt`, `POST /student/reservations/:reservationId/payment-receipt/submit`, `GET /student/reservations/:reservationId`.
+- Page-needed fields: `amount_rupiah`, `payment_instructions`, `payment.required`, `payment.review_status`, `payment.receipt`; receipt upload accepts JPG/JPEG/PNG images only.
+- Auth/session assumptions: student-owned reservation only.
+- Source files: `backend/app/api/routes/payment_routes.py`, `backend/app/schemas/reservation_schemas.py`.
+
+### BG-STUDENT-07-01: Payment Instructions And Receipt Upload
+
+- Status: `resolved`
+- Domain area: Payment
+- Affected UI: payment instruction card and receipt upload panel.
+- Contract needed: retrieve payment instructions, upload receipt metadata without entering review, and explicitly submit the uploaded receipt for payment verification.
+- Evidence: payment instruction, receipt upload, and receipt submit routes exist in `backend/app/api/routes/payment_routes.py`; payment schemas exist in `backend/app/schemas/reservation_schemas.py`.
+- Source issue/PRD: `docs/issues/ISSUE-0010-paid-facility-receipt-upload-and-payment-review.md`.
+
+## Shared Components
+
+- `docs/frontend/per-component-brief/reservation-stepper.md`
+- `docs/frontend/per-component-brief/payment-upload-panel.md`
+- `docs/frontend/per-component-brief/reservation-summary-card.md`
+
+## Acceptance Checks
+
+- Desktop and mobile screenshots match references.
+- Integration checks: successful upload stays on the payment page and shows the stored receipt; `Kirim` submits for verification and routes to waiting state.
+
+## Open Questions
+
+- Upload progress visual state is referenced in `docs/frontend/html-reference/Shared - 03 - Upload And Calendar States.html`.

@@ -1,0 +1,27 @@
+.venv/
+.env
+.env.*
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.db
+*.sqlite
+*.sqlite3
+.pytest_cache/
+.DS_Store
+
+# Runtime uploads and private/generated files
+private-storage/
+
+# Local logs and coverage reports
+*.log
+.coverage
+htmlcov/
+coverage/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
+frontend/coverage/

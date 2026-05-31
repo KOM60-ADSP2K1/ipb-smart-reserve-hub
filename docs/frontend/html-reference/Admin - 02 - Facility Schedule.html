@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jadwal Fasilitas Admin - IPB Smart Reserve Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        /* Global Variables & Reset */
+        :root {
+            --bg-main: #f8fafc;
+            --bg-surface: #ffffff;
+            --primary-text: #111827;
+            --secondary-text: #6b7280;
+            --brand-green: #0f9d58;
+            --brand-green-light: #e8f5e9;
+            --border-color: #e5e7eb;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            
+            /* Badge Colors */
+            --badge-yellow-bg: #fef3c7;
+            --badge-yellow-text: #92400e;
+            --badge-green-bg: #d1fae5;
+            --badge-green-text: #065f46;
+            --badge-red-bg: #fee2e2;
+            --badge-red-text: #991b1b;
+            --badge-gray-bg: #f3f4f6;
+            --badge-gray-text: #4b5563;
+
+            --sans-serif: 'Inter', system-ui, sans-serif;
+            --navbar-height: 80px;
+        }
+
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; font-family: var(--sans-serif); background-color: var(--bg-main); color: var(--primary-text); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+        a { text-decoration: none; color: inherit; }
+
+        /* Navbar */
+        .navbar { position: fixed; top: 0; width: 100%; height: var(--navbar-height); background-color: var(--bg-surface); border-bottom: 1px solid var(--border-color); display: flex; justify-content: center; z-index: 1000; transition: all 0.3s ease; }
+        .navbar-content { width: 1200px; max-width: 95%; display: flex; justify-content: space-between; align-items: center; height: 100%; }
+        .nav-left, .nav-right { display: flex; align-items: center; gap: 24px; }
+        
+        .mobile-menu-btn { display: none; padding: 0; border: 0; background: transparent; font-size: 24px; color: var(--secondary-text); cursor: pointer; }
+        .logo-nav { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: #1d7667; line-height: 1.1; display: block; }
+        .logo-nav-mobile-text { display: inline; }
+        
+        .nav-search { position: relative; }
+        .nav-search input { padding: 10px 16px 10px 40px; border: 1px solid var(--border-color); border-radius: 20px; font-size: 14px; width: 250px; background-color: #f1f5f9; outline: none; transition: border-color 0.2s; }
+        .nav-search input:focus { border-color: var(--brand-green); background-color: #ffffff; }
+        .nav-search .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--secondary-text); }
+        
+        .nav-center { display: flex; gap: 40px; }
+        .nav-link { font-size: 15px; font-weight: 600; color: var(--secondary-text); transition: color 0.2s; }
+        .nav-link:hover { color: var(--primary-text); }
+        .nav-link.active { color: var(--brand-green); border-bottom: 2px solid var(--brand-green); padding-bottom: 4px; }
+        
+        .nav-notifications { font-size: 20px; color: var(--secondary-text); cursor: pointer; transition: color 0.2s; }
+        .nav-notifications:hover { color: var(--primary-text); }
+        
+        .profile-pic { width: 36px; height: 36px; border-radius: 50%; background-color: #ddd; overflow: hidden; border: 2px solid var(--brand-green); cursor: pointer; }
+        .profile-pic img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Main Container */
+        .page-container { width: 1200px; max-width: 95%; margin: calc(var(--navbar-height) + 40px) auto 80px; }
+
+        .back-link { display: inline-flex; align-items: center; gap: 8px; color: var(--brand-green); font-size: 14px; font-weight: 600; margin-bottom: 24px; }
+
+        /* Header */
+        .page-header { margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .header-text h1 { font-size: 32px; font-weight: 700; color: var(--primary-text); margin: 0 0 12px; }
+        .header-text p { font-size: 14px; color: var(--secondary-text); margin: 0; max-width: 600px; line-height: 1.6; }
+        
+        .header-actions { display: flex; gap: 16px; align-items: center; }
+        .date-picker { padding: 10px 16px; border: 1px solid var(--border-color); border-radius: 8px; font-family: var(--sans-serif); font-size: 14px; color: var(--primary-text); background-color: var(--bg-surface); outline: none; }
+        .btn-today { background-color: var(--bg-surface); color: var(--primary-text); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background-color 0.2s; }
+        .btn-today:hover { background-color: #f9fafb; }
+
+        /* Calendar UI */
+        .calendar-container { background-color: var(--bg-surface); border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--card-shadow); padding: 24px; margin-bottom: 32px; }
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; gap: 16px; }
+        .calendar-kicker { margin: 0 0 6px; font-size: 12px; font-weight: 700; color: var(--secondary-text); text-transform: uppercase; letter-spacing: 0.5px; }
+        .calendar-title { font-size: 20px; font-weight: 700; color: var(--primary-text); margin: 0; }
+        .calendar-nav { display: flex; gap: 8px; }
+        .calendar-nav button { background: #ffffff; border: 1px solid var(--border-color); border-radius: 8px; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--secondary-text); font-weight: 700; }
+        .calendar-nav button:hover { background-color: #f9fafb; color: var(--primary-text); }
+
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 8px; }
+        .day-head { font-size: 11px; font-weight: 700; color: var(--secondary-text); text-transform: uppercase; text-align: center; padding: 0 0 8px; }
+        .month-day { min-height: 60px; border: 1px solid var(--border-color); border-radius: 10px; padding: 9px; display: flex; flex-direction: column; justify-content: space-between; cursor: pointer; transition: border-color 0.2s, background-color 0.2s; background-color: var(--bg-surface); font-size: 14px; font-weight: 700; color: var(--primary-text); }
+        .month-day:hover { border-color: var(--brand-green); }
+        .month-day.selected { border-color: var(--brand-green); background-color: var(--brand-green-light); color: #064e3b; }
+        .month-day.muted { background-color: #f9fafb; color: #9ca3af; border-color: #f3f4f6; }
+        .day-dots { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+        .dot { width: 7px; height: 7px; border-radius: 999px; background: #cbd5e1; }
+        .dot.green { background: #10b981; }
+        .dot.amber { background: #f59e0b; }
+        .dot.red { background: #ef4444; }
+        .legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 18px; color: var(--secondary-text); font-size: 12px; }
+        .legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+        /* Layout Grid for Top Row */
+        .top-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; align-items: start; }
+        
+        /* Compact Agenda List */
+        .agenda-container { background-color: var(--bg-surface); border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--card-shadow); padding: 24px; }
+        .agenda-header { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); }
+        .agenda-title { font-size: 18px; font-weight: 700; color: var(--primary-text); margin: 0 0 4px; }
+        .agenda-subtitle { font-size: 13px; color: var(--secondary-text); margin: 0; }
+        .agenda-list { display: flex; flex-direction: column; gap: 16px; }
+        .agenda-item { display: flex; gap: 16px; padding-bottom: 16px; border-bottom: 1px dashed var(--border-color); }
+        .agenda-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .agenda-time { font-size: 13px; font-weight: 600; color: var(--primary-text); white-space: nowrap; width: 85px; }
+        .agenda-time span { display: block; font-size: 11px; color: var(--secondary-text); font-weight: 400; margin-top: 2px; }
+        .agenda-details { flex: 1; }
+        .agenda-event { font-size: 14px; font-weight: 600; color: var(--primary-text); margin: 0 0 8px; }
+        .agenda-meta { display: flex; justify-content: space-between; align-items: center; }
+
+        /* Data Table Container */
+        .table-section { background-color: var(--bg-surface); border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--card-shadow); overflow: hidden; }
+        
+        .table-header { display: flex; justify-content: space-between; align-items: center; padding: 24px 32px; border-bottom: 1px solid var(--border-color); }
+        .table-header h2 { font-size: 18px; font-weight: 600; margin: 0; color: var(--primary-text); }
+        .btn-filter { display: flex; align-items: center; gap: 8px; background-color: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--secondary-text); cursor: pointer; }
+        .btn-filter:hover { background-color: #f9fafb; }
+
+        /* Table Styles */
+        .data-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .schedule-table th:nth-child(1), .schedule-table td:nth-child(1) { width: 17%; }
+        .schedule-table th:nth-child(2), .schedule-table td:nth-child(2) { width: 34%; }
+        .schedule-table th:nth-child(3), .schedule-table td:nth-child(3) { width: 22%; }
+        .schedule-table th:nth-child(4), .schedule-table td:nth-child(4) { width: 15%; }
+        .schedule-table th:nth-child(5), .schedule-table td:nth-child(5) { width: 12%; }
+        .data-table th { font-size: 10px; font-weight: 700; color: var(--secondary-text); text-transform: uppercase; letter-spacing: 0.5px; padding: 16px 32px; background-color: #f9fafb; border-bottom: 1px solid var(--border-color); }
+        .data-table td { padding: 20px 32px; border-bottom: 1px solid var(--border-color); vertical-align: top; }
+        .data-table tr:last-child td { border-bottom: none; }
+        
+        .time-cell { font-size: 14px; font-weight: 600; color: var(--primary-text); white-space: nowrap; }
+        
+        .event-info { display: flex; flex-direction: column; gap: 4px; }
+        .event-title { font-size: 15px; font-weight: 600; color: var(--primary-text); margin: 0; }
+        .event-desc { font-size: 13px; color: var(--secondary-text); margin: 0; }
+
+        /* Applicant Cell */
+        .applicant-cell { display: flex; align-items: center; gap: 12px; }
+        .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: white; overflow: hidden; flex-shrink: 0; }
+        .applicant-info { display: flex; flex-direction: column; }
+        .applicant-name { font-size: 14px; font-weight: 600; color: var(--primary-text); margin: 0 0 2px; }
+        .applicant-role { font-size: 12px; color: var(--secondary-text); margin: 0; }
+        
+        /* Badges */
+        .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+        .badge-yellow { background-color: var(--badge-yellow-bg); color: var(--badge-yellow-text); }
+        .badge-green { background-color: var(--badge-green-bg); color: var(--badge-green-text); }
+        .badge-gray { background-color: var(--badge-gray-bg); color: var(--badge-gray-text); }
+
+        /* Actions */
+        .action-link { font-size: 13px; font-weight: 600; color: var(--brand-green); cursor: pointer; white-space: nowrap; }
+        .action-link:hover { text-decoration: underline; }
+
+        /* Empty State */
+        .empty-state { padding: 60px 32px; text-align: center; color: var(--secondary-text); }
+        .empty-state .icon { font-size: 48px; color: #d1d5db; margin-bottom: 16px; display: block; }
+
+        /* Footer */
+        .footer { background-color: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; justify-content: center; padding: 60px 0; margin-top: 40px;}
+        .footer-content { width: 1200px; max-width: 90%; display: flex; justify-content: space-between; align-items: flex-start; }
+        .logo-footer { font-family: 'Playfair Display', serif; font-size: 64px; font-weight: 700; color: #4da38b; margin: 0; line-height: 1; letter-spacing: -1px; }
+        .copyright { font-size: 14px; color: var(--secondary-text); margin: 0; margin-top: 12px; }
+        .footer-right { display: flex; flex-direction: column; gap: 16px; align-items: flex-end; font-size: 16px; color: var(--secondary-text); }
+
+        
+        
+        
+        
+        /* =========================================
+           RESPONSIVE MOBILE STYLES
+           ========================================= */
+        @media (max-width: 992px) {
+            .page-header { flex-direction: column; align-items: flex-start; gap: 16px; }
+            .facilities-grid { grid-template-columns: repeat(2, 1fr); }
+            .top-row { grid-template-columns: 1fr; }
+            .content-layout, .details-layout, .profile-layout, .wizard-layout, .dashboard-layout { flex-direction: column; align-items: stretch; gap: 24px; }
+            .main-details, .sidebar, .time-sidebar, .summary-sidebar, .profile-sidebar, .profile-main, .docs-section, .form-card { width: 100%; box-sizing: border-box; }
+            .gallery-grid { grid-template-columns: 1fr 1fr; grid-template-rows: 200px 200px; }
+            .item-main { grid-column: 1 / 3; grid-row: 1 / 2; }
+            .item-top-right-1 { grid-column: 1 / 2; grid-row: 2 / 3; }
+            .item-top-right-2 { grid-column: 2 / 3; grid-row: 2 / 3; }
+            .item-bottom-right { display: none; }
+            .info-cards-row { grid-template-columns: 1fr; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .summary-cards { flex-direction: column; gap: 16px; }
+            .doc-item { flex-direction: column; align-items: flex-start; gap: 16px; }
+        }
+
+        @media (max-width: 768px) {
+            /* Mobile Navbar */
+            :root { --navbar-height: 64px; }
+            .navbar { height: var(--navbar-height); }
+            .navbar-content { max-width: 100%; padding: 0 12px; }
+            .mobile-menu-btn { display: block; flex: 0 0 28px; }
+            .nav-left { gap: 16px; }
+            .nav-search { display: none; }
+            .nav-center { display: none; }
+            .nav-right { gap: 16px; }
+            .logo-nav br { display: none; }
+            .logo-nav-mobile-text { display: inline; margin-left: 6px; }
+
+            /* Mobile Layout Spacing */
+            .page-container { margin-top: calc(var(--navbar-height) + 24px) !important; width: 100%; padding: 0 16px; box-sizing: border-box; }
+            
+            /* Mobile Header & Metrics */
+            .page-header { flex-direction: column; align-items: stretch; gap: 16px; margin-bottom: 24px; }
+            .header-text h1 { font-size: 28px; margin-bottom: 8px; }
+            .metrics-card { padding: 20px; margin-bottom: 32px; width: 100%; box-sizing: border-box; flex-direction: row; }
+            .metric-value { font-size: 32px; }
+            .header-actions { flex-direction: row; gap: 12px; width: 100%; }
+            .btn-today { flex: 1; text-align: center; }
+            .date-picker { flex: 2; }
+            .btn-add { width: 100%; justify-content: center; padding: 12px; }
+
+            /* Mobile Table to Card Transformation */
+            .table-section { background: transparent; border: none; box-shadow: none; border-radius: 0; }
+            .table-header { padding: 0 0 16px 0; border-bottom: none; flex-direction: row; }
+            .table-header h2 { font-size: 20px; }
+            
+            .data-table, .data-table tbody, .dash-table, .dash-table tbody { display: block; width: 100%; }
+            .data-table thead, .dash-table thead { display: none; }
+            
+            .data-table tr, .dash-table tr { 
+                display: grid;
+                grid-template-columns: 1fr auto;
+                grid-template-areas: 
+                    "applicant status"
+                    "facility date"
+                    "actions actions";
+                gap: 16px;
+                background-color: var(--bg-surface); 
+                border: 1px solid var(--border-color); 
+                border-radius: 12px; 
+                margin-bottom: 16px; 
+                padding: 16px;
+                box-shadow: var(--card-shadow);
+            }
+            
+            .data-table td, .dash-table td { 
+                display: block;
+                padding: 0; 
+                border: none;
+                text-align: left;
+            }
+            
+            .data-table td:nth-child(1), .dash-table td:nth-child(1) { grid-area: applicant; }
+            .data-table td:nth-child(2), .dash-table td:nth-child(2) { grid-area: facility; }
+            .data-table td:nth-child(3), .dash-table td:nth-child(3) { grid-area: date; text-align: right; }
+            .data-table td:nth-child(4), .dash-table td:nth-child(4) { grid-area: status; align-self: start; justify-self: end; }
+            .data-table td:nth-child(5), .dash-table td:nth-child(5) { grid-area: actions; border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 4px; }
+            
+            /* Labels */
+            .data-table td::before, .dash-table td::before { 
+                display: block;
+                font-size: 10px; 
+                font-weight: 700; 
+                color: var(--secondary-text); 
+                text-transform: uppercase; 
+                letter-spacing: 0.5px; 
+                margin-bottom: 4px;
+                content: attr(data-label);
+            }
+            .data-table td:nth-child(1)::before, .dash-table td:nth-child(1)::before { display: none; }
+            .data-table td:nth-child(4)::before, .dash-table td:nth-child(4)::before { display: none; }
+            .data-table td:nth-child(5)::before, .dash-table td:nth-child(5)::before { display: none; }
+
+            .applicant-cell { display: flex; flex-direction: row; align-items: center; gap: 12px; }
+            .applicant-cell .avatar { width: 36px; height: 36px; margin: 0; }
+            .applicant-info { display: flex; flex-direction: column; align-items: flex-start; }
+            .applicant-name { font-size: 14px; margin-bottom: 2px; }
+            .status-badge { font-size: 11px; padding: 4px 8px; width: fit-content; }
+            
+            .actions-cell { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; justify-content: flex-start; }
+            .action-btn { background-color: var(--bg-main); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 16px; }
+            .action-download { color: var(--secondary-text); }
+            .action-download::after { content: 'Unduh'; font-size: 11px; font-weight: 600; color: var(--secondary-text); }
+            .action-verify { color: #10b981; }
+            .action-verify::after { content: 'Verifikasi'; font-size: 11px; font-weight: 600; color: #10b981; }
+            .action-reject { color: #ef4444; }
+            .action-reject::after { content: 'Tolak'; font-size: 11px; font-weight: 600; color: #ef4444; }
+
+            .table-footer { flex-direction: column; gap: 16px; padding: 24px 0; background: transparent; border: none; align-items: center; text-align: center; }
+
+            /* Grid Layout adjustments */
+            .calendar-container, .agenda-container { width: 100%; padding: 16px; box-sizing: border-box; }
+            .calendar-grid-wrapper { width: 100%; overflow-x: visible; padding: 0; margin: 0; }
+            .calendar-grid { min-width: 0; gap: 6px; }
+            .calendar-day { padding: 4px; border-radius: 6px; align-items: center; justify-content: center; min-height: 40px; }
+            .calendar-day-header { font-size: 10px; padding-bottom: 6px; }
+            .day-number { font-size: 13px; margin-bottom: 0; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
+            .day-indicators { justify-content: center; gap: 2px; margin-top: 4px; width: 100%; }
+            .indicator { width: 5px; height: 5px; }
+            
+            .agenda-item { flex-direction: column; gap: 8px; align-items: stretch; }
+            .agenda-time { display: flex; gap: 8px; align-items: center; width: 100%; }
+            .agenda-time span { display: inline; margin-top: 0; }
+            .agenda-meta { display: grid; grid-template-columns: 1fr; gap: 8px; justify-items: start; }
+            .agenda-meta .action-link { text-align: center; border: 1px solid var(--border-color); padding: 8px; border-radius: 6px; width: 100%; box-sizing: border-box; }
+            .action-link { width: 100%; display: block; text-align: center; background-color: #f9fafb; padding: 12px 0; border-radius: 8px; border: 1px solid var(--border-color); }
+
+            .actions-bar, .filter-container { flex-direction: column; align-items: stretch; gap: 16px; padding: 16px; }
+            .filter-group { flex-direction: row; gap: 12px; width: 100%; }
+            .filter-select { flex: 1; padding: 10px; }
+            .filter-input { width: 100%; }
+
+            .facilities-grid { grid-template-columns: 1fr; gap: 20px; }
+            
+            .gallery-grid { grid-template-columns: 1fr; grid-template-rows: auto auto auto; }
+            .item-main { grid-column: 1 / 2; grid-row: 1 / 2; }
+            .item-top-right-1, .item-top-right-2 { grid-column: 1 / 2; grid-row: auto; }
+            
+            .kpi-grid { grid-template-columns: 1fr; }
+            .dashboard-layout { grid-template-columns: 1fr; }
+
+            .reservation-layout { flex-direction: column; }
+            .calendar-card, .time-sidebar { width: 100%; padding: 24px; box-sizing: border-box; }
+            .stepper { width: 100%; justify-content: space-between; }
+
+            .form-grid { grid-template-columns: 1fr; }
+            .checkbox-grid { grid-template-columns: 1fr; }
+            .form-actions { flex-direction: column; }
+
+            /* Mobile Footer */
+            .footer-content { flex-direction: column; align-items: center; text-align: center; gap: 32px; }
+            .footer-left { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+            .footer-right { align-items: center; }
+
+            .schedule-table tr {
+                grid-template-columns: 1fr auto;
+                grid-template-areas:
+                    "time status"
+                    "event event"
+                    "applicant applicant"
+                    "actions actions";
+                gap: 18px;
+            }
+            .schedule-table th,
+            .schedule-table td {
+                width: auto !important;
+            }
+            .schedule-table td:nth-child(1) { grid-area: time; }
+            .schedule-table td:nth-child(2) { grid-area: event; }
+            .schedule-table td:nth-child(3) { grid-area: applicant; }
+            .schedule-table td:nth-child(4) { grid-area: status; align-self: start; justify-self: end; }
+            .schedule-table td:nth-child(5) { grid-area: actions; border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 0; }
+            .schedule-table td:nth-child(1)::before,
+            .schedule-table td:nth-child(4)::before,
+            .schedule-table td:nth-child(5)::before { display: none; }
+            .schedule-table .time-cell {
+                font-size: 14px;
+                line-height: 1.4;
+                white-space: normal;
+            }
+            .schedule-table .event-info {
+                gap: 6px;
+            }
+            .schedule-table .event-title {
+                font-size: 16px;
+                line-height: 1.35;
+            }
+            .schedule-table .event-desc {
+                font-size: 13px;
+                line-height: 1.5;
+            }
+            .schedule-table .applicant-cell {
+                padding: 12px;
+                background-color: #f9fafb;
+                border: 1px solid var(--border-color);
+                border-radius: 10px;
+            }
+            .schedule-table .action-link {
+                width: 100%;
+                display: block;
+                text-align: center;
+                background-color: #f9fafb;
+                padding: 12px 0;
+                border-radius: 8px;
+                border: 1px solid var(--border-color);
+                white-space: normal;
+            }
+        }
+
+    .lucide-icon{display:inline-block;vertical-align:-.18em;flex:0 0 auto}
+
+        /* Shared layout shell header/footer alignment */
+        :root{--shared-shell-nav:72px;--navbar-height:72px;--nav:72px}
+        .navbar{position:fixed;inset:0 0 auto;width:100%;height:var(--navbar-height,var(--nav,var(--shared-shell-nav)));background:#fff;border-bottom:1px solid var(--border-color,var(--border,#e5e7eb));display:flex;justify-content:center;z-index:1000}
+        .navbar-content{width:1200px;max-width:95%;display:flex;align-items:center;justify-content:space-between;gap:22px}
+        .nav-left,.nav-center,.nav-right{display:flex;align-items:center;gap:22px}
+        .nav-center{gap:40px}
+        .logo-nav{font-family:'Playfair Display',serif;color:#1d7667;font-size:24px;font-weight:700;line-height:1.05;text-decoration:none;white-space:nowrap}
+        .mobile-menu-btn{display:none;border:0;background:transparent;color:var(--secondary-text,var(--muted,#6b7280));font-size:24px;padding:0;line-height:1;cursor:pointer}
+        .nav-link{font-size:14px;font-weight:700;color:var(--secondary-text,var(--muted,#6b7280));text-decoration:none}
+        .nav-link.active{color:var(--brand-green,var(--green,#0f9d58));border-bottom:2px solid currentColor;padding-bottom:4px}
+        .nav-search{position:relative;display:flex;align-items:center;min-width:232px;height:40px;color:var(--secondary-text,var(--muted,#6b7280))}
+        .nav-search input{width:250px;height:40px;border:1px solid #dbe2ea;border-radius:999px;background:linear-gradient(180deg,#fff,#f8fafc);box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 1px 2px rgba(15,23,42,.04);padding:0 16px 0 42px;color:var(--secondary-text,var(--muted,#6b7280));font:500 13px var(--sans-serif,Inter,system-ui,sans-serif);outline:none}
+        .nav-search input:focus{border-color:var(--brand-green,var(--green,#0f9d58));background:#fff}
+        .nav-search .search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#94a3b8;display:inline-flex;align-items:center;justify-content:center;pointer-events:none}
+        .nav-notifications{border:0;background:transparent;color:#6b7280;font-size:19px;padding:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+        .profile-pic{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:var(--brand-green,var(--green,#0f9d58));border:0;overflow:hidden;font-size:13px;font-weight:700;text-decoration:none;flex:0 0 34px}
+        .profile-pic img{width:100%;height:100%;object-fit:cover}
+        .footer{border-top:1px solid var(--border-color,var(--border,#e5e7eb));padding:22px 0;background:#fff;display:flex;justify-content:center}
+        .footer-content{width:1200px;max-width:95%;display:flex;align-items:center;justify-content:space-between;gap:24px}
+        .footer-left,.footer-brand,.footer-content>div:first-child{display:flex;align-items:center;gap:16px;min-width:0}
+        .logo-footer,.footer-logo{font-family:'Playfair Display',serif;font-size:30px;color:#4da38b;margin:0;line-height:1;white-space:nowrap;letter-spacing:0}
+        .copyright,.footer-copy,.footer .muted{font-size:13px;color:var(--secondary-text,var(--muted,#6b7280));margin:0;line-height:1.5}
+        .footer-right,.footer-links{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px 18px;color:var(--secondary-text,var(--muted,#6b7280));font-size:14px;font-weight:600}
+        .footer-right a,.footer-links a{white-space:nowrap;text-decoration:none;color:inherit}
+        @media(max-width:768px){:root{--shared-shell-nav:64px;--navbar-height:64px;--nav:64px}.navbar-content{max-width:100%;padding:0 14px}.mobile-menu-btn{display:block}.logo-nav br{display:none}.logo-nav span{margin-left:6px}.nav-center,.nav-search{display:none}.nav-left,.nav-right{gap:14px}.footer{padding:22px 0}.footer-content{flex-direction:column;align-items:center;text-align:center;gap:14px}.footer-left,.footer-brand,.footer-content>div:first-child{flex-direction:column;gap:8px}.footer-right,.footer-links{justify-content:center;align-items:center}}
+
+    </style>
+</head>
+<body>
+
+                    <header class="navbar">
+        <div class="navbar-content">
+            <div class="nav-left">
+                <button class="mobile-menu-btn" type="button" aria-label="Buka navigasi">&#9776;</button>
+                <a href="#" class="logo-nav" style="color: #1d7667;" aria-label="IPB Smart Reserve Hub">IPB<br><span class="logo-nav-mobile-text">SRH</span></a>
+                <div class="nav-search">
+                    <span class="search-icon"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+                    <input type="search" placeholder="Cari reservasi..." aria-label="Cari reservasi">
+                </div>
+            </div>
+            <div class="nav-center">
+                <a href="#" class="nav-link">Beranda</a>
+                <a href="#" class="nav-link">Reservasi</a>
+                <a href="#" class="nav-link active">Fasilitas</a>
+            </div>
+            <div class="nav-right">
+                <button class="nav-notifications" type="button" aria-label="Notifikasi" style="color: #6b7280; cursor: pointer; font-size: 20px; border: 0; background: transparent; padding: 0;"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 21a2 2 0 0 0 4 0"/><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/></svg></button>
+                <a href="#" class="profile-pic" aria-label="Profil admin" style="background-color: #0f9d58; border: none; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; font-weight: 700;">BS</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="page-container">
+        
+        <a href="Admin - 01 - Facility List.html" class="back-link">&larr; Kembali ke Daftar Fasilitas</a>
+
+        <div class="page-header">
+            <div class="header-text">
+                <h1>Jadwal Grand Auditorium</h1>
+                <p>Kelola agenda harian, reservasi disetujui, dan pengajuan yang masih menunggu untuk fasilitas ini.</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn-today" type="button">Hari Ini</button>
+                <input type="date" class="date-picker" value="2024-10-24" aria-label="Tanggal jadwal terpilih">
+            </div>
+        </div>
+
+        <div class="top-row">
+            <div class="calendar-container" style="margin-bottom: 0;">
+                <div class="calendar-header">
+                    <div>
+                        <p class="calendar-kicker">Kalender Fasilitas</p>
+                        <h2 class="calendar-title">Oktober 2024</h2>
+                    </div>
+                    <div class="calendar-nav">
+                        <button type="button" aria-label="Previous month">&lt;</button>
+                        <button type="button" aria-label="Next month">&gt;</button>
+                    </div>
+                </div>
+                <div class="calendar-grid-wrapper">
+                    <div class="calendar-grid">
+                        <div class="day-head">Min</div>
+                        <div class="day-head">Sen</div>
+                        <div class="day-head">Sel</div>
+                        <div class="day-head">Rab</div>
+                        <div class="day-head">Kam</div>
+                        <div class="day-head">Jum</div>
+                        <div class="day-head">Sab</div>
+                        
+                        <div class="month-day muted"><span>29</span></div>
+                        <div class="month-day muted"><span>30</span></div>
+                        <div class="month-day"><span>1</span></div>
+                        <div class="month-day"><span>2</span></div>
+                        <div class="month-day"><span>3</span></div>
+                        <div class="month-day"><span>4</span></div>
+                        <div class="month-day"><span>5</span></div>
+
+                        <div class="month-day"><span>6</span></div>
+                        <div class="month-day"><span>7</span></div>
+                        <div class="month-day"><span>8</span></div>
+                        <div class="month-day"><span>9</span></div>
+                        <div class="month-day"><span>10</span></div>
+                        <div class="month-day"><span>11</span></div>
+                        <div class="month-day"><span>12</span></div>
+
+                        <div class="month-day"><span>13</span></div>
+                        <div class="month-day"><span>14</span></div>
+                        <div class="month-day"><span>15</span></div>
+                        <div class="month-day"><span>16</span></div>
+                        <div class="month-day"><span>17</span></div>
+                        <div class="month-day"><span>18</span></div>
+                        <div class="month-day"><span>19</span></div>
+
+                        <div class="month-day"><span>20</span></div>
+                        <div class="month-day"><span>21</span></div>
+                        <div class="month-day"><span>22</span></div>
+                        <div class="month-day"><span>23</span></div>
+                        <div class="month-day selected">
+                            <span>24</span>
+                            <div class="day-dots">
+                                <span class="dot green"></span>
+                                <span class="dot green"></span>
+                                <span class="dot amber"></span>
+                            </div>
+                        </div>
+                        <div class="month-day"><span>25</span></div>
+                        <div class="month-day"><span>26</span></div>
+
+                        <div class="month-day"><span>27</span></div>
+                        <div class="month-day"><span>28</span></div>
+                        <div class="month-day"><span>29</span></div>
+                        <div class="month-day"><span>30</span></div>
+                        <div class="month-day"><span>31</span></div>
+                        <div class="month-day muted"><span>1</span></div>
+                        <div class="month-day muted"><span>2</span></div>
+                    </div>
+                    <div class="legend">
+                        <span><i class="dot green"></i> Disetujui</span>
+                        <span><i class="dot amber"></i> Menunggu</span>
+                        <span><i class="dot red"></i> Konflik</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="agenda-container">
+                <div class="agenda-header">
+                    <h2 class="agenda-title">Agenda</h2>
+                    <p class="agenda-subtitle">24 Oktober 2024</p>
+                </div>
+                <div class="agenda-list">
+                    <div class="agenda-item">
+                        <div class="agenda-time">09:00<span>sampai 12:00</span></div>
+                        <div class="agenda-details">
+                            <p class="agenda-event">Simposium Etika AI 2024</p>
+                            <div class="agenda-meta">
+                                <span class="status-badge badge-green" style="padding: 4px 8px; font-size: 10px;">Disetujui</span>
+                                <a href="Admin - 11 - Reservation Details.html" class="action-link" style="font-size: 12px;">Lihat Detail</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="agenda-item">
+                        <div class="agenda-time">13:00<span>sampai 15:00</span></div>
+                        <div class="agenda-details">
+                            <p class="agenda-event">Kuliah Tamu: Perubahan Iklim</p>
+                            <div class="agenda-meta">
+                                <span class="status-badge badge-green" style="padding: 4px 8px; font-size: 10px;">Disetujui</span>
+                                <a href="Admin - 11 - Reservation Details.html" class="action-link" style="font-size: 12px;">Lihat Detail</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="agenda-item">
+                        <div class="agenda-time">16:00<span>sampai 18:00</span></div>
+                        <div class="agenda-details">
+                            <p class="agenda-event">Kejuaraan Tahunan Klub Debat</p>
+                            <div class="agenda-meta">
+                                <span class="status-badge badge-yellow" style="padding: 4px 8px; font-size: 10px;">Menunggu</span>
+                                <a href="Admin - 11 - Reservation Details.html" class="action-link" style="font-size: 12px; color: #d97706;">Tinjau Pengajuan</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-section">
+            <div class="table-header">
+                <h2>Semua Reservasi</h2>
+                <button class="btn-filter" type="button">
+                    <span style="font-size: 14px;">&#8801;</span> Filter
+                </button>
+            </div>
+            
+            <table class="data-table schedule-table">
+                <thead>
+                    <tr>
+                        <th>WAKTU</th>
+                        <th>DETAIL KEGIATAN</th>
+                        <th>PEMOHON</th>
+                        <th>STATUS</th>
+                        <th>AKSI</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="time-cell" data-label="Waktu">09:00 - 12:00</td>
+                        <td data-label="Detail Reservasi">
+                            <div class="event-info">
+                                <p class="event-title">Simposium Etika AI 2024</p>
+                                <p class="event-desc">Departemen Ilmu Komputer - estimasi 150 peserta</p>
+                            </div>
+                        </td>
+                        <td data-label="Pemohon">
+                            <div class="applicant-cell">
+                                <div class="avatar" style="background-color: #064e3b;">JD</div>
+                                <div class="applicant-info">
+                                    <p class="applicant-name">Johnathan Doe</p>
+                                    <p class="applicant-role">Organisasi Mahasiswa</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td data-label="Status">
+                            <div class="status-badge badge-green">
+                                Disetujui
+                            </div>
+                        </td>
+                        <td data-label="Aksi">
+                            <a href="Admin - 11 - Reservation Details.html" class="action-link">Lihat Detail</a>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="time-cell" data-label="Waktu">13:00 - 15:00</td>
+                        <td data-label="Detail Reservasi">
+                            <div class="event-info">
+                                <p class="event-title">Kuliah Tamu: Adaptasi Perubahan Iklim</p>
+                                <p class="event-desc">Fakultas Kehutanan - estimasi 200 peserta</p>
+                            </div>
+                        </td>
+                        <td data-label="Pemohon">
+                            <div class="applicant-cell">
+                                <div class="avatar" style="background-color: #b45309;">ER</div>
+                                <div class="applicant-info">
+                                    <p class="applicant-name">Elena Rodriguez</p>
+                                    <p class="applicant-role">Staf Fakultas</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td data-label="Status">
+                            <div class="status-badge badge-green">
+                                Disetujui
+                            </div>
+                        </td>
+                        <td data-label="Aksi">
+                            <a href="Admin - 11 - Reservation Details.html" class="action-link">Lihat Detail</a>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td class="time-cell" data-label="Waktu">16:00 - 18:00</td>
+                        <td data-label="Detail Reservasi">
+                            <div class="event-info">
+                                <p class="event-title">Kejuaraan Tahunan Klub Debat</p>
+                                <p class="event-desc">BEM Mahasiswa - estimasi 100 peserta</p>
+                            </div>
+                        </td>
+                        <td data-label="Pemohon">
+                            <div class="applicant-cell">
+                                <div class="avatar" style="background-color: #475569;">AS</div>
+                                <div class="applicant-info">
+                                    <p class="applicant-name">Ahmed Syah</p>
+                                    <p class="applicant-role">Mahasiswa</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td data-label="Status">
+                            <div class="status-badge badge-yellow">
+                                Menunggu Verifikasi
+                            </div>
+                        </td>
+                        <td data-label="Aksi">
+                            <a href="Admin - 11 - Reservation Details.html" class="action-link" style="color: #d97706;">Tinjau Pengajuan</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Example of Empty State (hidden by default, shown for reference if no events)
+        <div class="table-section" style="display: none;">
+            <div class="table-header">
+                <h2>Agenda for October 25, 2024</h2>
+            </div>
+            <div class="empty-state">
+                <span class="icon"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M3 10h18"/></svg></span>
+                <h3>No events scheduled</h3>
+                <p>There are no reservations for this facility on the selected date.</p>
+            </div>
+        </div>
+        -->
+
+    </main>
+
+                    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-left">
+                <h2 class="logo-footer">IPB SRH</h2>
+                <p class="copyright">&copy; 2026 IPB Smart Reserve Hub. Hak cipta dilindungi.</p>
+            </div>
+            <div class="footer-right">
+                <a href="#">Beranda</a>
+                <a href="#">Reservasi</a>
+                <a href="#">Fasilitas</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

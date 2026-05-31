@@ -1,0 +1,82 @@
+# Student 05 Reservation Letter
+
+## Reference
+
+- HTML: `docs/frontend/html-reference/Student - 05 - Reservation Letter.html`
+- Desktop screenshot: `docs/frontend/screenshots/student-05-reservation-letter-desktop.png`
+- Mobile screenshot: `docs/frontend/screenshots/student-05-reservation-letter-mobile.png`
+- Reference label: `Student - 05 - Reservation Letter`
+
+## Route Contract
+
+- Proposed route: `/student/reservations/:reservationId/letter`
+- Auth/role: `student`
+- Unauthorized behavior: redirect to login.
+- Redirect behavior: after upload, stay on the letter page and show the stored file; after `Kirim`, route to verification waiting page.
+
+## Purpose
+
+- User job: download/generated approval letter, upload signed letter, confirm the stored file, and submit it for document verification.
+- Entry points: reservation creation success, reservation list/detail when document upload is needed.
+- Exit points: verification waiting state, reservation detail.
+
+## Design Contract
+
+- Layout: reservation workflow card rhythm with template download, shared upload panel, selected-file row when a file is chosen, and summary.
+- Desktop behavior: main document panel plus side summary.
+- Mobile behavior: stacked panels and full-width upload/continue action.
+- Required copy/status labels: use `Unduh`, `Unggah`, `Kirim`, `Pilih File`, and Indonesian selected-file/empty-file text. Signed approval-letter uploads are PDF-only.
+- Source-of-truth notes: upload uses shared `upload`/`button-row` anatomy; file rows must wrap long filenames and should not show redundant `valid` badges.
+
+## UX Behavior
+
+- Primary actions: upload signed approval letter, then submit the uploaded letter for verification.
+- Secondary actions: download generated letter, replace selected file, go back.
+- Loading state: keep selected file visible during upload.
+- Empty state: generated letter unavailable shows retry/generate action.
+- Error state: file type/size/upload errors near upload control.
+- Disabled state: upload disabled while uploading; submit shows an error until an uploaded signed letter exists.
+
+## Accessibility
+
+- File input must have a visible label.
+- Download/upload actions must be keyboard reachable.
+- File validation errors must be announced.
+- Document metadata must be text-readable.
+
+## Data And Fixture Contract
+
+- Deterministic fixture requirements: reservation summary, generated letter metadata, valid/invalid file examples.
+- Real entities: StudentReservation document projection, approval letter metadata, signed letter upload.
+- Fixture media: no remote assets.
+
+## Backend Integration And Gaps
+
+- Endpoints consumed: `GET /student/reservations/:reservationId`, `GET /student/reservations/:reservationId/approval-letter`, `GET /student/reservations/:reservationId/approval-letter/download`, `POST /student/reservations/:reservationId/signed-approval-letter`, `POST /student/reservations/:reservationId/signed-approval-letter/submit`.
+- Page-needed fields: reservation `document.approval_letter`, `document.signed_approval_letter`, `document.review_status`, deadlines, summary fields. Generated approval-letter metadata includes `letter_number`.
+- Auth/session assumptions: student can access only owned reservations/files.
+- Source files: `backend/app/api/routes/approval_letter_routes.py`, `backend/app/api/routes/reservation_routes.py`, `backend/app/schemas/reservation_schemas.py`.
+
+### BG-STUDENT-05-01: Approval Letter Generation And Upload
+
+- Status: `resolved`
+- Domain area: Reservation Workflow
+- Affected UI: generated approval letter row and signed-letter upload panel.
+- Contract needed: generated approval letter is issued during reservation creation, exposes `letter_number`, supports authorized download, signed approval-letter upload accepts PDF only up to 5 MB and stores metadata without entering review, and signed approval-letter submit moves the reservation to document verification waiting with `document_verification_due_at`.
+- Evidence: approval letter routes exist in `backend/app/api/routes/approval_letter_routes.py`; metadata schemas exist in `backend/app/schemas/reservation_schemas.py`; issuance is wired through `backend/app/services/approval_letters.py` and `backend/app/services/reservations.py`.
+- Source issue/PRD: `docs/issues/ISSUE-0008-generated-approval-letter-download.md`, `docs/issues/ISSUE-0009-signed-letter-upload-and-staff-document-review.md`.
+
+## Shared Components
+
+- `docs/frontend/per-component-brief/reservation-stepper.md`
+- `docs/frontend/per-component-brief/file-upload-panel.md`
+- `docs/frontend/per-component-brief/reservation-summary-card.md`
+
+## Acceptance Checks
+
+- Desktop and mobile screenshots match references.
+- Integration checks: successful upload stays on the letter page and shows the stored file; `Kirim` submits for verification and routes to waiting; invalid file shows error without clearing context.
+
+## Open Questions
+
+- Upload progress state is referenced in `docs/frontend/html-reference/Shared - 03 - Upload And Calendar States.html`.

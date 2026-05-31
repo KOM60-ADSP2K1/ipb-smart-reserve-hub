@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hub Verifikasi Admin - IPB Smart Reserve Hub</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <style>
+        /* Global Variables & Reset */
+        :root {
+            --bg-main: #f8fafc;
+            --bg-surface: #ffffff;
+            --primary-text: #111827;
+            --secondary-text: #6b7280;
+            --brand-green: #0f9d58;
+            --border-color: #e5e7eb;
+            --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            
+            /* Badge Colors */
+            --badge-yellow-bg: #fef3c7;
+            --badge-yellow-text: #92400e;
+            --badge-green-bg: #d1fae5;
+            --badge-green-text: #065f46;
+            --badge-red-bg: #fee2e2;
+            --badge-red-text: #991b1b;
+            --badge-gray-bg: #f3f4f6;
+            --badge-gray-text: #4b5563;
+
+            --sans-serif: 'Inter', system-ui, sans-serif;
+            --navbar-height: 80px;
+        }
+
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; font-family: var(--sans-serif); background-color: var(--bg-main); color: var(--primary-text); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+        a { text-decoration: none; color: inherit; }
+
+        /* Navbar */
+        .navbar { position: fixed; top: 0; width: 100%; height: var(--navbar-height); background-color: var(--bg-surface); border-bottom: 1px solid var(--border-color); display: flex; justify-content: center; z-index: 1000; transition: all 0.3s ease; }
+        .navbar-content { width: 1200px; max-width: 95%; display: flex; justify-content: space-between; align-items: center; height: 100%; }
+        .nav-left, .nav-right { display: flex; align-items: center; gap: 24px; }
+        
+        .mobile-menu-btn { display: none; padding: 0; border: 0; background: transparent; font-size: 24px; color: var(--secondary-text); cursor: pointer; }
+        .logo-nav { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: #1d7667; line-height: 1.1; display: block; }
+        .logo-nav-mobile-text { display: inline; }
+        
+        .nav-search { position: relative; }
+        .nav-search input { padding: 10px 16px 10px 40px; border: 1px solid var(--border-color); border-radius: 20px; font-size: 14px; width: 250px; background-color: #f1f5f9; outline: none; transition: border-color 0.2s; }
+        .nav-search input:focus { border-color: var(--brand-green); background-color: #ffffff; }
+        .nav-search .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--secondary-text); }
+        
+        .nav-center { display: flex; gap: 40px; }
+        .nav-link { font-size: 15px; font-weight: 600; color: var(--secondary-text); transition: color 0.2s; }
+        .nav-link:hover { color: var(--primary-text); }
+        .nav-link.active { color: var(--brand-green); border-bottom: 2px solid var(--brand-green); padding-bottom: 4px; }
+        
+        .nav-notifications { font-size: 20px; color: var(--secondary-text); cursor: pointer; transition: color 0.2s; }
+        .nav-notifications:hover { color: var(--primary-text); }
+        
+        .profile-pic { width: 36px; height: 36px; border-radius: 50%; background-color: #ddd; overflow: hidden; border: 2px solid var(--brand-green); cursor: pointer; }
+        .profile-pic img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Main Container */
+        .page-container { width: 1200px; max-width: 95%; margin: calc(var(--navbar-height) + 40px) auto 80px; }
+
+        /* Header */
+        .page-header { margin-bottom: 32px; }
+        .page-header h1 { font-size: 32px; font-weight: 700; color: var(--primary-text); margin: 0 0 12px; }
+        .page-header p { font-size: 14px; color: var(--secondary-text); margin: 0; max-width: 600px; line-height: 1.6; }
+
+        /* Metric Card */
+        .metrics-card { display: flex; justify-content: space-between; align-items: center; background-color: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px 32px; width: 380px; max-width: 100%; box-shadow: var(--card-shadow); margin-bottom: 40px; }
+        .metric-info { display: flex; flex-direction: column; gap: 8px; }
+        .metric-label { font-size: 10px; font-weight: 700; color: var(--secondary-text); text-transform: uppercase; letter-spacing: 0.5px; }
+        .metric-value { font-size: 36px; font-weight: 700; color: var(--primary-text); line-height: 1; }
+        .metric-icon { width: 48px; height: 48px; background-color: var(--badge-yellow-bg); color: var(--badge-yellow-text); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+
+        /* Data Table Container */
+        .table-section { background-color: var(--bg-surface); border-radius: 16px; border: 1px solid var(--border-color); box-shadow: var(--card-shadow); overflow: hidden; }
+        
+        .table-header { display: flex; justify-content: space-between; align-items: center; padding: 24px 32px; border-bottom: 1px solid var(--border-color); }
+        .table-header h2 { font-size: 18px; font-weight: 600; margin: 0; color: var(--primary-text); }
+        .btn-filter { display: flex; align-items: center; gap: 8px; background-color: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--secondary-text); cursor: pointer; transition: background-color 0.2s; }
+        .btn-filter:hover { background-color: #f9fafb; }
+
+        /* Table Styles */
+        .data-table { width: 100%; border-collapse: collapse; text-align: left; }
+        .data-table th { font-size: 10px; font-weight: 700; color: var(--secondary-text); text-transform: uppercase; letter-spacing: 0.5px; padding: 16px 32px; background-color: #f9fafb; border-bottom: 1px solid var(--border-color); }
+        .data-table td { padding: 20px 32px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        .data-table tr:last-child td { border-bottom: none; }
+        
+        /* Applicant Cell */
+        .applicant-cell { display: flex; align-items: center; gap: 16px; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: white; overflow: hidden; flex-shrink: 0; }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .applicant-info { display: flex; flex-direction: column; }
+        .applicant-name { font-size: 14px; font-weight: 600; color: var(--primary-text); margin: 0 0 2px; }
+        .applicant-role { font-size: 12px; color: var(--secondary-text); margin: 0; }
+
+        /* General Table Cells */
+        .cell-text { font-size: 14px; color: var(--primary-text); font-weight: 500; }
+        
+        /* Badges */
+        .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+        .status-badge .icon { font-size: 10px; }
+        .badge-yellow { background-color: var(--badge-yellow-bg); color: var(--badge-yellow-text); }
+        .badge-green { background-color: var(--badge-green-bg); color: var(--badge-green-text); }
+        .badge-red { background-color: var(--badge-red-bg); color: var(--badge-red-text); }
+        .badge-gray { background-color: var(--badge-gray-bg); color: var(--badge-gray-text); }
+
+        /* Actions */
+        .actions-cell { display: flex; align-items: center; gap: 16px; }
+        .action-btn { background: none; border: none; cursor: pointer; font-size: 16px; padding: 4px; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s, transform 0.1s; }
+        .action-btn:hover { opacity: 0.7; transform: scale(1.1); }
+        .action-download { color: var(--secondary-text); }
+        .action-verify { color: #10b981; }
+        .action-reject { color: #ef4444; }
+
+        /* Table Footer / Pagination */
+        .table-footer { display: flex; justify-content: space-between; align-items: center; padding: 20px 32px; border-top: 1px solid var(--border-color); background-color: var(--bg-surface); }
+        .footer-text { font-size: 13px; color: var(--secondary-text); }
+        .pagination { display: flex; gap: 8px; }
+        .btn-page { background-color: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 16px; font-size: 13px; font-weight: 500; color: var(--primary-text); cursor: pointer; transition: background-color 0.2s; }
+        .btn-page:disabled { color: #9ca3af; cursor: not-allowed; background-color: #f9fafb; }
+        .btn-page:not(:disabled):hover { background-color: #f3f4f6; }
+
+        /* Footer */
+        .footer { background-color: var(--bg-surface); border-top: 1px solid var(--border-color); display: flex; justify-content: center; padding: 60px 0; margin-top: 40px;}
+        .footer-content { width: 1200px; max-width: 90%; display: flex; justify-content: space-between; align-items: flex-start; }
+        .footer-left { display: flex; flex-direction: column; gap: 12px; }
+        .logo-footer { font-family: 'Playfair Display', serif; font-size: 64px; font-weight: 700; color: #4da38b; margin: 0; line-height: 1; letter-spacing: -1px; }
+        .copyright { font-size: 14px; color: var(--secondary-text); margin: 0; }
+        .footer-right { display: flex; flex-direction: column; gap: 16px; align-items: flex-end; font-size: 16px; color: var(--secondary-text); }
+        .footer-right a:hover { color: var(--brand-green); }
+
+        /* =========================================
+           RESPONSIVE MOBILE STYLES
+           ========================================= */
+        @media (max-width: 768px) {
+            :root { --navbar-height: 64px; }
+            .navbar { height: var(--navbar-height); }
+            .navbar-content { max-width: 100%; padding: 0 12px; }
+            .mobile-menu-btn { display: block; flex: 0 0 28px; }
+            .nav-left { gap: 16px; }
+            .nav-search { display: none; }
+            .nav-center { display: none; }
+            .nav-right { gap: 16px; }
+            .logo-nav br { display: none; }
+            .logo-nav-mobile-text { display: inline; margin-left: 6px; }
+
+            .page-container { width: 100%; max-width: none; margin: calc(var(--navbar-height) + 28px) 0 72px; padding: 0 26px; }
+            
+            .page-header { margin-bottom: 24px; }
+            .page-header h1 { font-size: 32px; line-height: 1.15; margin-bottom: 16px; }
+            .page-header p { font-size: 14px; line-height: 1.6; max-width: none; }
+            .metrics-card { width: 100%; padding: 20px; margin-bottom: 36px; }
+            .metric-value { font-size: 32px; }
+
+            .table-section { background: transparent; border: none; box-shadow: none; border-radius: 0; }
+            .table-header { padding: 0 0 16px; border-bottom: none; }
+            .table-header h2 { font-size: 20px; }
+            
+            .data-table, .data-table tbody { display: block; width: 100%; }
+            .data-table thead { display: none; }
+            
+            .data-table tr { 
+                display: grid;
+                grid-template-columns: 1fr auto;
+                grid-template-areas: 
+                    "applicant status"
+                    "facility date"
+                    "actions actions";
+                gap: 16px;
+                background-color: var(--bg-surface); 
+                border: 1px solid var(--border-color); 
+                border-radius: 12px; 
+                margin-bottom: 16px; 
+                padding: 16px;
+                box-shadow: var(--card-shadow);
+            }
+            
+            .data-table td { 
+                display: block;
+                padding: 0; 
+                border: none;
+                text-align: left;
+            }
+            
+            .data-table td:nth-child(1) { grid-area: applicant; }
+            .data-table td:nth-child(2) { grid-area: facility; }
+            .data-table td:nth-child(3) { grid-area: date; text-align: right; }
+            .data-table td:nth-child(4) { grid-area: status; align-self: start; justify-self: end; }
+            .data-table td:nth-child(5) { grid-area: actions; border-top: 1px solid var(--border-color); padding-top: 16px; margin-top: 4px; }
+            
+            .data-table td::before { 
+                display: block;
+                font-size: 10px; 
+                font-weight: 700; 
+                color: var(--secondary-text); 
+                text-transform: uppercase; 
+                letter-spacing: 0.5px; 
+                margin-bottom: 4px;
+                content: attr(data-label);
+            }
+            .data-table td:nth-child(1)::before,
+            .data-table td:nth-child(4)::before,
+            .data-table td:nth-child(5)::before { display: none; }
+
+            .applicant-cell { display: flex; flex-direction: row; align-items: center; gap: 12px; }
+            .applicant-cell .avatar { width: 36px; height: 36px; margin: 0; }
+            .applicant-info { display: flex; flex-direction: column; align-items: flex-start; }
+            .applicant-name { font-size: 14px; margin-bottom: 2px; }
+            .status-badge { font-size: 11px; padding: 4px 8px; width: fit-content; }
+            
+            .actions-cell { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; justify-content: flex-start; }
+            .action-btn { background-color: var(--bg-main); border: 1px solid var(--border-color); border-radius: 8px; padding: 10px 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 16px; }
+            .action-download { color: var(--secondary-text); }
+            .action-download::after { content: 'Unduh'; font-size: 11px; font-weight: 600; color: var(--secondary-text); }
+            .action-verify { color: #10b981; }
+            .action-verify::after { content: 'Verifikasi'; font-size: 11px; font-weight: 600; color: #10b981; }
+            .action-reject { color: #ef4444; }
+            .action-reject::after { content: 'Tolak'; font-size: 11px; font-weight: 600; color: #ef4444; }
+
+            .table-footer { flex-direction: column; gap: 16px; padding: 24px 0; background: transparent; border: none; align-items: center; text-align: center; }
+
+            .footer { padding: 64px 0; }
+            .footer-content { flex-direction: column; align-items: center; text-align: center; gap: 32px; }
+            .footer-left { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+            .footer-right { align-items: center; }
+        }
+
+    .lucide-icon{display:inline-block;vertical-align:-.18em;flex:0 0 auto}
+
+        /* Shared layout shell header/footer alignment */
+        :root{--shared-shell-nav:72px;--navbar-height:72px;--nav:72px}
+        .navbar{position:fixed;inset:0 0 auto;width:100%;height:var(--navbar-height,var(--nav,var(--shared-shell-nav)));background:#fff;border-bottom:1px solid var(--border-color,var(--border,#e5e7eb));display:flex;justify-content:center;z-index:1000}
+        .navbar-content{width:1200px;max-width:95%;display:flex;align-items:center;justify-content:space-between;gap:22px}
+        .nav-left,.nav-center,.nav-right{display:flex;align-items:center;gap:22px}
+        .nav-center{gap:40px}
+        .logo-nav{font-family:'Playfair Display',serif;color:#1d7667;font-size:24px;font-weight:700;line-height:1.05;text-decoration:none;white-space:nowrap}
+        .mobile-menu-btn{display:none;border:0;background:transparent;color:var(--secondary-text,var(--muted,#6b7280));font-size:24px;padding:0;line-height:1;cursor:pointer}
+        .nav-link{font-size:14px;font-weight:700;color:var(--secondary-text,var(--muted,#6b7280));text-decoration:none}
+        .nav-link.active{color:var(--brand-green,var(--green,#0f9d58));border-bottom:2px solid currentColor;padding-bottom:4px}
+        .nav-search{position:relative;display:flex;align-items:center;min-width:232px;height:40px;color:var(--secondary-text,var(--muted,#6b7280))}
+        .nav-search input{width:250px;height:40px;border:1px solid #dbe2ea;border-radius:999px;background:linear-gradient(180deg,#fff,#f8fafc);box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 1px 2px rgba(15,23,42,.04);padding:0 16px 0 42px;color:var(--secondary-text,var(--muted,#6b7280));font:500 13px var(--sans-serif,Inter,system-ui,sans-serif);outline:none}
+        .nav-search input:focus{border-color:var(--brand-green,var(--green,#0f9d58));background:#fff}
+        .nav-search .search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#94a3b8;display:inline-flex;align-items:center;justify-content:center;pointer-events:none}
+        .nav-notifications{border:0;background:transparent;color:#6b7280;font-size:19px;padding:0;line-height:1;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+        .profile-pic{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:var(--brand-green,var(--green,#0f9d58));border:0;overflow:hidden;font-size:13px;font-weight:700;text-decoration:none;flex:0 0 34px}
+        .profile-pic img{width:100%;height:100%;object-fit:cover}
+        .footer{border-top:1px solid var(--border-color,var(--border,#e5e7eb));padding:22px 0;background:#fff;display:flex;justify-content:center}
+        .footer-content{width:1200px;max-width:95%;display:flex;align-items:center;justify-content:space-between;gap:24px}
+        .footer-left,.footer-brand,.footer-content>div:first-child{display:flex;align-items:center;gap:16px;min-width:0}
+        .logo-footer,.footer-logo{font-family:'Playfair Display',serif;font-size:30px;color:#4da38b;margin:0;line-height:1;white-space:nowrap;letter-spacing:0}
+        .copyright,.footer-copy,.footer .muted{font-size:13px;color:var(--secondary-text,var(--muted,#6b7280));margin:0;line-height:1.5}
+        .footer-right,.footer-links{display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:10px 18px;color:var(--secondary-text,var(--muted,#6b7280));font-size:14px;font-weight:600}
+        .footer-right a,.footer-links a{white-space:nowrap;text-decoration:none;color:inherit}
+        @media(max-width:768px){:root{--shared-shell-nav:64px;--navbar-height:64px;--nav:64px}.navbar-content{max-width:100%;padding:0 14px}.mobile-menu-btn{display:block}.logo-nav br{display:none}.logo-nav span{margin-left:6px}.nav-center,.nav-search{display:none}.nav-left,.nav-right{gap:14px}.footer{padding:22px 0}.footer-content{flex-direction:column;align-items:center;text-align:center;gap:14px}.footer-left,.footer-brand,.footer-content>div:first-child{flex-direction:column;gap:8px}.footer-right,.footer-links{justify-content:center;align-items:center}}
+
+    </style>
+</head>
+<body>
+
+    <header class="navbar">
+        <div class="navbar-content">
+            <div class="nav-left">
+                <button class="mobile-menu-btn" type="button" aria-label="Buka navigasi">&#9776;</button>
+                <a href="#" class="logo-nav" style="color: #1d7667;" aria-label="IPB Smart Reserve Hub">IPB<br><span class="logo-nav-mobile-text">SRH</span></a>
+                <div class="nav-search">
+                    <span class="search-icon"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg></span>
+                    <input type="search" placeholder="Cari reservasi..." aria-label="Cari reservasi">
+                </div>
+            </div>
+            <div class="nav-center">
+                <a href="#" class="nav-link">Beranda</a>
+                <a href="#" class="nav-link active">Reservasi</a>
+                <a href="#" class="nav-link">Fasilitas</a>
+            </div>
+            <div class="nav-right">
+                <button class="nav-notifications" type="button" aria-label="Notifikasi" style="color: #6b7280; cursor: pointer; font-size: 20px; border: 0; background: transparent; padding: 0;"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 21a2 2 0 0 0 4 0"/><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/></svg></button>
+                <a href="#" class="profile-pic" aria-label="Profil admin" style="background-color: #0f9d58; border: none; display: flex; align-items: center; justify-content: center; color: white; font-size: 14px; font-weight: 700;">BS</a>
+            </div>
+        </div>
+    </header>
+
+    <main class="page-container">
+        
+        <div class="page-header">
+            <h1>Hub Verifikasi</h1>
+            <p>Tinjau pengajuan reservasi, verifikasi dokumen, dan kelola akses fasilitas kampus dalam satu tampilan operasional.</p>
+        </div>
+
+        <div class="metrics-card">
+            <div class="metric-info">
+                <span class="metric-label">MENUNGGU VERIFIKASI</span>
+                <span class="metric-value">24</span>
+            </div>
+            <div class="metric-icon"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg></div>
+        </div>
+
+        <div class="table-section">
+            <div class="table-header">
+                <h2>Pengajuan Reservasi</h2>
+                <button class="btn-filter" type="button">
+                    <span style="font-size: 14px;">&#8801;</span> Filter
+                </button>
+            </div>
+            
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>PEMOHON</th>
+                        <th>NAMA FASILITAS</th>
+                        <th>TANGGAL PENGAJUAN</th>
+                        <th>STATUS DOKUMEN</th>
+                        <th>AKSI</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td data-label="Pemohon">
+                            <div class="applicant-cell">
+                                <div class="avatar" style="background-color: #064e3b;">JD</div>
+                                <div class="applicant-info">
+                                    <p class="applicant-name">Johnathan Doe</p>
+                                    <p class="applicant-role">Kandidat Doktor, Fisika</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="cell-text" data-label="Nama Fasilitas">Bio-Labs Complex A</td>
+                        <td class="cell-text" data-label="Tanggal Pengajuan">24 Oktober 2024</td>
+                        <td data-label="Status Dokumen">
+                            <div class="status-badge badge-yellow">
+                                <span class="icon"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg></span> Dokumen Diunggah
+                            </div>
+                        </td>
+                        <td data-label="Aksi">
+                            <div class="actions-cell">
+                                <button class="action-btn action-download" type="button" title="Unduh"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                                <button class="action-btn action-verify" type="button" title="Verifikasi"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>
+                                <button class="action-btn action-reject" type="button" title="Tolak"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td data-label="Pemohon">
+                            <div class="applicant-cell">
+                                <div class="avatar">
+                                    <img src="https://via.placeholder.com/40x40/475569/ffffff?text=E" alt="Elena">
+                                </div>
+                                <div class="applicant-info">
+                                    <p class="applicant-name">Elena Rodriguez</p>
+                                    <p class="applicant-role">Peneliti Senior</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="cell-text" data-label="Nama Fasilitas">Materials Sci Wing</td>
+                        <td class="cell-text" data-label="Tanggal Pengajuan">23 Oktober 2024</td>
+                        <td data-label="Status Dokumen">
+                            <div class="status-badge badge-yellow">
+                                <span class="icon"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg></span> Bukti Bayar Diunggah
+                            </div>
+                        </td>
+                        <td data-label="Aksi">
+                            <div class="actions-cell">
+                                <button class="action-btn action-download" type="button" title="Unduh"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                                <button class="action-btn action-verify" type="button" title="Verifikasi"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>
+                                <button class="action-btn action-reject" type="button" title="Tolak"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td data-label="Pemohon">
+                            <div class="applicant-cell">
+                                <div class="avatar" style="background-color: #a7f3d0; color: #065f46;">MK</div>
+                                <div class="applicant-info">
+                                    <p class="applicant-name">Marcus Knight</p>
+                                    <p class="applicant-role">Mitra Eksternal</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="cell-text" data-label="Nama Fasilitas">Innovation Hub Pod 4</td>
+                        <td class="cell-text" data-label="Tanggal Pengajuan">22 Oktober 2024</td>
+                        <td data-label="Status Dokumen">
+                            <div class="status-badge badge-green">
+                                <span class="icon"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Dokumen Terverifikasi
+                            </div>
+                        </td>
+                        <td data-label="Aksi">
+                            <div class="actions-cell">
+                                <button class="action-btn action-download" type="button" title="Unduh"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                                <button class="action-btn action-verify" type="button" title="Verifikasi"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>
+                                <button class="action-btn action-reject" type="button" title="Tolak"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td data-label="Pemohon">
+                            <div class="applicant-cell">
+                                <div class="avatar" style="background-color: #065f46;">SC</div>
+                                <div class="applicant-info">
+                                    <p class="applicant-name">Sarah Chen</p>
+                                    <p class="applicant-role">Peneliti Pascasarjana</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="cell-text" data-label="Nama Fasilitas">Quantum Computing Lab</td>
+                        <td class="cell-text" data-label="Tanggal Pengajuan">21 Oktober 2024</td>
+                        <td data-label="Status Dokumen">
+                            <div class="status-badge badge-green">
+                                <span class="icon"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span> Pembayaran Terverifikasi
+                            </div>
+                        </td>
+                        <td data-label="Aksi">
+                            <div class="actions-cell">
+                                <button class="action-btn action-download" type="button" title="Unduh"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                                <button class="action-btn action-verify" type="button" title="Verifikasi"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>
+                                <button class="action-btn action-reject" type="button" title="Tolak"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td data-label="Pemohon">
+                            <div class="applicant-cell">
+                                <div class="avatar" style="background-color: #e5e7eb; color: #4b5563;">AH</div>
+                                <div class="applicant-info">
+                                    <p class="applicant-name">Arthur Hansen</p>
+                                    <p class="applicant-role">Staf Fakultas</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="cell-text" data-label="Nama Fasilitas">Agri-Tech Greenhouses</td>
+                        <td class="cell-text" data-label="Tanggal Pengajuan">20 Oktober 2024</td>
+                        <td data-label="Status Dokumen">
+                            <div class="status-badge badge-red">
+                                <span class="icon"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></span> Dokumen Ditolak
+                            </div>
+                        </td>
+                        <td data-label="Aksi">
+                            <div class="actions-cell">
+                                <button class="action-btn action-download" type="button" title="Unduh"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                                <button class="action-btn action-verify" type="button" title="Verifikasi"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>
+                                <button class="action-btn action-reject" type="button" title="Tolak"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td data-label="Pemohon">
+                            <div class="applicant-cell">
+                                <div class="avatar" style="background-color: #a7f3d0; color: #065f46;">LW</div>
+                                <div class="applicant-info">
+                                    <p class="applicant-name">Linda Wu</p>
+                                    <p class="applicant-role">Peneliti Pascadoktoral</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="cell-text" data-label="Nama Fasilitas">Neuroscience Center</td>
+                        <td class="cell-text" data-label="Tanggal Pengajuan">19 Oktober 2024</td>
+                        <td data-label="Status Dokumen">
+                            <div class="status-badge badge-gray">
+                                <span class="icon"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></span> Menunggu Peninjauan
+                            </div>
+                        </td>
+                        <td data-label="Aksi">
+                            <div class="actions-cell">
+                                <button class="action-btn action-download" type="button" title="Unduh"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg></button>
+                                <button class="action-btn action-verify" type="button" title="Verifikasi"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></button>
+                                <button class="action-btn action-reject" type="button" title="Tolak"><svg class="lucide-icon" aria-hidden="true" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="table-footer">
+                <span class="footer-text">Menampilkan 6 dari 24 pengajuan yang menunggu verifikasi</span>
+                <div class="pagination">
+                    <button class="btn-page" type="button" disabled>Sebelumnya</button>
+                    <button class="btn-page" type="button">Berikutnya</button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-left">
+                <h2 class="logo-footer">IPB SRH</h2>
+                <p class="copyright">&copy; 2026 IPB Smart Reserve Hub. Hak cipta dilindungi.</p>
+            </div>
+            <div class="footer-right">
+                <a href="#">Beranda</a>
+                <a href="#">Reservasi</a>
+                <a href="#">Fasilitas</a>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>
