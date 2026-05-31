@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / ".agents" / "scripts" / "local_tracker.py"
+SCRIPT = Path(__file__).resolve().parents[2] / ".agents" / "scripts" / "local_tracker.py"
 
 
 def run_tracker(repo_root: Path, *args: str) -> subprocess.CompletedProcess[str]:

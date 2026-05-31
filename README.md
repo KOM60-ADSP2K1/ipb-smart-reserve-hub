@@ -161,6 +161,7 @@ More technical details live in:
 - [Backend package README](backend/app/README.md)
 - [Frontend README](frontend/README.md)
 - [Backend deployment guide](docs/backend-deployment.md)
+- [Frontend deployment guide](docs/frontend-deployment.md)
 
 ## Common Commands
 

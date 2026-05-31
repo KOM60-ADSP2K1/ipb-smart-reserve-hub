@@ -1,14 +1,17 @@
-from pathlib import Path
+import json
 import tomllib
+from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = BACKEND_ROOT.parent
 
 
-def test_railway_backend_deployment_runs_fastapi_and_smoke_checks_health():
-    railway_config = tomllib.loads((REPO_ROOT / "railway.toml").read_text())
+def test_railway_backend_deployment_config_lives_with_backend_package():
+    railway_config = tomllib.loads((BACKEND_ROOT / "railway.toml").read_text())
 
-    assert railway_config["build"]["builder"] == "NIXPACKS"
+    assert not (REPO_ROOT / "railway.toml").exists()
+    assert railway_config["build"]["builder"] == "RAILPACK"
     assert railway_config["deploy"]["startCommand"] == (
         "uvicorn app.main:create_app --factory --host 0.0.0.0 --port $PORT"
     )
@@ -20,6 +23,8 @@ def test_backend_deployment_guide_covers_demo_readiness_topics():
 
     for required_text in [
         "Railway backend deployment",
+        "Root Directory: `/backend`",
+        "Config file path: `/backend/railway.toml`",
         "IPB_ENVIRONMENT=production",
         "IPB_DATABASE_URL",
         "IPB_SECRET_KEY",
@@ -34,6 +39,32 @@ def test_backend_deployment_guide_covers_demo_readiness_topics():
 
 
 def test_backend_dependencies_include_postgresql_runtime_driver():
-    pyproject = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text())
+    pyproject = tomllib.loads((BACKEND_ROOT / "pyproject.toml").read_text())
 
     assert "psycopg[binary]>=3.2.0" in pyproject["project"]["dependencies"]
+
+
+def test_vercel_frontend_config_supports_vite_spa_deep_links():
+    vercel_config = json.loads((REPO_ROOT / "frontend" / "vercel.json").read_text())
+
+    assert vercel_config["$schema"] == "https://openapi.vercel.sh/vercel.json"
+    assert vercel_config["rewrites"] == [
+        {
+            "source": "/(.*)",
+            "destination": "/index.html",
+        }
+    ]
+
+
+def test_frontend_deployment_guide_covers_vercel_configuration():
+    guide = (REPO_ROOT / "docs" / "frontend-deployment.md").read_text()
+
+    for required_text in [
+        "Vercel frontend deployment",
+        "Root Directory: `frontend`",
+        "Build Command: `npm run build`",
+        "Output Directory: `dist`",
+        "VITE_API_BASE_URL",
+        "frontend/vercel.json",
+    ]:
+        assert required_text in guide

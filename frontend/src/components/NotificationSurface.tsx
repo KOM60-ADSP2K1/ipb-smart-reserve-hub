@@ -53,7 +53,7 @@ export function NotificationSurface({
     queryKey: ["notifications", "unread-count"],
   });
   const notificationsQuery = useQuery({
-    queryFn: fetchNotifications,
+    queryFn: () => fetchNotifications(),
     queryKey: ["notifications"],
     enabled: isOpen,
   });

@@ -4,7 +4,12 @@ This guide covers backend/API demo deployment readiness. Frontend/Vercel deploym
 
 ## Railway backend deployment
 
-Deploy the FastAPI backend as a Railway service from this repository. The committed `railway.toml` uses Nixpacks and starts the ASGI app with:
+Deploy the FastAPI backend as a Railway service from this repository. Because this repository is an isolated monorepo, configure the Railway service with:
+
+- Root Directory: `/backend`
+- Config file path: `/backend/railway.toml`
+
+The committed `backend/railway.toml` uses Railpack and starts the ASGI app with:
 
 ```sh
 uvicorn app.main:create_app --factory --host 0.0.0.0 --port $PORT
