@@ -10,10 +10,10 @@ describe("App routing", () => {
     expect(await screen.findByRole("heading", { name: "Masuk" })).toBeVisible();
   });
 
-  it("falls back to the login page for unknown routes instead of the smoke harness", async () => {
+  it("shows a not found page for unknown routes instead of the smoke harness", async () => {
     renderWithProviders(<App />, { initialEntries: ["/docs"] });
 
-    expect(await screen.findByRole("heading", { name: "Masuk" })).toBeVisible();
+    expect(await screen.findByRole("heading", { name: "Halaman tidak ditemukan" })).toBeVisible();
     expect(screen.queryByText(/Rute smoke non-produk/i)).not.toBeInTheDocument();
   });
 });

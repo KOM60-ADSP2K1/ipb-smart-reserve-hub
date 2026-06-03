@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { RequireRole } from "./auth/session";
+import { NotFoundPage } from "./pages/NotFoundPage";
 import { StaffProfilePage, SuperAdminProfilePage } from "./pages/account/AccountProfilePage";
 import { LoginPage } from "./pages/auth/LoginPage";
 import { RegisterPage } from "./pages/auth/RegisterPage";
@@ -156,7 +157,7 @@ export function App() {
         path="/__reference__/upload-calendar-states"
       />
       <Route element={<UiPrimitivesPage />} path="/__reference__/ui-primitives" />
-      <Route element={<Navigate replace to="/login" />} path="*" />
+      <Route element={<NotFoundPage />} path="*" />
     </Routes>
   );
 }

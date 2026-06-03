@@ -25,6 +25,7 @@ class FacilityManagementProfileResponse(BaseModel):
     open_hours_summary: str
     open_hours: list["FacilityOpenHourResponse"] = []
     images: list["FacilityImageManagementResponse"] = []
+    blackouts: list["FacilityBlackoutResponse"] = []
     is_active: bool
 
 

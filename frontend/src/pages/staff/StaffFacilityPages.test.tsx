@@ -605,7 +605,7 @@ describe("StaffFacilityPages", () => {
     });
   });
 
-  it("submits supported image and blackout creation payloads", async () => {
+  it("submits supported image and blackout creation payloads, then shows the created blackout", async () => {
     const user = userEvent.setup();
     let facilitiesGetCount = 0;
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
@@ -628,7 +628,26 @@ describe("StaffFacilityPages", () => {
                       url: "https://cdn.example.test/existing-auditorium.jpg",
                     },
                   ]
-                : [
+                : facilitiesGetCount === 2
+                  ? [
+                    {
+                      alt_text: "Cover auditorium",
+                      display_order: 0,
+                      id: "image-1",
+                      is_active: true,
+                      is_cover: false,
+                      url: "https://cdn.example.test/auditorium.jpg",
+                    },
+                    {
+                      alt_text: "Existing auditorium view",
+                      display_order: 1,
+                      id: "image-existing",
+                      is_active: true,
+                      is_cover: true,
+                      url: "https://cdn.example.test/existing-auditorium.jpg",
+                    },
+                  ]
+                  : [
                     {
                       alt_text: "Cover auditorium",
                       display_order: 0,
@@ -646,6 +665,17 @@ describe("StaffFacilityPages", () => {
                       url: "https://cdn.example.test/existing-auditorium.jpg",
                     },
                   ],
+            blackouts:
+              facilitiesGetCount >= 3
+                ? [
+                    {
+                      ends_at: "2026-06-01T04:00:00Z",
+                      id: "blackout-1",
+                      reason: "Maintenance",
+                      starts_at: "2026-06-01T03:00:00Z",
+                    },
+                  ]
+                : [],
           },
         ]);
       }
@@ -698,8 +728,11 @@ describe("StaffFacilityPages", () => {
     await user.type(screen.getByLabelText("Alasan blackout"), "Maintenance");
     await user.click(screen.getByRole("button", { name: "Tambah Blackout" }));
     expect(await screen.findByText("Blackout fasilitas ditambahkan.")).toBeVisible();
+    expect(await screen.findByText("Maintenance")).toBeVisible();
+    expect(screen.getByText("1 Juni 2026, 10:00-11:00")).toBeVisible();
 
     await waitFor(() => {
+      expect(facilitiesGetCount).toBe(3);
       expect(fetchMock).toHaveBeenCalledWith(
         "http://localhost:8000/staff/facilities/grand-auditorium/images",
         expect.objectContaining({ method: "POST" }),

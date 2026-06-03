@@ -19,6 +19,7 @@ from app.schemas.facility_management_schemas import (
 from app.services.accounts import UserAccount
 from app.services.facility_management import (
     FacilityBlackoutCreation,
+    FacilityBlackoutInvalid,
     FacilityCategoryNotFound,
     FacilityCreation,
     FacilityImageCreation,
@@ -215,5 +216,7 @@ def register_facility_management_routes(
                 facility_id,
                 FacilityBlackoutCreation(**payload.model_dump()),
             )
+        except FacilityBlackoutInvalid:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Blackout selesai harus setelah mulai.")
         except StaffFacilityAccessDenied:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Staff tidak ditugaskan ke fasilitas ini.")

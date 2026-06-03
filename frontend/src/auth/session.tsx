@@ -14,10 +14,12 @@ export type CurrentUser = {
     program_studi: string | null;
   } | null;
   email: string;
+  faculty?: string | null;
   full_name: string;
   id: number | string;
   is_active: boolean;
   nim?: string | null;
+  nip?: string | null;
   phone?: string | null;
   role: UserRole;
 };

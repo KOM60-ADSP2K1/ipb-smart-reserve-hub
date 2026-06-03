@@ -194,6 +194,19 @@ async def test_assigned_staff_manages_facility_images_open_hours_and_blackouts()
                 "reason": "Maintenance",
             },
         )
+        invalid_blackout = await client.post(
+            f"/staff/facilities/{facility_id}/blackouts",
+            headers={"Authorization": f"Bearer {staff_token}"},
+            json={
+                "starts_at": "2026-06-01T04:00:00+00:00",
+                "ends_at": "2026-06-01T03:00:00+00:00",
+                "reason": "Invalid",
+            },
+        )
+        assigned_facilities_after_blackout = await client.get(
+            "/staff/facilities",
+            headers={"Authorization": f"Bearer {staff_token}"},
+        )
         detail = await client.get(f"/facilities/{facility_id}")
         availability = await client.get(
             f"/facilities/{facility_id}/availability",
@@ -228,6 +241,17 @@ async def test_assigned_staff_manages_facility_images_open_hours_and_blackouts()
     assert open_hour.json()["day_of_week"] == 0
     assert blackout.status_code == 201
     assert blackout.json()["reason"] == "Maintenance"
+    assert invalid_blackout.status_code == 400
+    assert invalid_blackout.json()["detail"] == "Blackout selesai harus setelah mulai."
+    assert assigned_facilities_after_blackout.status_code == 200
+    assert assigned_facilities_after_blackout.json()[0]["blackouts"] == [
+        {
+            "id": blackout.json()["id"],
+            "starts_at": "2026-06-01T03:00:00Z",
+            "ends_at": "2026-06-01T04:00:00Z",
+            "reason": "Maintenance",
+        }
+    ]
     assert [image["is_cover"] for image in detail.json()["images"]].count(True) == 1
     assert detail.json()["images"][0]["url"] == "https://cdn.example.test/auditorium-new-cover.jpg"
     assert availability.status_code == 200

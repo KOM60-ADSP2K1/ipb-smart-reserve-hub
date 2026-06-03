@@ -6,6 +6,7 @@ import {
   FileText,
   Filter,
   Home,
+  LogOut,
   Menu,
   Upload,
   X,
@@ -13,6 +14,7 @@ import {
 import { useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "../../api/http";
+import { useAuth } from "../../auth/session";
 import { NotificationSurface } from "../../components/NotificationSurface";
 import {
   staffReservationList,
@@ -93,6 +95,7 @@ export function StaffShell({
   children: ReactNode;
 }) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const auth = useAuth();
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#f8fafc] text-[#111827]">
@@ -138,7 +141,7 @@ export function StaffShell({
         aria-label="Navigasi staff utama"
         className="group fixed left-0 top-[72px] z-40 hidden h-[calc(100vh-72px)] w-[78px] overflow-hidden border-r border-[#e5e7eb] bg-white/95 shadow-none backdrop-blur transition-[width,box-shadow] duration-200 hover:w-[244px] hover:shadow-[8px_0_28px_rgba(15,23,42,0.08)] max-md:hidden md:flex"
       >
-        <div className="flex w-full flex-col px-3 py-4">
+        <div className="flex h-full w-full flex-col px-2 py-4">
           <div className="mb-4 flex items-center justify-between px-2 text-[10px] font-bold uppercase tracking-[0.08em] text-[#9ca3af]">
             <span className="whitespace-nowrap opacity-0 transition-opacity duration-200 group-hover:opacity-100">
               Menu staff
@@ -150,7 +153,7 @@ export function StaffShell({
             />
           </div>
 
-          <nav aria-label="Menu utama staff" className="flex flex-1 flex-col gap-1.5">
+          <nav aria-label="Menu utama staff" className="flex flex-col gap-1.5">
             {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = active === item.key;
@@ -159,7 +162,7 @@ export function StaffShell({
                 <a
                   aria-current={isActive ? "page" : undefined}
                   className={cn(
-                    "flex items-center gap-3 rounded-[12px] px-3 py-3 text-sm font-bold text-[#6b7280] no-underline transition-colors hover:bg-[#f8fafc] hover:text-[#111827]",
+                    "flex items-center justify-center gap-0 rounded-[12px] px-3 py-3 text-sm font-bold text-[#6b7280] no-underline transition-colors hover:bg-[#f8fafc] hover:text-[#111827] group-hover:justify-start group-hover:gap-3",
                     isActive && "bg-[#e8f5e9] text-[#0f9d58]",
                   )}
                   href={item.href}
@@ -173,13 +176,26 @@ export function StaffShell({
                   >
                     <Icon aria-hidden="true" size={18} />
                   </span>
-                  <span className="whitespace-nowrap opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100">
+                  <span className="w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover:w-auto group-hover:translate-x-0 group-hover:opacity-100">
                     {item.label}
                   </span>
                 </a>
               );
             })}
           </nav>
+          <button
+            aria-label="Keluar"
+            className="mt-auto flex w-full items-center justify-center gap-0 rounded-[12px] px-3 py-3 text-sm font-bold text-[#b91c1c] transition-colors hover:bg-[#fef2f2] group-hover:justify-start group-hover:gap-3"
+            onClick={() => auth.logout()}
+            type="button"
+          >
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#fee2e2]">
+              <LogOut aria-hidden="true" size={18} />
+            </span>
+            <span className="w-0 overflow-hidden whitespace-nowrap opacity-0 transition-all duration-200 group-hover:w-auto group-hover:translate-x-0 group-hover:opacity-100">
+              Keluar
+            </span>
+          </button>
         </div>
       </aside>
 
@@ -233,6 +249,17 @@ export function StaffShell({
                 );
               })}
             </nav>
+            <button
+              aria-label="Keluar"
+              className="mt-auto flex items-center gap-3 rounded-[10px] px-2.5 py-3 text-sm font-bold text-[#b91c1c]"
+              onClick={() => auth.logout()}
+              type="button"
+            >
+              <span className="flex w-6 justify-center">
+                <LogOut aria-hidden="true" size={18} />
+              </span>
+              Keluar
+            </button>
           </aside>
         </div>
       ) : null}

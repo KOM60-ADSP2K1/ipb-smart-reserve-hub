@@ -16,7 +16,7 @@ import { useParams } from "react-router-dom";
 import { ApiError, apiRequest } from "../../api/http";
 import { type StaffFacility, type StaffScheduleEntry } from "../../fixtures/staffFacilities";
 import { mapStaffReservationStatus } from "../../reservations/staffReservationOperations";
-import { campusDateKey } from "../../utils/campusTime";
+import { campusDateKey, formatCampusDate, formatCampusTime } from "../../utils/campusTime";
 import { cn } from "../../utils/cn";
 
 type FacilityManagementProfileResponse = {
@@ -34,6 +34,7 @@ type FacilityManagementProfileResponse = {
   name: string;
   open_hours: FacilityOpenHourResponse[];
   open_hours_summary: string;
+  blackouts?: FacilityBlackoutResponse[];
   payment_instructions: string | null;
   price_rupiah: number;
   price_summary: string;
@@ -61,6 +62,13 @@ type FacilityOpenHourResponse = {
   day_of_week: number;
   id?: string;
   opens_at: string;
+};
+
+type FacilityBlackoutResponse = {
+  ends_at: string;
+  id: string;
+  reason: string;
+  starts_at: string;
 };
 
 type StaffFacilityScheduleEntryResponse = {
@@ -243,6 +251,19 @@ function formatScheduleMonth(value: string) {
     timeZone: "Asia/Jakarta",
     year: "numeric",
   }).format(new Date(`${value.slice(0, 7)}-01T00:00:00+07:00`));
+}
+
+function formatBlackoutRange(blackout: FacilityBlackoutResponse) {
+  const startsDate = formatCampusDate(blackout.starts_at);
+  const startsTime = formatCampusTime(blackout.starts_at);
+  const endsDate = formatCampusDate(blackout.ends_at);
+  const endsTime = formatCampusTime(blackout.ends_at);
+
+  if (startsDate === endsDate) {
+    return `${startsDate}, ${startsTime}-${endsTime}`;
+  }
+
+  return `${startsDate}, ${startsTime} - ${endsDate}, ${endsTime}`;
 }
 
 function dateKeyFromUtcParts(year: number, monthIndex: number, day: number) {
@@ -1117,10 +1138,11 @@ export function StaffFacilityEditPage() {
       setMessage("");
       setFormError(apiErrorMessage(error, "Blackout fasilitas belum dapat ditambahkan."));
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       setBlackoutForm((current) => ({ ...current, reason: "" }));
       setFormError("");
       setMessage("Blackout fasilitas ditambahkan.");
+      await invalidateFacilities();
     },
   });
 
@@ -1548,6 +1570,26 @@ export function StaffFacilityEditPage() {
                   <CalendarDays aria-hidden="true" size={18} />
                 </span>
                 <h3 className="m-0 text-sm font-bold text-[#111827]">Tambah Blackout</h3>
+              </div>
+              <div className="mb-4 grid gap-2">
+                <p className="m-0 text-[13px] font-bold text-[#111827]">Blackout aktif</p>
+                {facility.blackouts && facility.blackouts.length > 0 ? (
+                  <ul className="m-0 grid list-none gap-2 p-0">
+                    {facility.blackouts.map((blackout) => (
+                      <li
+                        className="rounded-lg border border-[#d1fae5] bg-[#f0fdf4] p-3 text-[13px]"
+                        key={blackout.id}
+                      >
+                        <div className="font-bold text-[#111827]">{blackout.reason}</div>
+                        <div className="mt-1 text-[#047857]">{formatBlackoutRange(blackout)}</div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="m-0 rounded-lg border border-dashed border-[#e5e7eb] bg-[#f8fafc] p-3 text-[13px] text-[#6b7280]">
+                    Belum ada blackout aktif.
+                  </p>
+                )}
               </div>
               <div className="grid gap-3">
                 <fieldset className="grid gap-2 rounded-lg border border-[#e5e7eb] bg-[#f8fafc] p-3">

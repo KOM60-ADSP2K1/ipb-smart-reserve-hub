@@ -29,6 +29,10 @@ class FacilityOpenHourInvalid(FacilityManagementError):
     pass
 
 
+class FacilityBlackoutInvalid(FacilityManagementError):
+    pass
+
+
 class StaffUserNotFound(FacilityManagementError):
     pass
 
@@ -65,6 +69,7 @@ class FacilityManagementProfile:
     open_hours_summary: str
     open_hours: list["FacilityOpenHourProfile"]
     images: list["FacilityImageProfile"]
+    blackouts: list["FacilityBlackoutProfile"]
     is_active: bool
 
 
@@ -362,6 +367,7 @@ class FacilityManagementModule:
         creation: FacilityBlackoutCreation,
     ) -> FacilityBlackoutProfile:
         self._require_assigned_facility(staff, facility_id)
+        _ensure_valid_blackout(creation.starts_at, creation.ends_at)
         blackout = self._facility_management_repository.add_blackout(
             FacilityBlackout(
                 facility_id=facility_id,
@@ -398,6 +404,10 @@ def _to_facility_profile(facility: Facility) -> FacilityManagementProfile:
         open_hours_summary=facility.open_hours_summary,
         open_hours=[_to_open_hour_profile(open_hour) for open_hour in facility.open_hours],
         images=[_to_image_profile(image) for image in facility.images],
+        blackouts=[
+            _to_blackout_profile(blackout)
+            for blackout in sorted(facility.blackouts, key=lambda item: item.starts_at)
+        ],
         is_active=facility.is_active,
     )
 
@@ -490,6 +500,11 @@ def _ensure_valid_open_hour(day_of_week: int, opens_at: str, closes_at: str) -> 
         raise FacilityOpenHourInvalid
     if _time_from_string(closes_at) <= _time_from_string(opens_at):
         raise FacilityOpenHourInvalid
+
+
+def _ensure_valid_blackout(starts_at: datetime, ends_at: datetime) -> None:
+    if _as_utc(ends_at) <= _as_utc(starts_at):
+        raise FacilityBlackoutInvalid
 
 
 _DAY_NAMES = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
