@@ -18,6 +18,36 @@ def test_academic_profile_deriver_uses_digit_based_entry_year_for_newer_nim_form
     assert academic_profile.entry_year == 2023
 
 
+def test_academic_profile_deriver_uses_current_ipb_nim_structure_for_vokasi_example():
+    academic_profile = AcademicProfileDeriver().derive("J0409241025")
+
+    assert academic_profile == AcademicProfile(
+        program_studi="Teknologi dan Manajemen Ternak",
+        faculty="Sekolah Vokasi",
+        entry_year=2024,
+        degree="Sarjana Terapan",
+    )
+
+
+def test_academic_profile_deriver_uses_current_ipb_program_study_codes():
+    academic_profile = AcademicProfileDeriver().derive("M0403241001")
+
+    assert academic_profile == AcademicProfile(
+        program_studi="Ilmu Komputer",
+        faculty="Sekolah Sains Data, Matematika dan Informatika",
+        entry_year=2024,
+        degree="Sarjana",
+    )
+
+
+def test_academic_profile_deriver_uses_department_digit_to_disambiguate_postgraduate_programs():
+    soil_science = AcademicProfileDeriver().derive("A1551241001")
+    seed_science = AcademicProfileDeriver().derive("A2551241001")
+
+    assert soil_science.program_studi == "Ilmu Tanah"
+    assert seed_science.program_studi == "Ilmu dan Teknologi Benih"
+
+
 def test_academic_profile_deriver_returns_null_fields_for_unknown_nim():
     academic_profile = AcademicProfileDeriver().derive("ZZZ190001")
 

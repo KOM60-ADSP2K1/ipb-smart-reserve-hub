@@ -201,6 +201,40 @@ async def test_active_authenticated_user_can_get_current_user_identity():
 
 
 @pytest.mark.anyio
+async def test_current_user_identity_derives_current_ipb_nim_academic_profile():
+    transport = ASGITransport(app=create_app(database_url="sqlite+pysqlite:///:memory:"))
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        await client.post(
+            "/auth/register",
+            json={
+                "email": "siti@apps.ipb.ac.id",
+                "password": "secret123",
+                "full_name": "Siti Lestari",
+                "nim": "J0409241025",
+                "phone": "08123456789",
+            },
+        )
+        logged_in = await client.post(
+            "/auth/login",
+            json={"email": "siti@apps.ipb.ac.id", "password": "secret123"},
+        )
+
+        response = await client.get(
+            "/auth/me",
+            headers={"Authorization": f"Bearer {logged_in.json()['access_token']}"},
+        )
+
+        assert response.status_code == 200
+        assert response.json()["academic_profile"] == {
+            "program_studi": "Teknologi dan Manajemen Ternak",
+            "faculty": "Sekolah Vokasi",
+            "entry_year": 2024,
+            "degree": "Sarjana Terapan",
+        }
+
+
+@pytest.mark.anyio
 async def test_current_user_identity_requires_bearer_credentials():
     transport = ASGITransport(app=create_app(database_url="sqlite+pysqlite:///:memory:"))
 

@@ -56,12 +56,12 @@ Total akun seed: 10.
 | `demo.staff.operations@ipb.ac.id` | `staff` | Demo Staff Operasional | - | - | Testing staff untuk Auditorium Andi Hakim Nasoetion dan reservasi approved. |
 | `demo.staff.facilities@ipb.ac.id` | `staff` | Demo Staff Fasilitas | - | - | Testing staff untuk Ruang Sidang Rektorat dan reservasi pending document upload. |
 | `demo.staff.finance@ipb.ac.id` | `staff` | Demo Staff Keuangan | - | - | Testing staff untuk Lapangan Basket Indoor, terutama fasilitas berbayar. |
-| `demo.student@apps.ipb.ac.id` | `student` | Demo Student | `G64000001` | `081234500001` | Akun student bersih tanpa reservasi seed; cocok untuk testing flow pembuatan reservasi baru. |
-| `demo.student.02@apps.ipb.ac.id` | `student` | Demo Student 02 | `G64000003` | `081234500003` | Akun student tambahan untuk variasi testing. |
-| `demo.student.03@apps.ipb.ac.id` | `student` | Demo Student 03 | `G64000004` | `081234500004` | Akun student tambahan untuk variasi testing. |
-| `demo.student.04@apps.ipb.ac.id` | `student` | Demo Student 04 | `G64000005` | `081234500005` | Akun student tambahan untuk variasi testing. |
-| `demo.student.05@apps.ipb.ac.id` | `student` | Demo Student 05 | `G64000006` | `081234500006` | Akun student tambahan untuk variasi testing. |
-| `demo.student.06@apps.ipb.ac.id` | `student` | Demo Student Reservasi | `G64000002` | `081234500002` | Akun student dengan reservasi seed; cocok untuk testing daftar/detail reservasi dan kalender. |
+| `demo.student@apps.ipb.ac.id` | `student` | Demo Student Ilmu Komputer 2019 | `G64190001` | `081234500001` | Akun student bersih tanpa reservasi seed; cocok untuk testing flow pembuatan reservasi baru dan profil legacy Ilmu Komputer. |
+| `demo.student.02@apps.ipb.ac.id` | `student` | Demo Student Vokasi | `J0409241025` | `081234500003` | Akun student tambahan untuk variasi profil Sekolah Vokasi/Sarjana Terapan. |
+| `demo.student.03@apps.ipb.ac.id` | `student` | Demo Student FEM | `H1414241001` | `081234500004` | Akun student tambahan untuk variasi profil Fakultas Ekonomi dan Manajemen. |
+| `demo.student.04@apps.ipb.ac.id` | `student` | Demo Student Pertanian | `A2424241001` | `081234500005` | Akun student tambahan untuk variasi profil Fakultas Pertanian. |
+| `demo.student.05@apps.ipb.ac.id` | `student` | Demo Student Unknown NIM | `ZZZ190001` | `081234500006` | Akun student tambahan untuk fallback NIM yang tidak dapat diturunkan. |
+| `demo.student.06@apps.ipb.ac.id` | `student` | Demo Student Reservasi Sains Data | `M0403241001` | `081234500002` | Akun student dengan reservasi seed; cocok untuk testing daftar/detail reservasi, kalender, dan profil Sekolah Sains Data. |
 
 Catatan legacy: seed lama memakai `demo.blocking@apps.ipb.ac.id`. Jika database development lama masih punya akun itu, seed akan menggantinya menjadi `demo.student.06@apps.ipb.ac.id` agar total akun tetap 10.
 
@@ -143,7 +143,7 @@ Total organization unit seed: 5.
 
 ## Reservasi Demo
 
-Total reservasi seed: 35. Akun `demo.student.06@apps.ipb.ac.id` tetap memiliki 9 reservasi tracer utama untuk semua state detail student, sementara akun student tambahan memiliki variasi data produksi untuk demo kalender, antrean staff, laporan Super Admin, dan ulasan fasilitas.
+Total reservasi seed: 35. Akun `demo.student.06@apps.ipb.ac.id` tetap memiliki 9 reservasi tracer utama untuk semua state detail student, sementara akun student tambahan memiliki variasi data produksi untuk demo kalender, antrean staff, laporan Super Admin, dan ulasan fasilitas. Reservasi workflow aktif disetel relatif terhadap waktu seed berjalan agar tetap berada dalam window booking default 14 sampai 60 hari; reservasi completed tetap berada di masa lalu.
 
 | Kode | Status | Fasilitas | Organisasi | Aktivitas | Kegunaan testing |
 | --- | --- | --- | --- | --- | --- |

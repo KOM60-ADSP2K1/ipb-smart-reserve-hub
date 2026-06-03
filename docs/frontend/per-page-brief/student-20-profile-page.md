@@ -62,7 +62,7 @@
 - Domain area: Auth and session
 - Affected UI: student profile identity and academic info.
 - Contract needed: `/auth/me` includes NIM, phone, and best-effort academic profile for students.
-- Evidence: `UserResponse` includes `nim`, `phone`, and `academic_profile`; `/auth/me` exists in `backend/app/api/routes/account_routes.py`; `AcademicProfileDeriver` now covers legacy `G6419...` and newer digit-based `G640123...` entry-year formats.
+- Evidence: `UserResponse` includes `nim`, `phone`, and `academic_profile`; `/auth/me` exists in `backend/app/api/routes/account_routes.py`; `AcademicProfileDeriver` covers legacy `G6419...` and `G640123...` formats plus current 11-character IPB NIM structure such as `J0409241025`, using official faculty/school, strata, entry-year, and program-study code positions.
 - Source issue/PRD: `docs/issues/ISSUE-0029-student-academic-profile-identity.md`.
 
 ## Shared Components

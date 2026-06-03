@@ -1,5 +1,5 @@
 from collections import Counter
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select, text
@@ -75,6 +75,46 @@ def test_dev_seed_creates_fixed_demo_accounts_with_login_credentials(tmp_path):
         )
 
     assert session_token.access_token
+
+
+def test_dev_seed_varies_student_nims_for_academic_profile_demo(tmp_path):
+    settings = SettingsModule(database_url=f"sqlite+pysqlite:///{tmp_path / 'seed.db'}", secret_key="test-secret")
+    session_factory = build_session_factory(settings.database_url)
+
+    seed_development_data(settings=settings)
+
+    with session_factory() as session:
+        user_accounts = UserAccountModule(
+            user_repository=SqlAlchemyUserRepository(session),
+            secret_key=settings.secret_key,
+            student_email_policy=AllowedStudentEmailDomains(("apps.ipb.ac.id",)),
+        )
+        student_accounts = {
+            account.email: account
+            for account in user_accounts.list_user_accounts(role=UserRole.student, page_size=20).items
+        }
+
+    assert {account.nim for account in student_accounts.values()} == {
+        "G64190001",
+        "M0403241001",
+        "J0409241025",
+        "H1414241001",
+        "A2424241001",
+        "ZZZ190001",
+    }
+    assert student_accounts["demo.student@apps.ipb.ac.id"].academic_profile.program_studi == "Ilmu Komputer"
+    assert (
+        student_accounts["demo.student.06@apps.ipb.ac.id"].academic_profile.faculty
+        == "Sekolah Sains Data, Matematika dan Informatika"
+    )
+    assert student_accounts["demo.student.02@apps.ipb.ac.id"].academic_profile.degree == "Sarjana Terapan"
+    assert student_accounts["demo.student.03@apps.ipb.ac.id"].academic_profile.faculty == (
+        "Fakultas Ekonomi dan Manajemen"
+    )
+    assert student_accounts["demo.student.04@apps.ipb.ac.id"].academic_profile.program_studi == (
+        "Agronomi dan Hortikultura"
+    )
+    assert student_accounts["demo.student.05@apps.ipb.ac.id"].academic_profile.program_studi is None
 
 
 def test_dev_seed_refuses_production_environment(tmp_path):
@@ -226,12 +266,55 @@ def test_dev_seed_creates_production_like_reservation_and_review_mix(tmp_path):
         ) >= 1
 
 
+def test_dev_seed_keeps_workflow_reservations_in_current_booking_window(tmp_path):
+    settings = SettingsModule(database_url=f"sqlite+pysqlite:///{tmp_path / 'seed.db'}", secret_key="test-secret")
+    before_seed = datetime.now(UTC)
+
+    seed_development_data(settings=settings)
+
+    after_seed = datetime.now(UTC)
+    session_factory = build_session_factory(settings.database_url)
+    workflow_statuses = {
+        ReservationStatus.pending_document_upload,
+        ReservationStatus.pending_document_review,
+        ReservationStatus.overdue_verification,
+        ReservationStatus.pending_payment,
+        ReservationStatus.approved,
+        ReservationStatus.cancellation_requested,
+    }
+    with session_factory() as session:
+        workflow_reservations = session.scalars(
+            select(Reservation).where(
+                Reservation.reservation_code.like("DEV-SEED-%"),
+                Reservation.status.in_(workflow_statuses),
+            )
+        ).all()
+        completed_reservations = session.scalars(
+            select(Reservation).where(
+                Reservation.reservation_code.like("DEV-SEED-%"),
+                Reservation.status == ReservationStatus.completed,
+            )
+        ).all()
+
+    assert workflow_reservations
+    assert min(_as_utc(reservation.starts_at) for reservation in workflow_reservations) >= (
+        before_seed + timedelta(days=14)
+    )
+    assert max(_as_utc(reservation.starts_at) for reservation in workflow_reservations) <= (
+        after_seed + timedelta(days=60)
+    )
+    assert completed_reservations
+    assert max(_as_utc(reservation.ends_at) for reservation in completed_reservations) < after_seed
+
+
 @pytest.mark.anyio
 async def test_dev_seed_supports_blackbox_student_staff_and_admin_workflows(tmp_path):
     settings = SettingsModule(database_url=f"sqlite+pysqlite:///{tmp_path / 'seed.db'}", secret_key="test-secret")
     seed_development_data(settings=settings)
     app = create_app(settings=settings, clock=lambda: datetime(2026, 5, 1, tzinfo=UTC))
     transport = ASGITransport(app=app)
+    report_start = (datetime.now(UTC) - timedelta(days=45)).isoformat()
+    report_end = (datetime.now(UTC) + timedelta(days=75)).isoformat()
 
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         student_token = await _login(client, email="demo.student.06@apps.ipb.ac.id")
@@ -253,7 +336,7 @@ async def test_dev_seed_supports_blackbox_student_staff_and_admin_workflows(tmp_
         )
         report = await client.get(
             "/admin/reports/aggregate",
-            params={"start": "2026-05-01T00:00:00+00:00", "end": "2026-07-31T23:59:59+00:00"},
+            params={"start": report_start, "end": report_end},
             headers={"Authorization": f"Bearer {admin_token}"},
         )
 
@@ -381,3 +464,9 @@ def test_dev_seed_is_idempotent_for_seeded_database_rows(tmp_path):
         assert session.scalar(select(func.count()).select_from(ReservationSignedApprovalLetter)) == 26
         assert session.scalar(select(func.count()).select_from(ReservationPaymentReceipt)) == 10
         assert session.scalar(select(func.count()).select_from(FacilityReview)) == 11
+
+
+def _as_utc(value: datetime) -> datetime:
+    if value.tzinfo is None:
+        return value.replace(tzinfo=UTC)
+    return value.astimezone(UTC)
