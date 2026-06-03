@@ -725,6 +725,9 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function healthLabel(status: string) {
+  if (status === "not_used") {
+    return "Tidak Digunakan";
+  }
   return status === "ok" ? "OK" : status.charAt(0).toUpperCase() + status.slice(1).replaceAll("_", " ");
 }
 
@@ -1000,10 +1003,17 @@ export function SuperAdminSystemPage() {
         { meta: `${status.application.name} ${status.application.version}`, name: "Application", status: "Aktif" },
         { meta: "API", name: "Backend", status: healthLabel(status.backend.status) },
         { meta: "Database", name: "Database", status: healthLabel(status.database.status) },
-        { meta: "Object storage", name: "Storage", status: healthLabel(status.storage.status) },
-        { meta: "Deadline worker", name: "Worker", status: healthLabel(status.worker.status) },
+        { meta: "Private file storage", name: "Storage", status: healthLabel(status.storage.status) },
+        { meta: "Deadline automation", name: "Worker", status: healthLabel(status.worker.status) },
       ]
     : [];
+
+  const serviceHealthIsHealthy = status
+    ? status.backend.status === "ok"
+      && status.database.status === "ok"
+      && status.storage.status === "ok"
+      && (status.worker.status === "ok" || status.worker.status === "not_used")
+    : false;
 
   return (
     <SuperAdminShell active="system">
@@ -1013,38 +1023,7 @@ export function SuperAdminSystemPage() {
           mobileStackActions
           title="Sistem"
         >
-          <button
-            className="inline-flex min-h-[38px] items-center justify-center rounded-lg border border-[#e5e7eb] bg-white px-5 text-sm font-bold text-[#111827]"
-            onClick={() => {
-              const settings = settingsQuery.data;
-              const systemStatus = statusQuery.data;
-              if (!settings || !systemStatus) {
-                setFormError("Status dan pengaturan harus termuat sebelum snapshot diunduh.");
-                return;
-              }
-              downloadCsv("super-admin-system-snapshot.csv", [
-                {
-                  allowed_student_email_domains: settings.allowed_student_email_domains.join(";"),
-                  backend: systemStatus.backend.status,
-                  database: systemStatus.database.status,
-                  document_upload_due_hours: settings.document_upload_due_hours,
-                  document_verification_due_hours: settings.document_verification_due_hours,
-                  final_approval_cutoff_hours: settings.final_approval_cutoff_hours,
-                  max_booking_advance_hours: settings.max_booking_advance_hours,
-                  min_booking_lead_hours: settings.min_booking_lead_hours,
-                  payment_upload_due_hours: settings.payment_upload_due_hours,
-                  payment_verification_due_hours: settings.payment_verification_due_hours,
-                  storage: systemStatus.storage.status,
-                  worker: systemStatus.worker.status,
-                },
-              ]);
-              setFormError("");
-              setMessage("Snapshot sistem diunduh.");
-            }}
-            type="button"
-          >
-            Unduh Snapshot
-          </button>
+          <span className="text-sm font-semibold text-[#6b7280]">Snapshot belum tersedia</span>
         </PageHeader>
 
         <section className="grid grid-cols-4 gap-5 max-lg:grid-cols-2 max-md:grid-cols-1">
@@ -1078,7 +1057,7 @@ export function SuperAdminSystemPage() {
         <div className="mt-7 grid grid-cols-2 gap-7 max-lg:grid-cols-1">
           <SectionCard link="" title="Status Layanan">
             <div className="absolute right-6 top-5 max-md:right-5">
-              <StatusBadge status={status && status.storage.status === "ok" ? "Semua Aktif" : "Pantau"} />
+              <StatusBadge status={serviceHealthIsHealthy ? "Semua Aktif" : "Pantau"} />
             </div>
             <div className="grid">
               {services.map((service) => (

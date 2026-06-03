@@ -74,9 +74,9 @@ async def test_super_admin_views_read_only_system_status():
     assert response.json() == {
         "backend": {"status": "ok"},
         "database": {"status": "ok"},
-        "storage": {"status": "not_configured"},
+        "storage": {"status": "ok"},
         "application": {"name": "ipb-smart-reserve-hub", "version": "0.1.0"},
-        "worker": {"status": "not_configured"},
+        "worker": {"status": "not_used"},
     }
 
 

@@ -255,5 +255,13 @@ class BookingSettingsModuleFactory:
 
 
 class SystemStatusModuleFactory:
+    def __init__(self, *, private_storage: PrivateStorage, worker_enabled: bool = False) -> None:
+        self._private_storage = private_storage
+        self._worker_enabled = worker_enabled
+
     def build(self, session: Session) -> SystemStatusModule:
-        return SystemStatusModule(session=session)
+        return SystemStatusModule(
+            session=session,
+            storage=self._private_storage,
+            worker_enabled=self._worker_enabled,
+        )

@@ -305,8 +305,8 @@ const systemStatusResponse = {
   application: { name: "IPB SRH", version: "1.0.0" },
   backend: { status: "ok" },
   database: { status: "ok" },
-  storage: { status: "degraded" },
-  worker: { status: "ok" },
+  storage: { status: "ok" },
+  worker: { status: "not_used" },
 };
 
 const bookingSettingsResponse = {
@@ -1133,7 +1133,6 @@ describe("SuperAdminDashboardPage", () => {
 
   it("loads system status and booking settings, then saves a full settings payload", async () => {
     const user = userEvent.setup();
-    const csv = mockCsvDownload();
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
       const url = String(input);
 
@@ -1160,12 +1159,11 @@ describe("SuperAdminDashboardPage", () => {
 
     expect(await screen.findByText("IPB SRH 1.0.0")).toBeVisible();
     expect(screen.getAllByText("Storage")[0]).toBeVisible();
-    expect(screen.getAllByText("Degraded")[0]).toBeVisible();
+    expect(screen.getAllByText("OK")[0]).toBeVisible();
+    expect(screen.getAllByText("Tidak Digunakan")[0]).toBeVisible();
     expect(screen.getByLabelText("Minimum lead time jam")).toHaveValue(336);
     expect(screen.getByLabelText("Domain email mahasiswa")).toHaveValue("apps.ipb.ac.id");
-    await user.click(screen.getByRole("button", { name: "Unduh Snapshot" }));
-    expect(csv.createObjectUrl).toHaveBeenCalledOnce();
-    expect(csv.click).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button", { name: "Unduh Snapshot" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Simpan Pengaturan" })).toBeDisabled();
 
     await user.clear(screen.getByLabelText("Minimum lead time jam"));

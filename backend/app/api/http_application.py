@@ -240,7 +240,7 @@ class HttpRuntimeModule:
         self._booking_settings_factory = BookingSettingsModuleFactory(
             default_booking_settings=self._default_booking_settings
         )
-        self._system_status_factory = SystemStatusModuleFactory()
+        self._system_status_factory = SystemStatusModuleFactory(private_storage=self._private_storage)
         self._bearer_scheme = bearer_scheme or HTTPBearer(auto_error=False)
         self.session_factory = build_session_factory(self._settings.database_url)
         self.get_user_accounts = self._build_get_user_accounts()
