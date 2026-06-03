@@ -38,6 +38,10 @@ class AdminReviewRemovalReasonRequired(ReviewError):
     pass
 
 
+class AdminReviewPermanentDeleteRequiresSoftDeleted(ReviewError):
+    pass
+
+
 EDIT_WARNING = "Review tidak dapat diedit setelah dikirim."
 
 
@@ -225,6 +229,23 @@ class ReviewModule:
             reservation_id=review.reservation_id,
         )
         return _to_admin_review(review)
+
+    def permanently_delete_admin_review(self, admin: UserAccount, review_id: str) -> None:
+        review = self._review_repository.get_by_id(review_id)
+        if review is None:
+            raise ReviewNotFound
+        if not review.is_deleted:
+            raise AdminReviewPermanentDeleteRequiresSoftDeleted
+        self._audit_recorder.record(
+            actor=admin,
+            action_type="review.admin_permanently_deleted",
+            target_type="review",
+            target_id=review.id,
+            facility_id=review.facility_id,
+            student_id=review.student_id,
+            reservation_id=review.reservation_id,
+        )
+        self._review_repository.remove(review)
 
     def list_staff_facility_reviews(self, staff: UserAccount, facility_id: str) -> list[StaffFacilityReview]:
         self._require_staff_assignment(staff, facility_id)

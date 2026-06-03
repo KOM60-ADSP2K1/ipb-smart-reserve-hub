@@ -52,7 +52,7 @@
 
 ## Backend Integration And Gaps
 
-- Endpoints consumed: `GET /admin/reports/aggregate`, `GET /admin/audit-logs`, `GET /admin/reviews`, review delete/restore endpoints.
+- Endpoints consumed: `GET /admin/reports/aggregate`, `GET /admin/audit-logs`, `GET /admin/reviews`, review hide/restore/permanent-delete endpoints.
 - Page-needed fields: reservation counts/trends, revenue totals, audit log rows, moderation rows.
 - Trend behavior: backend daily trend points stay daily in `Mingguan`, group by week in `Bulanan`, and group by month in `Tahunan`; the line/area chart uses sparse axis labels plus hover/focus point detail.
 - Audit behavior: `/super-admin/reports` filters audit preview by the selected report date range and renders a maximum of 10 rows. `/super-admin/reports/logs` consumes the same audit endpoint, starting with a bounded batch and loading more rows on demand until the complete administrative log list is visible.
@@ -74,7 +74,7 @@
 - Domain area: Super Admin
 - Affected UI: audit log and moderation rows.
 - Contract needed: audit log list and review moderation list/actions.
-- Evidence: `GET /admin/audit-logs`, `GET /admin/reviews`, delete, and restore routes exist.
+- Evidence: `GET /admin/audit-logs`, `GET /admin/reviews`, soft-delete, restore, and permanent-delete routes exist.
 - Source issue/PRD: `docs/issues/ISSUE-0015-super-admin-review-moderation-and-audit-logs.md`.
 
 ### BG-SUPER-03-03: Report Export Action
@@ -97,7 +97,7 @@
 ## Acceptance Checks
 
 - Desktop and mobile screenshots match references.
-- Integration checks: moderation actions update row status, audit preview is capped at 10 rows, full audit log route can progressively reveal the complete list, and trend line points expose dates/counts/revenue through labels and hover/focus text.
+- Integration checks: moderation actions update row status, hidden reviews can be removed permanently, audit preview is capped at 10 rows, full audit log route can progressively reveal the complete list, and trend line points expose dates/counts/revenue through labels and hover/focus text.
 
 ## Open Questions
 

@@ -448,6 +448,77 @@ async def test_super_admin_soft_deletes_review_with_reason_and_restores_without_
 
 
 @pytest.mark.anyio
+async def test_super_admin_permanently_deletes_soft_deleted_review_from_moderation_list():
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime.fromisoformat("2026-06-02T00:00:00+00:00"),
+    )
+    test_data = DataBuilder(app)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    organization_unit_id = test_data.create_organization_unit(name="BEM KM IPB")
+    reservation_id = test_data.create_reservation(
+        facility_id=facility_id,
+        organization_unit_id=organization_unit_id,
+        activity_title="Seminar Karier",
+        starts_at="2026-06-01T02:00:00+00:00",
+        ends_at="2026-06-01T04:00:00+00:00",
+        status=ReservationStatus.completed,
+    )
+    student = test_data.user_account_for_reservation(reservation_id)
+    test_data.create_user(email="admin@ipb.ac.id", role=UserRole.super_admin)
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        student_login = await client.post("/auth/login", json={"email": student.email, "password": "secret123"})
+        student_token = student_login.json()["access_token"]
+        review = await client.post(
+            f"/student/reservations/{reservation_id}/review",
+            headers={"Authorization": f"Bearer {student_token}"},
+            json={"rating": 1, "comment": "Tidak sesuai deskripsi."},
+        )
+        admin_login = await client.post("/auth/login", json={"email": "admin@ipb.ac.id", "password": "secret123"})
+        admin_token = admin_login.json()["access_token"]
+        direct_delete = await client.delete(
+            f"/admin/reviews/{review.json()['id']}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        await client.post(
+            f"/admin/reviews/{review.json()['id']}/delete",
+            headers={"Authorization": f"Bearer {admin_token}"},
+            json={"reason": "Komentar mengandung data pribadi."},
+        )
+        permanent_delete = await client.delete(
+            f"/admin/reviews/{review.json()['id']}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        listed_after_delete = await client.get(
+            "/admin/reviews",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        student_reservation_after_delete = await client.get(
+            f"/student/reservations/{reservation_id}",
+            headers={"Authorization": f"Bearer {student_token}"},
+        )
+        restore_after_delete = await client.post(
+            f"/admin/reviews/{review.json()['id']}/restore",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+        public_detail_after_delete = await client.get(f"/facilities/{facility_id}")
+
+    assert direct_delete.status_code == 409
+    assert direct_delete.json()["detail"] == "Review harus disembunyikan terlebih dahulu sebelum dihapus permanen."
+    assert permanent_delete.status_code == 204
+    assert permanent_delete.content == b""
+    assert listed_after_delete.status_code == 200
+    assert listed_after_delete.json() == []
+    assert student_reservation_after_delete.json()["review"] is None
+    assert restore_after_delete.status_code == 404
+    assert restore_after_delete.json()["detail"] == "Review tidak ditemukan."
+    assert public_detail_after_delete.json()["review_summary"] == {"rating_average": None, "review_count": 0}
+    assert public_detail_after_delete.json()["reviews"] == []
+
+
+@pytest.mark.anyio
 async def test_super_admin_views_immutable_audit_logs_with_filters_for_review_and_staff_assignment_actions():
     app = create_app(
         database_url="sqlite+pysqlite:///:memory:",

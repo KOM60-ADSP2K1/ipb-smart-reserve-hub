@@ -13,6 +13,7 @@ from app.schemas.review_schemas import (
 )
 from app.services.accounts import UserAccount
 from app.services.reviews import (
+    AdminReviewPermanentDeleteRequiresSoftDeleted,
     AdminReviewRemovalReasonRequired,
     ReviewAlreadySubmitted,
     ReviewModule,
@@ -133,5 +134,21 @@ def register_review_routes(
     ):
         try:
             return reviews.restore_admin_review(current_user, review_id)
+        except ReviewNotFound:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review tidak ditemukan.")
+
+    @app.delete("/admin/reviews/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
+    async def permanently_delete_admin_review(
+        review_id: str,
+        reviews: ReviewModule = Depends(get_reviews),
+        current_user: UserAccount = Depends(require_access(AccessPolicyAction.manage_reviews)),
+    ):
+        try:
+            reviews.permanently_delete_admin_review(current_user, review_id)
+        except AdminReviewPermanentDeleteRequiresSoftDeleted:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Review harus disembunyikan terlebih dahulu sebelum dihapus permanen.",
+            )
         except ReviewNotFound:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Review tidak ditemukan.")

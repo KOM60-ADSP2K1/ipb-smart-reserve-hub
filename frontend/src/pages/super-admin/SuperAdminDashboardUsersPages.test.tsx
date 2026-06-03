@@ -605,7 +605,7 @@ describe("SuperAdminDashboardPage", () => {
 
   it("updates managed user profile data and resets password from the account modal", async () => {
     const user = userEvent.setup();
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
 
       if (url.startsWith("http://localhost:8000/admin/users") && !init?.method) {
@@ -660,7 +660,7 @@ describe("SuperAdminDashboardPage", () => {
   it("activates and deactivates users, and shows empty/error recovery states", async () => {
     const user = userEvent.setup();
     let listCalls = 0;
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
 
       if (url.startsWith("http://localhost:8000/admin/users") && !init?.method) {
@@ -1049,9 +1049,9 @@ describe("SuperAdminDashboardPage", () => {
     expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/admin/audit-logs?limit=40", expect.any(Object));
   });
 
-  it("deletes and restores moderated reviews", async () => {
+  it("deletes, restores, and permanently removes moderated reviews", async () => {
     const user = userEvent.setup();
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
 
       if (url.startsWith("http://localhost:8000/admin/reports/aggregate")) {
@@ -1070,6 +1070,9 @@ describe("SuperAdminDashboardPage", () => {
       if (url === "http://localhost:8000/admin/reviews/review-2/restore" && init?.method === "POST") {
         return jsonResponse({ ...adminReviewResponse[1], is_deleted: false });
       }
+      if (url === "http://localhost:8000/admin/reviews/review-2" && init?.method === "DELETE") {
+        return new Response(null, { status: 204 });
+      }
 
       return jsonResponse({ detail: `Unhandled ${url}` }, 404);
     });
@@ -1079,6 +1082,8 @@ describe("SuperAdminDashboardPage", () => {
     await user.click((await screen.findAllByRole("button", { name: "Sembunyikan review review-1" }))[0]);
     expect(await screen.findByText("Moderasi ulasan diperbarui.")).toBeVisible();
     await user.click(screen.getAllByRole("button", { name: "Pulihkan review review-2" })[0]);
+    await user.click(screen.getAllByRole("button", { name: "Hapus permanen review review-2" })[0]);
+    expect(await screen.findByText("Ulasan dihapus permanen.")).toBeVisible();
 
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith(
@@ -1088,6 +1093,10 @@ describe("SuperAdminDashboardPage", () => {
       expect(fetchMock).toHaveBeenCalledWith(
         "http://localhost:8000/admin/reviews/review-2/restore",
         expect.objectContaining({ method: "POST" }),
+      );
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://localhost:8000/admin/reviews/review-2",
+        expect.objectContaining({ method: "DELETE" }),
       );
     });
   });

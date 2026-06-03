@@ -213,6 +213,7 @@ def test_http_application_module_builds_app_with_foundation_routes():
     assert "/staff/facilities/{facility_id}/statistics" in route_paths
     assert "/admin/reviews" in route_paths
     assert "/admin/reviews/{review_id}/delete" in route_paths
+    assert "/admin/reviews/{review_id}" in route_paths
     assert "/admin/reviews/{review_id}/restore" in route_paths
     assert "/notifications" in route_paths
     assert "/admin/audit-logs" in route_paths

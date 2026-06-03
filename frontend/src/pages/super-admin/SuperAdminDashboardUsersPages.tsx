@@ -251,12 +251,18 @@ function deleteAdminReview(reviewId: string) {
   return apiRequest<AdminReviewResponse>(`/admin/reviews/${reviewId}/delete`, {
     body: { reason: "Moderasi Super Admin" },
     method: "POST",
-  });
+  }).then(() => undefined);
 }
 
 function restoreAdminReview(reviewId: string) {
   return apiRequest<AdminReviewResponse>(`/admin/reviews/${reviewId}/restore`, {
     method: "POST",
+  }).then(() => undefined);
+}
+
+function permanentlyDeleteAdminReview(reviewId: string) {
+  return apiRequest<void>(`/admin/reviews/${reviewId}`, {
+    method: "DELETE",
   });
 }
 
@@ -2205,15 +2211,22 @@ export function SuperAdminReportsPage() {
   const hasMoreAuditLogs = auditLogs.length > previewAuditLogs.length;
   const reviews = reviewsQuery.data ?? [];
   const reviewMutation = useMutation({
-    mutationFn: ({ action, reviewId }: { action: "delete" | "restore"; reviewId: string }) =>
-      action === "delete" ? deleteAdminReview(reviewId) : restoreAdminReview(reviewId),
+    mutationFn: ({ action, reviewId }: { action: "delete" | "restore" | "permanent-delete"; reviewId: string }) => {
+      if (action === "delete") {
+        return deleteAdminReview(reviewId);
+      }
+      if (action === "restore") {
+        return restoreAdminReview(reviewId);
+      }
+      return permanentlyDeleteAdminReview(reviewId);
+    },
     onError: (error) => {
       setMessage("");
       setFormError(errorMessage(error, "Moderasi ulasan belum dapat diperbarui."));
     },
-    onSuccess: async () => {
+    onSuccess: async (_, variables) => {
       setFormError("");
-      setMessage("Moderasi ulasan diperbarui.");
+      setMessage(variables.action === "permanent-delete" ? "Ulasan dihapus permanen." : "Moderasi ulasan diperbarui.");
       await queryClient.invalidateQueries({ queryKey: ["super-admin", "reports", "reviews"] });
     },
   });
@@ -2393,17 +2406,30 @@ export function SuperAdminReportsPage() {
                   <td className="px-5 py-4">{row.facility_name}</td>
                   <td className="px-5 py-4"><StatusBadge status={row.is_deleted ? "Disembunyikan" : "Aktif"} /></td>
                   <td className="px-5 py-4">
-                    <button
-                      aria-label={`${row.is_deleted ? "Pulihkan" : "Sembunyikan"} review ${row.id}`}
-                      className={tableActionButtonClass(row.is_deleted ? "primary" : "danger")}
-                      disabled={reviewMutation.isPending}
-                      onClick={() =>
-                        reviewMutation.mutate({ action: row.is_deleted ? "restore" : "delete", reviewId: row.id })
-                      }
-                      type="button"
-                    >
-                      {row.is_deleted ? "Pulihkan" : "Sembunyikan"}
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        aria-label={`${row.is_deleted ? "Pulihkan" : "Sembunyikan"} review ${row.id}`}
+                        className={tableActionButtonClass(row.is_deleted ? "primary" : "danger")}
+                        disabled={reviewMutation.isPending}
+                        onClick={() =>
+                          reviewMutation.mutate({ action: row.is_deleted ? "restore" : "delete", reviewId: row.id })
+                        }
+                        type="button"
+                      >
+                        {row.is_deleted ? "Pulihkan" : "Sembunyikan"}
+                      </button>
+                      {row.is_deleted ? (
+                        <button
+                          aria-label={`Hapus permanen review ${row.id}`}
+                          className={tableActionButtonClass("danger")}
+                          disabled={reviewMutation.isPending}
+                          onClick={() => reviewMutation.mutate({ action: "permanent-delete", reviewId: row.id })}
+                          type="button"
+                        >
+                          Hapus Permanen
+                        </button>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -2421,17 +2447,30 @@ export function SuperAdminReportsPage() {
                 <UserField label="Fasilitas">{row.facility_name}</UserField>
                 <UserField label="Status"><StatusBadge status={row.is_deleted ? "Disembunyikan" : "Aktif"} /></UserField>
                 <UserField label="Aksi">
-                  <button
-                    aria-label={`${row.is_deleted ? "Pulihkan" : "Sembunyikan"} review ${row.id}`}
-                    className={tableActionButtonClass(row.is_deleted ? "primary" : "danger")}
-                    disabled={reviewMutation.isPending}
-                    onClick={() =>
-                      reviewMutation.mutate({ action: row.is_deleted ? "restore" : "delete", reviewId: row.id })
-                    }
-                    type="button"
-                  >
-                    {row.is_deleted ? "Pulihkan" : "Sembunyikan"}
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      aria-label={`${row.is_deleted ? "Pulihkan" : "Sembunyikan"} review ${row.id}`}
+                      className={tableActionButtonClass(row.is_deleted ? "primary" : "danger")}
+                      disabled={reviewMutation.isPending}
+                      onClick={() =>
+                        reviewMutation.mutate({ action: row.is_deleted ? "restore" : "delete", reviewId: row.id })
+                      }
+                      type="button"
+                    >
+                      {row.is_deleted ? "Pulihkan" : "Sembunyikan"}
+                    </button>
+                    {row.is_deleted ? (
+                      <button
+                        aria-label={`Hapus permanen review ${row.id}`}
+                        className={tableActionButtonClass("danger")}
+                        disabled={reviewMutation.isPending}
+                        onClick={() => reviewMutation.mutate({ action: "permanent-delete", reviewId: row.id })}
+                        type="button"
+                      >
+                        Hapus Permanen
+                      </button>
+                    ) : null}
+                  </div>
                 </UserField>
               </article>
             ))}

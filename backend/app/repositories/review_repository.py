@@ -31,6 +31,9 @@ class ReviewRepository(Protocol):
     def get_by_id(self, review_id: str) -> FacilityReview | None:
         raise NotImplementedError
 
+    def remove(self, review: FacilityReview) -> None:
+        raise NotImplementedError
+
 
 class SqlAlchemyReviewRepository:
     def __init__(self, session: Session) -> None:
@@ -94,3 +97,7 @@ class SqlAlchemyReviewRepository:
             .options(joinedload(FacilityReview.facility), joinedload(FacilityReview.student))
             .where(FacilityReview.id == review_id)
         )
+
+    def remove(self, review: FacilityReview) -> None:
+        self._session.delete(review)
+        self._session.flush()
