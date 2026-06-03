@@ -141,9 +141,14 @@ test.describe("staff reservation detail and decision surfaces", () => {
     await expect(page.getByRole("heading", { name: "Johnathan Doe" })).toBeVisible();
     await expect(page.getByText("AI Ethics Symposium 2024")).toBeVisible();
     await expect(page.getByRole("heading", { name: "Verifikasi Dokumen" })).toBeVisible();
-    await expect(page.getByText("surat-dekan.pdf")).toBeVisible();
+    const documentPanel = page.getByRole("heading", { name: "Verifikasi Dokumen" }).locator("xpath=ancestor::section");
+    await expect(documentPanel.getByRole("heading", { name: "surat-dekan.pdf" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Grand Auditorium" })).toBeVisible();
+    await expect(documentPanel.getByText("Menunggu Verifikasi Dokumen")).toHaveCount(0);
     await expect(page.getByText("Menunggu Verifikasi Dokumen").first()).toBeVisible();
+    const actionPanel = page.getByRole("heading", { name: "Aksi Administrator" }).locator("xpath=ancestor::section");
+    await expect(actionPanel.getByText("File yang sedang ditinjau")).toBeVisible();
+    await expect(actionPanel.getByText("surat-dekan.pdf")).toBeVisible();
     await expect(page.getByRole("button", { name: "Setujui Dokumen" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Tolak Pengajuan" })).toHaveAttribute(
       "href",

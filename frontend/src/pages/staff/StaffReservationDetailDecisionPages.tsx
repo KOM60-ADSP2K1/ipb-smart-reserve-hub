@@ -1,4 +1,4 @@
-import { CalendarDays, Check, Clock, X } from "lucide-react";
+import { CalendarDays, Check, Clock, Download, Eye, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -11,7 +11,6 @@ import type { StaffBadgeTone } from "../../fixtures/staffReservationOperations";
 import {
   formatStaffDate,
   mapStaffReservationDisplayStatus,
-  mapStaffReviewStageStatus,
 } from "../../reservations/staffReservationOperations";
 import { StaffShell } from "./StaffReservationOperationsPages";
 import logo from "../../assets/logo.png";
@@ -209,12 +208,10 @@ function DocumentRow({
   file,
   onPreview,
   onDownload,
-  status,
 }: {
   file: StaffFileMetadata;
   onPreview: () => Promise<unknown>;
   onDownload: () => Promise<unknown>;
-  status: string;
 }) {
   const uploadedAt = file.uploaded_at ?? file.generated_at;
   const previewMutation = useMutation({
@@ -235,27 +232,28 @@ function DocumentRow({
           {uploadedAt ? `Diunggah ${formatStaffDate(uploadedAt)} - ${formatBytes(file.size_bytes)}` : formatBytes(file.size_bytes)}
         </p>
       </div>
-      <div className="flex items-center gap-3 max-md:col-span-2 max-md:flex-wrap max-md:border-t max-md:border-[#e5e7eb] max-md:pt-3">
-        <span className="rounded-full bg-[#fffbeb] px-2.5 py-1 text-xs font-bold text-[#b45309]">
-          {status}
-        </span>
+      <div className="flex min-w-[280px] items-center justify-end gap-2 max-md:col-span-2 max-md:min-w-0 max-md:flex-wrap max-md:justify-start max-md:border-t max-md:border-[#e5e7eb] max-md:pt-3">
         <button
           aria-label={`Lihat Dokumen ${file.filename}`}
-          className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] font-bold text-[#0f9d58] max-md:flex-1"
+          className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[#0f9d58] bg-[#0f9d58] px-3.5 py-2 text-[13px] font-bold text-white shadow-[0_6px_14px_rgba(15,157,88,0.18)] transition hover:bg-[#0b7340] focus:outline-none focus:ring-2 focus:ring-[#0f9d58] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-65 max-md:flex-1"
           disabled={previewMutation.isPending}
           onClick={() => previewMutation.mutate()}
+          title={`Lihat ${file.filename}`}
           type="button"
         >
-          {previewMutation.isPending ? "Membuka..." : "Lihat Dokumen"}
+          <Eye aria-hidden="true" size={15} />
+          {previewMutation.isPending ? "Membuka..." : "Lihat"}
         </button>
         <button
           aria-label={`Unduh Dokumen ${file.filename}`}
-          className="rounded-lg border border-[#e5e7eb] bg-white px-3 py-2 text-[13px] font-bold text-[#0f9d58] max-md:flex-1"
+          className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[#bbf7d0] bg-[#ecfdf5] px-3.5 py-2 text-[13px] font-bold text-[#047857] transition hover:border-[#86efac] hover:bg-[#d1fae5] focus:outline-none focus:ring-2 focus:ring-[#0f9d58] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-65 max-md:flex-1"
           disabled={downloadMutation.isPending}
           onClick={() => downloadMutation.mutate()}
+          title={`Unduh ${file.filename}`}
           type="button"
         >
-          {downloadMutation.isPending ? "Mengunduh..." : "Unduh Dokumen"}
+          <Download aria-hidden="true" size={15} />
+          {downloadMutation.isPending ? "Mengunduh..." : "Unduh"}
         </button>
       </div>
       {previewMutation.isError || downloadMutation.isError ? (
@@ -323,6 +321,12 @@ export function StaffReservationDetailPage() {
         ? [documentFile]
         : [];
   const paymentFile = detail?.payment.receipt ?? null;
+  const activeReviewFile =
+    activeTarget === "document"
+      ? documentFile
+      : activeTarget === "payment"
+        ? paymentFile
+        : null;
 
   return (
     <StaffShell active="reservations">
@@ -361,7 +365,7 @@ export function StaffReservationDetailPage() {
                     {detail.student.full_name}
                   </h1>
                   <p className="m-0 mt-1 break-words text-sm text-[#6b7280]">
-                    {detail.organization_unit.name} • {detail.student.id}
+                    {detail.organization_unit.name}
                   </p>
                 </div>
               </div>
@@ -394,7 +398,6 @@ export function StaffReservationDetailPage() {
                         key={file.id ?? `${file.filename}-${file.uploaded_at ?? ""}`}
                         onPreview={() => apiPreview(downloadUrl)}
                         onDownload={() => apiDownload(downloadUrl)}
-                        status={mapStaffReviewStageStatus("document", detail.document.review_status).label}
                       />
                     ) : null;
                   })
@@ -408,7 +411,6 @@ export function StaffReservationDetailPage() {
                     file={paymentFile}
                     onPreview={() => apiPreview(detail.review_actions.payment.download_url as string)}
                     onDownload={() => apiDownload(detail.review_actions.payment.download_url as string)}
-                    status={mapStaffReviewStageStatus("payment", detail.payment.review_status).label}
                   />
                 ) : null}
               </div>
@@ -444,6 +446,16 @@ export function StaffReservationDetailPage() {
                   ? `Tinjau tahap ${activeLabel.toLowerCase()} dan kirim keputusan berdasarkan data backend.`
                   : "Tidak ada tahap review yang membutuhkan keputusan saat ini."}
               </p>
+              {canReviewActiveTarget && activeReviewFile ? (
+                <div className="mt-3 rounded-lg border border-[#bbf7d0] bg-[#ecfdf5] p-3">
+                  <p className="m-0 text-[11px] font-bold uppercase tracking-[0.05em] text-[#047857]">
+                    File yang sedang ditinjau
+                  </p>
+                  <p className="m-0 mt-1 break-words text-sm font-bold leading-6 text-[#065f46]">
+                    {activeReviewFile.filename}
+                  </p>
+                </div>
+              ) : null}
               {actionError ? (
                 <p className="mt-4 rounded-lg border border-[#fecaca] bg-[#fef2f2] p-3 text-sm font-semibold text-[#991b1b]">
                   {actionError}

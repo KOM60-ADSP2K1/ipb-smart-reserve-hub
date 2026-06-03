@@ -112,7 +112,7 @@ const detailResponse = {
   student: {
     email: "student@apps.ipb.ac.id",
     full_name: "Student Reservasi",
-    id: "student-1",
+    id: "d46fa139-525f-4ffe-a473-659c87587fe7",
   },
 };
 
@@ -190,7 +190,8 @@ describe("StaffReservationDetailDecisionPages", () => {
     renderDetail();
 
     expect(await screen.findByRole("heading", { name: "Student Reservasi" })).toBeVisible();
-    expect(screen.getByText("BEM KM IPB")).toBeVisible();
+    expect(screen.getAllByText("BEM KM IPB").length).toBeGreaterThan(0);
+    expect(screen.queryByText(/d46fa139-525f-4ffe-a473-659c87587fe7/)).not.toBeInTheDocument();
     expect(screen.getByText("Auditorium Andi Hakim Nasoetion")).toBeVisible();
     expect(screen.getByRole("img", { name: "Foto Auditorium Andi Hakim Nasoetion" })).toHaveAttribute(
       "src",
@@ -198,9 +199,15 @@ describe("StaffReservationDetailDecisionPages", () => {
     );
     expect(screen.getByText("Seminar Detail")).toBeVisible();
     expect(screen.getByText("Dukungan AV, Catatan: Butuh dua mikrofon.")).toBeVisible();
-    expect(screen.getByText("surat-persetujuan.pdf")).toBeVisible();
-    expect(screen.getByText("surat-persetujuan-lama.pdf")).toBeVisible();
-    expect(screen.getByText("bukti-pembayaran.png")).toBeVisible();
+    const documentPanel = screen.getByRole("heading", { name: "Verifikasi Dokumen" }).closest("section") as HTMLElement;
+    expect(within(documentPanel).getByText("surat-persetujuan.pdf")).toBeVisible();
+    expect(within(documentPanel).getByText("surat-persetujuan-lama.pdf")).toBeVisible();
+    expect(within(documentPanel).getByText("bukti-pembayaran.png")).toBeVisible();
+    expect(within(documentPanel).queryByText("Menunggu Verifikasi Dokumen")).not.toBeInTheDocument();
+    const actionPanel = screen.getByRole("heading", { name: "Aksi Administrator" }).closest("section") as HTMLElement;
+    expect(within(actionPanel).getByText("File yang sedang ditinjau")).toBeVisible();
+    expect(within(actionPanel).getByText("surat-persetujuan.pdf")).toBeVisible();
+    expect(within(actionPanel).queryByText("surat-persetujuan-lama.pdf")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Lihat Dokumen surat-persetujuan.pdf" }));
     await user.click(screen.getByRole("button", { name: "Unduh Dokumen surat-persetujuan.pdf" }));
@@ -320,7 +327,10 @@ describe("StaffReservationDetailDecisionPages", () => {
       );
       expect(detailCalls).toBeGreaterThan(1);
     });
-    expect((await screen.findAllByText("Disetujui"))[0]).toBeVisible();
+    expect(await screen.findByRole("button", { name: "Setujui Pembayaran" })).toBeVisible();
+    const actionPanel = screen.getByRole("heading", { name: "Aksi Administrator" }).closest("section") as HTMLElement;
+    expect(within(actionPanel).getByText("File yang sedang ditinjau")).toBeVisible();
+    expect(within(actionPanel).getByText("bukti-pembayaran.png")).toBeVisible();
   });
 
   it("requires a rejection reason and submits reject actions through the active review URL", async () => {
