@@ -66,6 +66,15 @@
 - Evidence: staff facility patch, deactivate, images, image cover selection, open-hours, and blackouts routes exist in `backend/app/api/routes/facility_management_routes.py`; `FacilityManagementProfileResponse` exposes `category_id`, structured `open_hours`, `images`, and `blackouts`; `FacilityProfileUpdateRequest` accepts `category_id` and `open_hours`; `GET /facility-categories` exists in `backend/app/api/routes/facility_routes.py`.
 - Source issue/PRD: `docs/issues/ISSUE-0016-staff-facility-management-and-assignment-scope.md`, `docs/issues/ISSUE-0091-staff-facility-structured-category-and-open-hours-management.md`.
 
+### BG-STAFF-03-02: Staff Facility Binary Image Upload And Deletion
+
+- Status: `resolved`
+- Domain area: Staff Operations
+- Affected UI: staff facility media management.
+- Contract needed: binary file upload from local device plus delete/remove support for existing facility images, so staff can manage media without manually pasting URLs and can recover from mistaken uploads.
+- Evidence: `POST /staff/facilities/{facility_id}/images/upload` accepts multipart `file`, `alt_text`, and `is_cover`; `DELETE /staff/facilities/{facility_id}/images/{image_id}` removes an active image from staff/public projections; uploaded files are served by `GET /facility-images/{image_path}`; the behavior is covered in `backend/tests/test_staff_facility_management.py`.
+- Source issue/PRD: manual QA follow-up after facility edit integration.
+
 ## Shared Components
 
 - `docs/frontend/per-component-brief/layout-staff-shell.md`

@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { apiRequest } from "../../api/http";
+import { apiAssetUrl, apiRequest } from "../../api/http";
 import { NotificationSurface } from "../../components/NotificationSurface";
 import { StudentHeaderSearch } from "../../components/layout/StudentHeaderSearch";
 import type { FacilityCatalogItem } from "../../fixtures/studentFacilityCatalog";
@@ -136,7 +136,7 @@ function mapCatalogItem(item: FacilityCatalogItemResponse): FacilityCatalogItem 
     capacity: item.capacity,
     category: item.category,
     categoryLabel: item.category,
-    coverImageUrl: item.cover_image_url,
+    coverImageUrl: apiAssetUrl(item.cover_image_url),
     description: `${item.location} · ${item.open_hours_summary}`,
     href: `/student/facilities/${item.id}`,
     name: item.name,

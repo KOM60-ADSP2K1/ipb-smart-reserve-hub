@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { apiDownload, apiPreview, apiRequest, setAuthTokenProvider, setUnauthorizedHandler } from "./http";
+import { apiAssetUrl, apiDownload, apiPreview, apiRequest, setAuthTokenProvider, setUnauthorizedHandler } from "./http";
 
 describe("apiRequest", () => {
   afterEach(() => {
@@ -151,5 +151,15 @@ describe("apiPreview", () => {
 
     expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
     expect(open).toHaveBeenCalledWith("blob:http://localhost/preview", "_blank", "noopener,noreferrer");
+  });
+});
+
+describe("apiAssetUrl", () => {
+  it("resolves backend-relative asset paths against the API base URL", () => {
+    expect(apiAssetUrl("/facility-images/image-1.jpg")).toBe("http://localhost:8000/facility-images/image-1.jpg");
+  });
+
+  it("preserves absolute asset URLs", () => {
+    expect(apiAssetUrl("https://cdn.example.test/cover.jpg")).toBe("https://cdn.example.test/cover.jpg");
   });
 });

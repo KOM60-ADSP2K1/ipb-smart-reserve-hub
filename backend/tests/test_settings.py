@@ -27,6 +27,15 @@ def test_production_settings_require_explicit_safe_secret_and_database(monkeypat
     assert str(error.value) == "Production settings require IPB_DATABASE_URL and IPB_SECRET_KEY."
 
 
+def test_settings_module_uses_railway_volume_mount_path_as_private_storage_fallback(monkeypatch):
+    monkeypatch.delenv("IPB_PRIVATE_STORAGE_PATH", raising=False)
+    monkeypatch.setenv("RAILWAY_VOLUME_MOUNT_PATH", "/data")
+
+    settings = SettingsModule.from_environment()
+
+    assert settings.private_storage_path == "/data"
+
+
 def test_application_settings_do_not_construct_booking_settings():
     settings = SettingsModule(allowed_student_email_domains=("student.ipb.ac.id",))
 

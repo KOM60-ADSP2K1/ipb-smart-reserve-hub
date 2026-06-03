@@ -871,6 +871,38 @@ describe("SuperAdminDashboardPage", () => {
     });
   });
 
+  it("filters facility governance rows by search, status, and coverage", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const url = String(input);
+
+      if (url === "http://localhost:8000/admin/facilities/governance") {
+        return jsonResponse(facilityGovernanceResponse);
+      }
+      if (url === "http://localhost:8000/admin/users?role=staff&is_active=true&page=1&page_size=100") {
+        return jsonResponse({ ...usersResponse, items: [usersResponse.items[1]], total: 1 });
+      }
+
+      return jsonResponse({ detail: `Unhandled ${url}` }, 404);
+    });
+
+    renderFacilities();
+
+    expect((await screen.findAllByText("Grand Auditorium"))[0]).toBeVisible();
+    await user.type(screen.getByLabelText("Cari fasilitas super admin"), "arsip");
+    expect(screen.getAllByText("Lab Arsip")[0]).toBeVisible();
+    expect(screen.queryByText("Grand Auditorium")).not.toBeInTheDocument();
+
+    await user.selectOptions(screen.getByLabelText("Filter status fasilitas super admin"), "active");
+    expect(await screen.findByText("Tidak ada fasilitas yang cocok dengan pencarian atau filter.")).toBeVisible();
+
+    await user.clear(screen.getByLabelText("Cari fasilitas super admin"));
+    await user.selectOptions(screen.getByLabelText("Filter status fasilitas super admin"), "all");
+    await user.selectOptions(screen.getByLabelText("Filter cakupan staff fasilitas super admin"), "covered");
+    expect((await screen.findAllByText("Grand Auditorium"))[0]).toBeVisible();
+    expect(screen.queryByText("Lab Arsip")).not.toBeInTheDocument();
+  });
+
   it("shows facility governance empty and error recovery states", async () => {
     const user = userEvent.setup();
     let calls = 0;

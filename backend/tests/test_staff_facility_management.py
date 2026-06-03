@@ -14,6 +14,54 @@ async def login(client: AsyncClient, email: str) -> str:
 
 
 @pytest.mark.anyio
+async def test_assigned_staff_uploads_local_facility_image_and_public_clients_can_fetch_it(tmp_path):
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        private_storage_path=str(tmp_path / "private-storage"),
+        clock=lambda: datetime(2026, 5, 1, tzinfo=UTC),
+    )
+    test_data = DataBuilder(app)
+    test_data.create_user(email="admin@ipb.ac.id", role=UserRole.super_admin)
+    staff_id = test_data.create_user(email="staff@ipb.ac.id", role=UserRole.staff)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        admin_token = await login(client, "admin@ipb.ac.id")
+        staff_token = await login(client, "staff@ipb.ac.id")
+        await client.put(
+            f"/admin/facilities/{facility_id}/staff-assignments/{staff_id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+
+        uploaded = await client.post(
+            f"/staff/facilities/{facility_id}/images/upload",
+            headers={"Authorization": f"Bearer {staff_token}"},
+            data={"alt_text": "Cover auditorium upload", "is_cover": "true"},
+            files={"file": ("auditorium.jpg", b"facility-image-content", "image/jpeg")},
+        )
+        assigned_after_upload = await client.get(
+            "/staff/facilities",
+            headers={"Authorization": f"Bearer {staff_token}"},
+        )
+        public_detail = await client.get(f"/facilities/{facility_id}")
+        public_image = await client.get(uploaded.json()["url"]) if uploaded.status_code == 201 else None
+
+    assert uploaded.status_code == 201
+    assert uploaded.json()["alt_text"] == "Cover auditorium upload"
+    assert uploaded.json()["is_cover"] is True
+    assert uploaded.json()["url"] == f"/facility-images/{uploaded.json()['id']}.jpg"
+    assert assigned_after_upload.status_code == 200
+    assert assigned_after_upload.json()[0]["images"][0]["url"] == uploaded.json()["url"]
+    assert public_detail.status_code == 200
+    assert public_detail.json()["images"][0]["url"] == uploaded.json()["url"]
+    assert public_image is not None
+    assert public_image.status_code == 200
+    assert public_image.content == b"facility-image-content"
+    assert public_image.headers["content-type"] == "image/jpeg"
+
+
+@pytest.mark.anyio
 async def test_super_admin_assigns_staff_and_staff_manages_only_assigned_facility():
     app = create_app(
         database_url="sqlite+pysqlite:///:memory:",
@@ -265,6 +313,60 @@ async def test_assigned_staff_manages_facility_images_open_hours_and_blackouts()
     assert availability.status_code == 200
     assert availability.json()["available"] is False
     assert "blackout_period" in availability.json()["reasons"]
+
+
+@pytest.mark.anyio
+async def test_assigned_staff_removes_facility_image_and_public_detail_hides_it(tmp_path):
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        private_storage_path=str(tmp_path / "private-storage"),
+        clock=lambda: datetime(2026, 5, 1, tzinfo=UTC),
+    )
+    test_data = DataBuilder(app)
+    test_data.create_user(email="admin@ipb.ac.id", role=UserRole.super_admin)
+    staff_id = test_data.create_user(email="staff@ipb.ac.id", role=UserRole.staff)
+    facility_id = test_data.create_facility(name="Auditorium Andi Hakim Nasoetion")
+    test_data.add_facility_image(
+        facility_id,
+        url="https://cdn.example.test/auditorium-side.jpg",
+        display_order=2,
+    )
+    transport = ASGITransport(app=app)
+
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        admin_token = await login(client, "admin@ipb.ac.id")
+        staff_token = await login(client, "staff@ipb.ac.id")
+        await client.put(
+            f"/admin/facilities/{facility_id}/staff-assignments/{staff_id}",
+            headers={"Authorization": f"Bearer {admin_token}"},
+        )
+
+        uploaded = await client.post(
+            f"/staff/facilities/{facility_id}/images/upload",
+            headers={"Authorization": f"Bearer {staff_token}"},
+            data={"alt_text": "Cover auditorium upload", "is_cover": "true"},
+            files={"file": ("auditorium.jpg", b"facility-image-content", "image/jpeg")},
+        )
+        removed = await client.delete(
+            f"/staff/facilities/{facility_id}/images/{uploaded.json()['id']}",
+            headers={"Authorization": f"Bearer {staff_token}"},
+        )
+        assigned_after_remove = await client.get(
+            "/staff/facilities",
+            headers={"Authorization": f"Bearer {staff_token}"},
+        )
+        public_detail = await client.get(f"/facilities/{facility_id}")
+        removed_public_image = await client.get(uploaded.json()["url"])
+
+    assert uploaded.status_code == 201
+    assert removed.status_code == 200
+    assert removed.json()["id"] == uploaded.json()["id"]
+    assert removed.json()["is_active"] is False
+    assert assigned_after_remove.status_code == 200
+    assert all(image["id"] != uploaded.json()["id"] for image in assigned_after_remove.json()[0]["images"])
+    assert public_detail.status_code == 200
+    assert all(image["url"] != uploaded.json()["url"] for image in public_detail.json()["images"])
+    assert removed_public_image.status_code == 404
 
 
 @pytest.mark.anyio

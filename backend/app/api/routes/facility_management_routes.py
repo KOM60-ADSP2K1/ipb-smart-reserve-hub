@@ -1,6 +1,7 @@
 from collections.abc import Callable
+from pathlib import Path
 
-from fastapi import Depends, FastAPI, HTTPException, Response, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Response, UploadFile, status
 
 from app.core.access_policy import AccessPolicyAction
 from app.schemas.facility_management_schemas import (
@@ -26,9 +27,12 @@ from app.services.facility_management import (
     FacilityImageNotFound,
     FacilityManagementModule,
     FacilityNotFound,
+    FacilityImageDownload,
     FacilityOpenHourCreation,
     FacilityOpenHourInvalid,
     FacilityProfileUpdate,
+    FacilityImageUpload,
+    InvalidFacilityImageFile,
     StaffFacilityAccessDenied,
     StaffUserNotFound,
 )
@@ -163,6 +167,36 @@ def register_facility_management_routes(
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Staff tidak ditugaskan ke fasilitas ini.")
 
     @app.post(
+        "/staff/facilities/{facility_id}/images/upload",
+        status_code=status.HTTP_201_CREATED,
+        response_model=FacilityImageManagementResponse,
+    )
+    async def upload_staff_facility_image(
+        facility_id: str,
+        file: UploadFile = File(...),
+        alt_text: str = Form(...),
+        is_cover: bool = Form(False),
+        facility_management: FacilityManagementModule = Depends(get_facility_management),
+        current_user: UserAccount = Depends(require_access(AccessPolicyAction.manage_assigned_facilities)),
+    ):
+        try:
+            return facility_management.upload_assigned_facility_image(
+                current_user,
+                facility_id,
+                upload=FacilityImageUpload(
+                    filename=file.filename or "facility-image",
+                    content_type=file.content_type or "application/octet-stream",
+                    content=await file.read(),
+                ),
+                alt_text=alt_text,
+                is_cover=is_cover,
+            )
+        except InvalidFacilityImageFile:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Gambar fasilitas harus berupa file gambar.")
+        except StaffFacilityAccessDenied:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Staff tidak ditugaskan ke fasilitas ini.")
+
+    @app.post(
         "/staff/facilities/{facility_id}/images/{image_id}/cover",
         response_model=FacilityImageManagementResponse,
     )
@@ -178,6 +212,34 @@ def register_facility_management_routes(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gambar fasilitas tidak ditemukan.")
         except StaffFacilityAccessDenied:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Staff tidak ditugaskan ke fasilitas ini.")
+
+    @app.delete(
+        "/staff/facilities/{facility_id}/images/{image_id}",
+        response_model=FacilityImageManagementResponse,
+    )
+    async def remove_staff_facility_image(
+        facility_id: str,
+        image_id: str,
+        facility_management: FacilityManagementModule = Depends(get_facility_management),
+        current_user: UserAccount = Depends(require_access(AccessPolicyAction.manage_assigned_facilities)),
+    ):
+        try:
+            return facility_management.remove_assigned_facility_image(current_user, facility_id, image_id)
+        except (FacilityNotFound, FacilityImageNotFound):
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gambar fasilitas tidak ditemukan.")
+        except StaffFacilityAccessDenied:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Staff tidak ditugaskan ke fasilitas ini.")
+
+    @app.get("/facility-images/{image_path}")
+    async def get_public_facility_image(
+        image_path: str,
+        facility_management: FacilityManagementModule = Depends(get_facility_management),
+    ):
+        try:
+            download: FacilityImageDownload = facility_management.download_public_image(Path(image_path).stem)
+        except FacilityImageNotFound:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Gambar fasilitas tidak ditemukan.")
+        return Response(content=download.content, media_type=download.content_type)
 
     @app.post(
         "/staff/facilities/{facility_id}/open-hours",

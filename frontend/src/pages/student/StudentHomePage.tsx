@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
-import { apiRequest } from "../../api/http";
+import { apiAssetUrl, apiRequest } from "../../api/http";
 import { NotificationSurface } from "../../components/NotificationSurface";
 import { StudentHeaderSearch } from "../../components/layout/StudentHeaderSearch";
 import {
@@ -123,7 +123,7 @@ function mapFeaturedFacility(facility: FacilityCatalogItemResponse): StudentHome
   return {
     capacity: formatCapacity(facility.capacity),
     category: facility.category,
-    coverImageUrl: facility.cover_image_url,
+    coverImageUrl: apiAssetUrl(facility.cover_image_url),
     description: `${facility.location} · ${facility.open_hours_summary}`,
     href: `/student/facilities/${facility.id}`,
     name: facility.name,

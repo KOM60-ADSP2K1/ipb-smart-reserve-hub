@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime, time
+from mimetypes import guess_type
+from pathlib import Path
 
 from app.models import Facility, FacilityBlackout, FacilityImage, FacilityOpenHour
 from app.repositories.facility_management_repository import FacilityManagementRepository
@@ -11,6 +13,7 @@ from app.services.assigned_facility_access import (
 )
 from app.services.audit_logs import AuditLogModule, AuditLogRecorder
 from app.services.facilities import summarize_price
+from app.storage import PrivateStorage
 
 
 class FacilityManagementError(Exception):
@@ -42,6 +45,10 @@ class StaffFacilityAccessDenied(FacilityManagementError):
 
 
 class FacilityImageNotFound(FacilityManagementError):
+    pass
+
+
+class InvalidFacilityImageFile(FacilityManagementError):
     pass
 
 
@@ -138,6 +145,13 @@ class FacilityImageCreation:
 
 
 @dataclass(frozen=True)
+class FacilityImageUpload:
+    filename: str
+    content_type: str
+    content: bytes
+
+
+@dataclass(frozen=True)
 class FacilityImageProfile:
     id: str
     url: str
@@ -177,15 +191,23 @@ class FacilityBlackoutProfile:
     reason: str
 
 
+@dataclass(frozen=True)
+class FacilityImageDownload:
+    content: bytes
+    content_type: str
+
+
 class FacilityManagementModule:
     def __init__(
         self,
         *,
         facility_management_repository: FacilityManagementRepository,
+        storage: PrivateStorage,
         assigned_facility_access: AssignedFacilityAccessModule | None = None,
         audit_logs: AuditLogModule | None = None,
     ) -> None:
         self._facility_management_repository = facility_management_repository
+        self._storage = storage
         self._assigned_facility_access = assigned_facility_access or AssignedFacilityAccessModule(
             facility_repository=facility_management_repository
         )
@@ -328,6 +350,32 @@ class FacilityManagementModule:
         )
         return _to_image_profile(image)
 
+    def upload_assigned_facility_image(
+        self,
+        staff: UserAccount,
+        facility_id: str,
+        *,
+        upload: FacilityImageUpload,
+        alt_text: str,
+        is_cover: bool,
+    ) -> FacilityImageProfile:
+        facility = self._require_assigned_facility(staff, facility_id)
+        _ensure_supported_facility_image(upload)
+        image = FacilityImage(
+            facility_id=facility.id,
+            url="",
+            alt_text=alt_text.strip(),
+            display_order=0,
+            is_cover=is_cover,
+            is_active=True,
+        )
+        if image.is_cover:
+            self._facility_management_repository.clear_cover_images(facility.id)
+        image = self._facility_management_repository.add_image(image)
+        image.url = f"/facility-images/{image.id}{_facility_image_extension(upload.filename, upload.content_type)}"
+        self._storage.put(_facility_image_storage_key(image.url), upload.content, content_type=upload.content_type)
+        return _to_image_profile(image)
+
     def choose_assigned_facility_cover_image(
         self,
         staff: UserAccount,
@@ -341,6 +389,35 @@ class FacilityManagementModule:
         self._facility_management_repository.clear_cover_images(facility_id)
         image.is_cover = True
         return _to_image_profile(image)
+
+    def remove_assigned_facility_image(
+        self,
+        staff: UserAccount,
+        facility_id: str,
+        image_id: str,
+    ) -> FacilityImageProfile:
+        self._require_assigned_facility(staff, facility_id)
+        image = self._facility_management_repository.get_active_image(facility_id, image_id)
+        if image is None:
+            raise FacilityImageNotFound
+        image.is_active = False
+        image.is_cover = False
+        active_images = self._facility_management_repository.list_active_images(facility_id)
+        if active_images and not any(candidate.is_cover for candidate in active_images):
+            active_images[0].is_cover = True
+        return _to_image_profile(image)
+
+    def download_public_image(self, image_id: str) -> FacilityImageDownload:
+        image = self._facility_management_repository.get_active_image_by_id(image_id)
+        if image is None:
+            raise FacilityImageNotFound
+        if not image.url.startswith("/facility-images/"):
+            raise FacilityImageNotFound
+        content = self._storage.get(_facility_image_storage_key(image.url))
+        return FacilityImageDownload(
+            content=content,
+            content_type=guess_type(image.url)[0] or "application/octet-stream",
+        )
 
     def add_assigned_facility_open_hour(
         self,
@@ -387,6 +464,10 @@ class FacilityManagementModule:
             raise StaffFacilityAccessDenied
 
 def _to_facility_profile(facility: Facility) -> FacilityManagementProfile:
+    active_images = sorted(
+        [image for image in facility.images if image.is_active],
+        key=lambda image: (not image.is_cover, image.display_order, image.id),
+    )
     return FacilityManagementProfile(
         id=facility.id,
         name=facility.name,
@@ -403,7 +484,7 @@ def _to_facility_profile(facility: Facility) -> FacilityManagementProfile:
         payment_instructions=facility.payment_instructions,
         open_hours_summary=facility.open_hours_summary,
         open_hours=[_to_open_hour_profile(open_hour) for open_hour in facility.open_hours],
-        images=[_to_image_profile(image) for image in facility.images],
+        images=[_to_image_profile(image) for image in active_images],
         blackouts=[
             _to_blackout_profile(blackout)
             for blackout in sorted(facility.blackouts, key=lambda item: item.starts_at)
@@ -475,6 +556,28 @@ def _time_from_string(value: str) -> time:
         return time.fromisoformat(value)
     except ValueError:
         raise FacilityOpenHourInvalid from None
+
+
+def _ensure_supported_facility_image(upload: FacilityImageUpload) -> None:
+    if not upload.content_type.startswith("image/"):
+        raise InvalidFacilityImageFile
+    if not upload.filename.strip():
+        raise InvalidFacilityImageFile
+
+
+def _facility_image_extension(filename: str, content_type: str) -> str:
+    suffix = Path(filename).suffix.lower()
+    if suffix:
+        return suffix
+    if content_type == "image/png":
+        return ".png"
+    if content_type == "image/webp":
+        return ".webp"
+    return ".jpg"
+
+
+def _facility_image_storage_key(url: str) -> str:
+    return f"facility-images{url.removeprefix('/facility-images')}"
 
 
 def _open_hour_from_creation(

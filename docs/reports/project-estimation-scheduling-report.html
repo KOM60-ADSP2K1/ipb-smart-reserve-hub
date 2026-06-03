@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>Laporan Project Estimation &amp; Scheduling - IPB Smart Reserve Hub</title>
+  <style>
+    body {
+      font-family: "Times New Roman", serif;
+      font-size: 12pt;
+      line-height: 1.35;
+      margin: 36pt;
+      color: #111;
+    }
+    h1, h2, h3 {
+      margin-bottom: 6pt;
+    }
+    h1 {
+      text-align: center;
+      font-size: 16pt;
+    }
+    h2 {
+      font-size: 14pt;
+      margin-top: 20pt;
+    }
+    h3 {
+      font-size: 12pt;
+      margin-top: 14pt;
+    }
+    p {
+      margin: 6pt 0;
+      text-align: justify;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 8pt 0 14pt 0;
+    }
+    th, td {
+      border: 1px solid #222;
+      padding: 6pt;
+      vertical-align: top;
+    }
+    th {
+      text-align: center;
+    }
+    ul {
+      margin-top: 4pt;
+      margin-bottom: 8pt;
+    }
+    .meta td:first-child {
+      width: 180pt;
+      font-weight: bold;
+    }
+    .small {
+      font-size: 11pt;
+    }
+    .center {
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h1>Laporan Project Estimation &amp; Scheduling<br />IPB Smart Reserve Hub</h1>
+
+  <table class="meta">
+    <tr><td>Mata Kuliah</td><td>KOM 1337 Analisis dan Desain Sistem</td></tr>
+    <tr><td>Praktikum</td><td>Praktikum ke-12: Project Estimation &amp; Scheduling</td></tr>
+    <tr><td>Kelompok</td><td>Paralel 2 - Kelompok 1</td></tr>
+    <tr><td>Anggota</td><td>Ghiffari Bravia Hisham, Adhiya Radhin Fasya, Daffa Kautsar Falih, Muhammad Salman Maulana</td></tr>
+    <tr><td>Tanggal Penyusunan</td><td>31 Mei 2026</td></tr>
+    <tr><td>Objek Estimasi</td><td>Codebase dan dokumentasi proyek <i>IPB Smart Reserve Hub</i></td></tr>
+  </table>
+
+  <p><b>Catatan dasar estimasi.</b> Laporan ini disusun sebagai <b>estimasi akademik berbasis artefak repository</b>, bukan rekonstruksi timesheet aktual. Dasar yang dipakai adalah struktur codebase, dokumen PRD, status issue lokal, serta histori commit. Histori Git menunjukkan implementasi kode mulai pada <b>30 April 2026</b>, sedangkan tim menyampaikan bahwa fase pengembangan produk sudah berjalan sejak sekitar <b>1 Februari 2026</b>. Karena itu, fase <i>planning</i>, analisis, desain, dan perumusan scope diasumsikan berlangsung pada 1 Februari 2026 sampai 29 April 2026, lalu fase implementasi intensif dimulai pada 30 April 2026.</p>
+
+  <p>Bukti yang mendukung asumsi ini antara lain: PRD utama bertanggal 30 April 2026, terdapat 90+ issue lokal berstatus <i>done</i>, backend memiliki puluhan route dan service, frontend memiliki puluhan halaman dan komponen, serta tersedia suite test backend dan screenshot/integration test frontend. Dengan kompleksitas tersebut, estimasi dikerjakan menggunakan pendekatan <i>Wideband Delphi</i> dan pengurutan dependensi berbasis PERT/CPM.</p>
+
+  <h2>A. Project Estimation</h2>
+
+  <h3>1. Kick-off Meeting</h3>
+  <p>Pada sesi kick-off, tim membagi peran secara fungsional agar estimasi lebih realistis terhadap bentuk codebase yang ada saat ini.</p>
+
+  <table>
+    <tr>
+      <th>No</th>
+      <th>Task List</th>
+      <th>Output Utama</th>
+    </tr>
+    <tr><td class="center">1</td><td>Pembagian peran tim dan ruang lingkup MVP</td><td>Peran anggota dan definisi proyek</td></tr>
+    <tr><td class="center">2</td><td>Analisis masalah reservasi fasilitas kampus</td><td>Masalah inti dan tujuan sistem</td></tr>
+    <tr><td class="center">3</td><td>Identifikasi aktor dan kebutuhan fungsional</td><td>Daftar kebutuhan mahasiswa, staff, dan super admin</td></tr>
+    <tr><td class="center">4</td><td>Penyusunan PRD, use case, dan scope MVP</td><td>PRD dan batasan fitur</td></tr>
+    <tr><td class="center">5</td><td>Perancangan domain model, ERD, dan kontrak API</td><td>Model data dan alur integrasi</td></tr>
+    <tr><td class="center">6</td><td>Perancangan referensi UI, page brief, dan alur halaman</td><td>Referensi visual dan kebutuhan frontend</td></tr>
+    <tr><td class="center">7</td><td>Setup repository, environment, dan baseline testing</td><td>Fondasi pengembangan dan TDD</td></tr>
+    <tr><td class="center">8</td><td>Backend foundation: auth, role shell, settings</td><td>Fondasi backend dan autentikasi</td></tr>
+    <tr><td class="center">9</td><td>Backend katalog fasilitas dan detail fasilitas</td><td>Endpoint katalog, detail, dan kalender publik</td></tr>
+    <tr><td class="center">10</td><td>Manajemen kategori, unit organisasi, dan booking settings</td><td>Data master untuk reservasi</td></tr>
+    <tr><td class="center">11</td><td>Validasi pemilihan waktu dan aturan availability</td><td>Aturan pemesanan dan pengecekan bentrok</td></tr>
+    <tr><td class="center">12</td><td>Submission reservasi dan conflict-protected hold</td><td>Pembuatan reservasi awal</td></tr>
+    <tr><td class="center">13</td><td>Generate approval letter dan private file workflow</td><td>Surat persetujuan dan file privat</td></tr>
+    <tr><td class="center">14</td><td>Review dokumen, pembayaran, dan deadline worker</td><td>Workflow verifikasi end-to-end</td></tr>
+    <tr><td class="center">15</td><td>Notifikasi, pembatalan, review, audit log</td><td>Fitur pendukung operasional</td></tr>
+    <tr><td class="center">16</td><td>Frontend foundation, routing, auth pages</td><td>Kerangka frontend dan halaman login/register</td></tr>
+    <tr><td class="center">17</td><td>Student discovery pages</td><td>Home, katalog, detail fasilitas</td></tr>
+    <tr><td class="center">18</td><td>Student reservation workflow pages</td><td>Form waktu, detail, status, dan list reservasi</td></tr>
+    <tr><td class="center">19</td><td>Staff operational pages</td><td>Daftar fasilitas, jadwal, dan review reservasi</td></tr>
+    <tr><td class="center">20</td><td>Super admin governance and reporting pages</td><td>Dashboard, pengguna, fasilitas, laporan, sistem</td></tr>
+    <tr><td class="center">21</td><td>Integrasi frontend-backend dan session flow</td><td>Wiring API dan sinkronisasi state</td></tr>
+    <tr><td class="center">22</td><td>Seed/demo data, fixture, dan visual test harness</td><td>Data demo dan penopang pengujian</td></tr>
+    <tr><td class="center">23</td><td>Testing, bug fixing, dan contract smoke</td><td>Verifikasi perilaku sistem</td></tr>
+    <tr><td class="center">24</td><td>Deployment readiness dan final polish</td><td>Kesiapan deploy dan perapihan akhir</td></tr>
+  </table>
+
+  <h3>2. Individual Preparation</h3>
+  <p>Setiap anggota membuat estimasi berdasarkan peran dominan. Satuan yang dipakai adalah <b>person-days</b>, bukan hari kalender. Jika empat orang bekerja paralel, total calendar time dapat jauh lebih pendek daripada total person-days.</p>
+
+  <h3>ROLE: Project Manager / System Analyst (Ghiffari Bravia Hisham)</h3>
+  <table>
+    <tr><th>No</th><th>Task</th><th>Estimasi (hari)</th></tr>
+    <tr><td class="center">1</td><td>Pembagian peran tim dan kickoff</td><td class="center">2</td></tr>
+    <tr><td class="center">2</td><td>Analisis masalah dan stakeholder</td><td class="center">5</td></tr>
+    <tr><td class="center">3</td><td>Identifikasi kebutuhan dan scope MVP</td><td class="center">6</td></tr>
+    <tr><td class="center">4</td><td>Penyusunan PRD, use case, dan domain context</td><td class="center">5</td></tr>
+    <tr><td class="center">5</td><td>Perancangan ERD, kontrak API, dan aturan bisnis</td><td class="center">6</td></tr>
+    <tr><td class="center">6</td><td>Review referensi UI dan page brief</td><td class="center">4</td></tr>
+    <tr><td class="center">7</td><td>Koordinasi integrasi frontend-backend</td><td class="center">4</td></tr>
+    <tr><td class="center">8</td><td>UAT ringan, smoke test, dan final review</td><td class="center">4</td></tr>
+    <tr><td class="center">9</td><td>Dokumentasi deployment/final polish</td><td class="center">3</td></tr>
+    <tr><td colspan="2"><b>Total</b></td><td class="center"><b>39</b></td></tr>
+  </table>
+  <p class="small"><b>Asumsi:</b> PM/analyst fokus pada fase 1 Februari 2026 sampai 29 April 2026, memastikan scope tidak melebar dan spesifikasi cukup matang sebelum implementasi kode dimulai pada 30 April 2026.</p>
+
+  <h3>ROLE: Back-end Developer (Adhiya Radhin Fasya)</h3>
+  <table>
+    <tr><th>No</th><th>Task</th><th>Estimasi (hari)</th></tr>
+    <tr><td class="center">1</td><td>Setup backend, database, env, dan baseline test</td><td class="center">3</td></tr>
+    <tr><td class="center">2</td><td>Backend foundation: auth, role shell, settings</td><td class="center">6</td></tr>
+    <tr><td class="center">3</td><td>Katalog fasilitas, detail, dan kalender publik</td><td class="center">5</td></tr>
+    <tr><td class="center">4</td><td>Kategori fasilitas, organization unit, booking settings</td><td class="center">5</td></tr>
+    <tr><td class="center">5</td><td>Aturan pemilihan waktu dan availability</td><td class="center">6</td></tr>
+    <tr><td class="center">6</td><td>Submission reservasi dan conflict guard</td><td class="center">5</td></tr>
+    <tr><td class="center">7</td><td>Approval letter, file workflow, dan download</td><td class="center">5</td></tr>
+    <tr><td class="center">8</td><td>Review dokumen, pembayaran, deadline worker</td><td class="center">8</td></tr>
+    <tr><td class="center">9</td><td>Notifikasi, pembatalan, review, audit log</td><td class="center">7</td></tr>
+    <tr><td class="center">10</td><td>Seed data, fixture backend, dan smoke test</td><td class="center">4</td></tr>
+    <tr><td colspan="2"><b>Total</b></td><td class="center"><b>54</b></td></tr>
+  </table>
+  <p class="small"><b>Asumsi:</b> Backend mengikuti TDD per vertical slice, sehingga tiap fitur inti mencakup waktu untuk menulis behavior test, implementasi minimum, dan refactor.</p>
+
+  <h3>ROLE: Front-end Developer (Daffa Kautsar Falih)</h3>
+  <table>
+    <tr><th>No</th><th>Task</th><th>Estimasi (hari)</th></tr>
+    <tr><td class="center">1</td><td>Perancangan referensi visual dan layout shell</td><td class="center">7</td></tr>
+    <tr><td class="center">2</td><td>Frontend foundation, router, auth pages</td><td class="center">5</td></tr>
+    <tr><td class="center">3</td><td>Student home, katalog, dan detail fasilitas</td><td class="center">6</td></tr>
+    <tr><td class="center">4</td><td>Student reservation time, detail, dan status pages</td><td class="center">8</td></tr>
+    <tr><td class="center">5</td><td>Staff list, schedule, edit facility, dan review pages</td><td class="center">7</td></tr>
+    <tr><td class="center">6</td><td>Super admin dashboard, users, facility, report, system</td><td class="center">7</td></tr>
+    <tr><td class="center">7</td><td>Integrasi API, session, dan routing berbasis role</td><td class="center">6</td></tr>
+    <tr><td class="center">8</td><td>Visual verification dan layout polish</td><td class="center">4</td></tr>
+    <tr><td colspan="2"><b>Total</b></td><td class="center"><b>50</b></td></tr>
+  </table>
+  <p class="small"><b>Asumsi:</b> Frontend sudah memiliki HTML reference dan screenshot target, sehingga sebagian waktu desain digunakan untuk translasi visual dan bukan eksplorasi UI dari nol.</p>
+
+  <h3>ROLE: QA / DevOps / Integrator (Muhammad Salman Maulana)</h3>
+  <table>
+    <tr><th>No</th><th>Task</th><th>Estimasi (hari)</th></tr>
+    <tr><td class="center">1</td><td>Setup tooling lokal, script dev, dan pipeline verifikasi</td><td class="center">3</td></tr>
+    <tr><td class="center">2</td><td>Seed/demo data dan skenario integrasi</td><td class="center">4</td></tr>
+    <tr><td class="center">3</td><td>Integration testing frontend-backend</td><td class="center">6</td></tr>
+    <tr><td class="center">4</td><td>Playwright/screenshot checks dan regression check</td><td class="center">5</td></tr>
+    <tr><td class="center">5</td><td>Bug fixing support lintas modul</td><td class="center">5</td></tr>
+    <tr><td class="center">6</td><td>Deployment readiness dan dokumentasi environment</td><td class="center">4</td></tr>
+    <tr><td class="center">7</td><td>Final smoke test dan stabilisasi</td><td class="center">4</td></tr>
+    <tr><td colspan="2"><b>Total</b></td><td class="center"><b>31</b></td></tr>
+  </table>
+  <p class="small"><b>Asumsi:</b> Peran ini membantu lintas fase, terutama setelah implementasi aktif berjalan sejak 30 April 2026.</p>
+
+  <h3>3. Estimation Session</h3>
+  <p>Pada sesi diskusi, estimasi awal direvisi dua kali agar lebih konsisten terhadap ukuran codebase dan dependensi antarfitur. Ringkasan konsolidasi ditunjukkan pada tabel berikut.</p>
+
+  <table>
+    <tr>
+      <th>Workstream</th>
+      <th>Estimasi Awal</th>
+      <th>Iterasi 1</th>
+      <th>Iterasi 2 / Final</th>
+      <th>Alasan Revisi</th>
+    </tr>
+    <tr><td>Analisis, scope, dan desain</td><td class="center">20</td><td class="center">23</td><td class="center">24</td><td>Scope tiga role dan workflow reservasi lebih kompleks dari dugaan awal</td></tr>
+    <tr><td>Backend core dan data master</td><td class="center">18</td><td class="center">21</td><td class="center">22</td><td>Auth, settings, category, dan organization unit saling terkait</td></tr>
+    <tr><td>Workflow reservasi end-to-end backend</td><td class="center">21</td><td class="center">24</td><td class="center">25</td><td>Perlu file workflow, deadline worker, payment, dan notification</td></tr>
+    <tr><td>Frontend core dan student flow</td><td class="center">18</td><td class="center">21</td><td class="center">22</td><td>Banyak state UI dan halaman status reservasi</td></tr>
+    <tr><td>Staff dan super admin UI</td><td class="center">11</td><td class="center">13</td><td class="center">14</td><td>Halaman governance dan operational board cukup banyak</td></tr>
+    <tr><td>Integrasi, testing, dan deployment</td><td class="center">13</td><td class="center">15</td><td class="center">16</td><td>Perlu TDD backend, visual checks frontend, dan smoke test kontrak</td></tr>
+    <tr><td colspan="3"><b>Total Final Effort</b></td><td class="center"><b>123 person-days</b></td><td>Dipakai sebagai nilai <i>most likely</i> untuk penjadwalan</td></tr>
+  </table>
+
+  <h3>4. Assemble Session</h3>
+  <p>Tim kemudian menyatukan hasil estimasi ke dalam rentang <i>best case</i> dan <i>worst case</i>. Nilai ekspektasi dihitung dengan rumus PERT: <b>(O + 4M + P) / 6</b>, dengan O = <i>optimistic</i>, M = <i>most likely</i>, dan P = <i>pessimistic</i>.</p>
+
+  <table>
+    <tr>
+      <th>Workstream</th>
+      <th>O</th>
+      <th>M</th>
+      <th>P</th>
+      <th>Expected PERT</th>
+    </tr>
+    <tr><td>Analisis, scope, dan desain</td><td class="center">16</td><td class="center">24</td><td class="center">30</td><td class="center">23.67</td></tr>
+    <tr><td>Backend core dan data master</td><td class="center">15</td><td class="center">22</td><td class="center">28</td><td class="center">21.83</td></tr>
+    <tr><td>Workflow reservasi end-to-end backend</td><td class="center">18</td><td class="center">25</td><td class="center">33</td><td class="center">25.17</td></tr>
+    <tr><td>Frontend core dan student flow</td><td class="center">15</td><td class="center">22</td><td class="center">30</td><td class="center">22.17</td></tr>
+    <tr><td>Staff dan super admin UI</td><td class="center">10</td><td class="center">14</td><td class="center">19</td><td class="center">14.17</td></tr>
+    <tr><td>Integrasi, testing, dan deployment</td><td class="center">12</td><td class="center">16</td><td class="center">22</td><td class="center">16.33</td></tr>
+    <tr><td><b>Total</b></td><td class="center"><b>86</b></td><td class="center"><b>123</b></td><td class="center"><b>162</b></td><td class="center"><b>123.34</b></td></tr>
+  </table>
+
+  <p>Interpretasi hasil assemble:</p>
+  <ul>
+    <li><b>Best case</b>: 86 person-days jika hampir tidak ada revisi besar dan integrasi berjalan mulus.</li>
+    <li><b>Most likely</b>: 123 person-days berdasarkan ukuran codebase yang benar-benar ada pada repository.</li>
+    <li><b>Worst case</b>: 162 person-days jika banyak bug integrasi, revisi UI, atau perubahan kontrak API.</li>
+  </ul>
+
+  <h2>B. Project Scheduling</h2>
+
+  <h3>1. Task Dependency</h3>
+  <table>
+    <tr>
+      <th>No</th>
+      <th>Kode</th>
+      <th>Task</th>
+      <th>Durasi (hari)</th>
+      <th>Predecessor</th>
+    </tr>
+    <tr><td class="center">1</td><td>T01</td><td>Kick-off dan pembagian peran</td><td class="center">2</td><td>-</td></tr>
+    <tr><td class="center">2</td><td>T02</td><td>Analisis masalah dan stakeholder</td><td class="center">5</td><td>T01</td></tr>
+    <tr><td class="center">3</td><td>T03</td><td>Identifikasi kebutuhan dan scope MVP</td><td class="center">6</td><td>T02</td></tr>
+    <tr><td class="center">4</td><td>T04</td><td>PRD, use case, dan domain context</td><td class="center">5</td><td>T03</td></tr>
+    <tr><td class="center">5</td><td>T05</td><td>ERD, API contract, dan aturan bisnis</td><td class="center">6</td><td>T04</td></tr>
+    <tr><td class="center">6</td><td>T06</td><td>UI reference, page brief, dan flow halaman</td><td class="center">7</td><td>T04</td></tr>
+    <tr><td class="center">7</td><td>T07</td><td>Setup repo, environment, dan baseline testing</td><td class="center">3</td><td>T05</td></tr>
+    <tr><td class="center">8</td><td>T08</td><td>Backend foundation: auth, role shell, settings</td><td class="center">6</td><td>T07</td></tr>
+    <tr><td class="center">9</td><td>T09</td><td>Katalog fasilitas dan detail backend</td><td class="center">5</td><td>T08</td></tr>
+    <tr><td class="center">10</td><td>T10</td><td>Category, org unit, booking settings</td><td class="center">5</td><td>T08</td></tr>
+    <tr><td class="center">11</td><td>T11</td><td>Reservation time selection dan availability</td><td class="center">6</td><td>T09, T10</td></tr>
+    <tr><td class="center">12</td><td>T12</td><td>Reservation submission dan conflict guard</td><td class="center">5</td><td>T11</td></tr>
+    <tr><td class="center">13</td><td>T13</td><td>Approval letter dan private file workflow</td><td class="center">5</td><td>T12</td></tr>
+    <tr><td class="center">14</td><td>T14</td><td>Document review, payment, deadline worker</td><td class="center">8</td><td>T13</td></tr>
+    <tr><td class="center">15</td><td>T15</td><td>Notification, cancellation, review, audit log</td><td class="center">7</td><td>T14</td></tr>
+    <tr><td class="center">16</td><td>T16</td><td>Frontend foundation, router, auth pages</td><td class="center">5</td><td>T06, T07</td></tr>
+    <tr><td class="center">17</td><td>T17</td><td>Student discovery pages</td><td class="center">6</td><td>T16, T09</td></tr>
+    <tr><td class="center">18</td><td>T18</td><td>Student reservation workflow pages</td><td class="center">8</td><td>T16, T11, T12, T13, T14</td></tr>
+    <tr><td class="center">19</td><td>T19</td><td>Staff operational pages</td><td class="center">7</td><td>T16, T14</td></tr>
+    <tr><td class="center">20</td><td>T20</td><td>Super admin governance/report pages</td><td class="center">7</td><td>T16, T10, T15</td></tr>
+    <tr><td class="center">21</td><td>T21</td><td>Integrasi frontend-backend dan session flow</td><td class="center">6</td><td>T17, T18, T19, T20</td></tr>
+    <tr><td class="center">22</td><td>T22</td><td>Seed/demo data dan visual harness</td><td class="center">4</td><td>T08</td></tr>
+    <tr><td class="center">23</td><td>T23</td><td>Testing, bug fixing, contract smoke</td><td class="center">6</td><td>T21, T22</td></tr>
+    <tr><td class="center">24</td><td>T24</td><td>Deployment readiness dan final polish</td><td class="center">4</td><td>T23</td></tr>
+  </table>
+
+  <h3>2. Gantt Chart</h3>
+  <p>Karena pengembangan produk diasumsikan mulai pada <b>1 Februari 2026</b> dan implementasi kode baru mulai pada <b>30 April 2026</b>, jadwal dibagi ke dua fase: fase analisis-desain dan fase implementasi. Tabel berikut adalah representasi tekstual Gantt chart yang dapat dipindahkan ke Word atau digambar ulang di aplikasi Gantt.</p>
+
+  <table>
+    <tr>
+      <th>Periode</th>
+      <th>Task Dominan</th>
+      <th>Keterangan</th>
+    </tr>
+    <tr><td>1 Feb 2026 - 3 Feb 2026</td><td>T01</td><td>Kick-off, pembagian peran, dan target MVP</td></tr>
+    <tr><td>4 Feb 2026 - 10 Feb 2026</td><td>T02</td><td>Analisis masalah reservasi fasilitas dan aktor sistem</td></tr>
+    <tr><td>11 Feb 2026 - 18 Feb 2026</td><td>T03</td><td>Perumusan kebutuhan fungsional dan nonfungsional</td></tr>
+    <tr><td>19 Feb 2026 - 25 Feb 2026</td><td>T04</td><td>Penyusunan PRD, use case, dan domain context</td></tr>
+    <tr><td>26 Feb 2026 - 5 Mar 2026</td><td>T05</td><td>ERD, kontrak API, aturan bisnis, dan arsitektur</td></tr>
+    <tr><td>6 Mar 2026 - 16 Mar 2026</td><td>T06</td><td>HTML reference, screenshot target, dan page brief</td></tr>
+    <tr><td>17 Mar 2026 - 29 Apr 2026</td><td>Review desain dan penajaman scope</td><td>Buffer perencanaan, diskusi, dan penyelarasan sebelum coding</td></tr>
+    <tr><td>30 Apr 2026 - 2 Mei 2026</td><td>T07</td><td>Setup repo, environment, database, dan baseline test</td></tr>
+    <tr><td>3 Mei 2026 - 8 Mei 2026</td><td>T08, T16, T22</td><td>Fondasi backend dan frontend mulai berjalan paralel</td></tr>
+    <tr><td>9 Mei 2026 - 13 Mei 2026</td><td>T09, T10, T17</td><td>Katalog fasilitas, data master, dan halaman discovery</td></tr>
+    <tr><td>14 Mei 2026 - 19 Mei 2026</td><td>T11, T12</td><td>Validasi waktu reservasi dan submission workflow</td></tr>
+    <tr><td>20 Mei 2026 - 24 Mei 2026</td><td>T13, T14, T18, T19</td><td>Approval letter, payment, deadline worker, student/staff pages</td></tr>
+    <tr><td>25 Mei 2026 - 27 Mei 2026</td><td>T15, T20</td><td>Notification, audit, cancellation, dan super admin pages</td></tr>
+    <tr><td>28 Mei 2026 - 30 Mei 2026</td><td>T21, T23</td><td>Integrasi API, smoke test, bug fixing, dan contract validation</td></tr>
+    <tr><td>31 Mei 2026</td><td>T24</td><td>Final polish dan kesiapan deploy/demo</td></tr>
+  </table>
+
+  <p>Jika divisualisasikan di Gantt chart, maka fase Februari-Maret relatif linear karena fokus pada analisis dan desain, sedangkan fase 30 April 2026 sampai 31 Mei 2026 bersifat paralel: backend, frontend, dan QA bergerak bersamaan dengan titik temu utama di T21 dan T23.</p>
+
+  <h3>3. Critical Path</h3>
+  <p>Berdasarkan dependensi dan durasi yang paling memengaruhi tanggal selesai proyek, jalur kritis yang paling masuk akal adalah:</p>
+
+  <p><b>T01 -&gt; T02 -&gt; T03 -&gt; T04 -&gt; T05 -&gt; T07 -&gt; T08 -&gt; T09 -&gt; T11 -&gt; T12 -&gt; T13 -&gt; T14 -&gt; T18 -&gt; T21 -&gt; T23 -&gt; T24</b></p>
+
+  <p>Makna network diagram tersebut adalah bahwa proyek tidak dapat selesai tepat waktu bila salah satu task di atas terlambat, karena task-task itu membentuk alur utama dari perencanaan, fondasi backend, workflow reservasi inti, implementasi halaman student yang bergantung pada workflow tersebut, integrasi, testing, hingga final polish.</p>
+
+  <table>
+    <tr>
+      <th>Kategori</th>
+      <th>Task</th>
+      <th>Makna</th>
+    </tr>
+    <tr><td>Critical</td><td>T01, T02, T03, T04, T05</td><td>Jika fase analisis dan desain terlambat, coding 30 April 2026 tidak dapat dimulai dengan spesifikasi yang cukup jelas</td></tr>
+    <tr><td>Critical</td><td>T07, T08, T09, T11, T12, T13, T14</td><td>Ini adalah alur backend inti yang menghasilkan aturan reservasi, submission, surat, dokumen, pembayaran, dan deadline</td></tr>
+    <tr><td>Critical</td><td>T18</td><td>Halaman student reservation workflow tidak bisa benar-benar selesai sebelum workflow backend inti stabil</td></tr>
+    <tr><td>Critical</td><td>T21, T23, T24</td><td>Semua hasil kerja akhirnya harus bertemu di integrasi, pengujian, dan finalisasi</td></tr>
+    <tr><td>Non-critical</td><td>T06, T16, T17</td><td>Frontend discovery dapat dikerjakan lebih awal dan memiliki ruang tunggu sebelum integrasi final</td></tr>
+    <tr><td>Non-critical</td><td>T10, T15, T19, T20, T22</td><td>Task ini penting, tetapi masih memiliki kelonggaran selama tidak melewati kebutuhan task berikutnya</td></tr>
+  </table>
+
+  <p>Perkiraan waktu buffer untuk task non-critical adalah sebagai berikut:</p>
+
+  <table>
+    <tr>
+      <th>Task</th>
+      <th>Perkiraan Buffer</th>
+      <th>Alasan</th>
+    </tr>
+    <tr><td>T06 - UI reference dan page brief</td><td class="center">5 hari</td><td>Dapat selesai sedikit lebih lambat selama frontend foundation belum terblokir</td></tr>
+    <tr><td>T10 - Category, org unit, booking settings</td><td class="center">1 hari</td><td>Dibutuhkan sebelum validasi reservasi penuh berjalan, tetapi tidak sepanjang T09</td></tr>
+    <tr><td>T16 - Frontend foundation</td><td class="center">3 hari</td><td>Masih ada kelonggaran selama reservation workflow page belum memasuki integrasi final</td></tr>
+    <tr><td>T17 - Student discovery pages</td><td class="center">6 hari</td><td>Tidak seketat halaman reservation workflow terhadap tanggal integrasi T21</td></tr>
+    <tr><td>T19 - Staff operational pages</td><td class="center">4 hari</td><td>Dapat berjalan paralel dan selesai sedikit setelah T18 selama belum melewati T21</td></tr>
+    <tr><td>T20 - Super admin pages</td><td class="center">4 hari</td><td>Sama seperti T19, masih memiliki ruang karena tidak memblokir backend inti</td></tr>
+    <tr><td>T22 - Seed/demo data</td><td class="center">2 hari</td><td>Penting untuk demo dan test, tetapi tidak memimpin alur bisnis inti</td></tr>
+  </table>
+
+  <p><b>Makna task critical dan non-critical.</b> Task yang berada di <i>critical path</i> tidak memiliki slack yang berarti; keterlambatan kecil saja langsung menggeser tanggal selesai proyek. Sebaliknya, task yang tidak berada di <i>critical path</i> tetap penting, tetapi memiliki <i>buffer</i> sehingga keterlambatan terbatas masih bisa diserap tanpa menunda penyelesaian keseluruhan proyek.</p>
+
+  <h2>Kesimpulan</h2>
+  <p>Berdasarkan isi codebase dan dokumentasi yang tersedia, proyek <i>IPB Smart Reserve Hub</i> paling realistis diperkirakan memiliki effort sekitar <b>123 person-days</b> dengan rentang <b>86 sampai 162 person-days</b>. Dengan asumsi fase produk dimulai pada <b>1 Februari 2026</b> dan implementasi kode dimulai pada <b>30 April 2026</b>, jadwal yang paling masuk akal adalah menyelesaikan analisis-desain lebih dulu, lalu melakukan implementasi paralel intensif selama bulan Mei 2026. Workflow reservasi inti backend beserta integrasinya ke halaman student menjadi penentu utama critical path proyek.</p>
+
+  <p class="small">Dokumen ini siap dipindahkan ke Microsoft Word. Jika diperlukan, tabel Gantt dapat digambar ulang di <i>Online Gantt</i> dengan daftar task dan predecessor pada bagian B.1 dan B.2.</p>
+</body>
+</html>

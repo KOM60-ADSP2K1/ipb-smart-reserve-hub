@@ -50,7 +50,13 @@ class FacilityManagementRepository(Protocol):
     def get_active_image(self, facility_id: str, image_id: str) -> FacilityImage | None:
         raise NotImplementedError
 
+    def get_active_image_by_id(self, image_id: str) -> FacilityImage | None:
+        raise NotImplementedError
+
     def clear_cover_images(self, facility_id: str) -> None:
+        raise NotImplementedError
+
+    def list_active_images(self, facility_id: str) -> list[FacilityImage]:
         raise NotImplementedError
 
     def add_open_hour(self, open_hour: FacilityOpenHour) -> FacilityOpenHour:
@@ -164,10 +170,27 @@ class SqlAlchemyFacilityManagementRepository:
             )
         )
 
+    def get_active_image_by_id(self, image_id: str) -> FacilityImage | None:
+        return self._session.scalar(
+            select(FacilityImage).where(
+                FacilityImage.id == image_id,
+                FacilityImage.is_active.is_(True),
+            )
+        )
+
     def clear_cover_images(self, facility_id: str) -> None:
         for image in self._session.scalars(select(FacilityImage).where(FacilityImage.facility_id == facility_id)):
             image.is_cover = False
         self._session.flush()
+
+    def list_active_images(self, facility_id: str) -> list[FacilityImage]:
+        return list(
+            self._session.scalars(
+                select(FacilityImage)
+                .where(FacilityImage.facility_id == facility_id, FacilityImage.is_active.is_(True))
+                .order_by(FacilityImage.display_order, FacilityImage.id)
+            )
+        )
 
     def add_open_hour(self, open_hour: FacilityOpenHour) -> FacilityOpenHour:
         self._session.add(open_hour)

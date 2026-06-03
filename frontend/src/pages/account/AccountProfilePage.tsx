@@ -94,7 +94,7 @@ function ProfileContent() {
 
 export function StaffProfilePage() {
   return (
-    <StaffShell active="home">
+    <StaffShell active="home" profileActive>
       <ProfileContent />
     </StaffShell>
   );
@@ -102,7 +102,7 @@ export function StaffProfilePage() {
 
 export function SuperAdminProfilePage() {
   return (
-    <SuperAdminShell active="dashboard">
+    <SuperAdminShell active="dashboard" profileActive>
       <ProfileContent />
     </SuperAdminShell>
   );

@@ -397,7 +397,10 @@ Common endpoints:
 | `GET` | `/staff/reservations/{reservation_id}` | Staff |
 | `GET` | `/staff/facilities` | Staff |
 | `PATCH` | `/staff/facilities/{facility_id}` | Staff assigned |
+| `POST` | `/staff/facilities/{facility_id}/images/upload` | Staff assigned |
+| `DELETE` | `/staff/facilities/{facility_id}/images/{image_id}` | Staff assigned |
 | `POST` | `/staff/facilities/{facility_id}/images/{image_id}/cover` | Staff assigned |
+| `GET` | `/facility-images/{image_path}` | Public |
 | `GET` | `/admin/dashboard` | Super Admin |
 | `GET` | `/admin/users` | Super Admin |
 | `POST` | `/admin/users` | Super Admin |

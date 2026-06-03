@@ -1,3 +1,4 @@
+import { apiAssetUrl } from "../api/http";
 import { formatCampusDate, formatCampusTime } from "../utils/campusTime";
 
 export type ReservationTone =
@@ -124,7 +125,7 @@ function baseListItem(
     date: formatCampusDate(reservation.starts_at),
     detailHref: primaryHref,
     facility: reservation.facility.name,
-    coverImageUrl: reservation.facility.cover_image_url ?? null,
+    coverImageUrl: apiAssetUrl(reservation.facility.cover_image_url ?? null),
     id: reservation.id,
     location: reservation.organization_unit.name,
     primaryAction,

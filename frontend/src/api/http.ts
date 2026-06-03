@@ -34,12 +34,19 @@ export function setUnauthorizedHandler(handler: (() => void) | null) {
   unauthorizedHandler = handler;
 }
 
-function buildUrl(path: string) {
+export function apiAssetUrl(path: string | null | undefined) {
+  if (!path) {
+    return null;
+  }
   if (/^https?:\/\//.test(path)) {
     return path;
   }
 
   return `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
+function buildUrl(path: string) {
+  return apiAssetUrl(path) ?? `${API_BASE_URL}/`;
 }
 
 function isBodyInit(body: RequestBody): body is BodyInit {

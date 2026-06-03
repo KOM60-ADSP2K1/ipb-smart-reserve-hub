@@ -409,9 +409,11 @@ function SuperIcon({ name, size = 18 }: { name: string; size?: number }) {
 export function SuperAdminShell({
   active,
   children,
+  profileActive = false,
 }: {
   active: SuperAdminActive;
   children: ReactNode;
+  profileActive?: boolean;
 }) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const auth = useAuth();
@@ -446,7 +448,11 @@ export function SuperAdminShell({
             <NotificationSurface className="text-[#6b7280]" role="super_admin" />
             <a
               aria-label="Profil Super Admin"
-              className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-[#0f9d58] text-[13px] font-bold text-white no-underline"
+              aria-current={profileActive ? "page" : undefined}
+              className={cn(
+                "flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white no-underline",
+                profileActive ? "bg-[#0b7340] ring-2 ring-[#bbf7d0] ring-offset-2" : "bg-[#0f9d58]",
+              )}
               href="/super-admin/profile"
             >
               SA
@@ -1325,6 +1331,9 @@ export function SuperAdminFacilitiesPage() {
   const [createFacilityOpen, setCreateFacilityOpen] = useState(false);
   const [facilityPage, setFacilityPage] = useState(1);
   const [facilityPageSize, setFacilityPageSize] = useState(5);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [coverageFilter, setCoverageFilter] = useState("all");
   const [selectedFacilityId, setSelectedFacilityId] = useState<string | null>(null);
   const [staffInputs, setStaffInputs] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
@@ -1342,9 +1351,19 @@ export function SuperAdminFacilitiesPage() {
     queryKey: ["super-admin", "staff-options"],
   });
   const facilities = governanceQuery.data ?? [];
-  const facilityTotalPages = Math.max(1, Math.ceil(facilities.length / facilityPageSize));
+  const filteredFacilities = facilities.filter((facility) => {
+    const searchHaystack = `${facility.name} ${facility.location} ${facility.category} ${(facility.issue_flags ?? []).join(" ")}`.toLowerCase();
+    const matchesSearch = searchQuery.trim().length === 0 || searchHaystack.includes(searchQuery.trim().toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "active" && facility.is_active) ||
+      (statusFilter === "inactive" && !facility.is_active);
+    const matchesCoverage = coverageFilter === "all" || facility.assignment_coverage === coverageFilter;
+    return matchesSearch && matchesStatus && matchesCoverage;
+  });
+  const facilityTotalPages = Math.max(1, Math.ceil(filteredFacilities.length / facilityPageSize));
   const currentFacilityPage = Math.min(facilityPage, facilityTotalPages);
-  const pagedFacilities = facilities.slice(
+  const pagedFacilities = filteredFacilities.slice(
     (currentFacilityPage - 1) * facilityPageSize,
     currentFacilityPage * facilityPageSize,
   );
@@ -1461,6 +1480,45 @@ export function SuperAdminFacilitiesPage() {
           </DashboardStateMessage>
         ) : null}
 
+        <section className="mt-6 grid grid-cols-[1fr_220px_220px] gap-3 rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)] max-md:grid-cols-1">
+          <input
+            aria-label="Cari fasilitas super admin"
+            className="min-h-11 rounded-lg border border-[#dbe2ea] bg-white px-3 text-sm text-[#111827]"
+            onChange={(event) => {
+              setFacilityPage(1);
+              setSearchQuery(event.target.value);
+            }}
+            placeholder="Cari nama, lokasi, atau kategori"
+            value={searchQuery}
+          />
+          <select
+            aria-label="Filter status fasilitas super admin"
+            className="min-h-11 rounded-lg border border-[#dbe2ea] bg-white px-3 text-sm text-[#111827]"
+            onChange={(event) => {
+              setFacilityPage(1);
+              setStatusFilter(event.target.value);
+            }}
+            value={statusFilter}
+          >
+            <option value="all">Semua status</option>
+            <option value="active">Aktif</option>
+            <option value="inactive">Nonaktif</option>
+          </select>
+          <select
+            aria-label="Filter cakupan staff fasilitas super admin"
+            className="min-h-11 rounded-lg border border-[#dbe2ea] bg-white px-3 text-sm text-[#111827]"
+            onChange={(event) => {
+              setFacilityPage(1);
+              setCoverageFilter(event.target.value);
+            }}
+            value={coverageFilter}
+          >
+            <option value="all">Semua cakupan</option>
+            <option value="covered">Sudah tercakup</option>
+            <option value="needs_staff">Butuh staff</option>
+          </select>
+        </section>
+
         <div className="mt-7 grid gap-7">
           <SectionCard link="Lihat Semua" linkHref="/super-admin/facilities" title="Daftar Fasilitas">
             <table className="w-full border-collapse max-md:hidden">
@@ -1558,7 +1616,7 @@ export function SuperAdminFacilitiesPage() {
                 </article>
               ))}
             </div>
-            {facilities.length > facilityPageSize ? (
+            {filteredFacilities.length > facilityPageSize ? (
               <PaginationControls
                 className="border-t border-[#e5e7eb] px-5 py-4"
                 currentPage={currentFacilityPage}
@@ -1570,7 +1628,7 @@ export function SuperAdminFacilitiesPage() {
                 onPrevious={() => setFacilityPage((current) => Math.max(current - 1, 1))}
                 pageSize={facilityPageSize}
                 pageSizeOptions={[5, 10, 20]}
-                summary={`Menampilkan ${pagedFacilities.length} dari ${facilities.length} fasilitas`}
+                summary={`Menampilkan ${pagedFacilities.length} dari ${filteredFacilities.length} fasilitas`}
                 totalPages={facilityTotalPages}
               />
             ) : null}
@@ -1589,6 +1647,11 @@ export function SuperAdminFacilitiesPage() {
                 >
                   Muat ulang fasilitas
                 </button>
+              </div>
+            ) : null}
+            {governanceQuery.isSuccess && facilities.length > 0 && filteredFacilities.length === 0 ? (
+              <div className="border-t border-[#e5e7eb] p-6 text-sm font-semibold text-[#6b7280]">
+                Tidak ada fasilitas yang cocok dengan pencarian atau filter.
               </div>
             ) : null}
           </SectionCard>

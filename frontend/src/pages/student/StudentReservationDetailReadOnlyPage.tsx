@@ -3,7 +3,7 @@ import { Building2, CalendarDays, FileText, Info, MapPin, Menu, Star } from "luc
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { Navigate, useParams } from "react-router-dom";
-import { ApiError, apiDownload, apiPreview, apiRequest } from "../../api/http";
+import { ApiError, apiAssetUrl, apiDownload, apiPreview, apiRequest } from "../../api/http";
 import { NotificationSurface } from "../../components/NotificationSurface";
 import { StudentHeaderSearch } from "../../components/layout/StudentHeaderSearch";
 import { studentHomeSession } from "../../fixtures/studentHome";
@@ -295,7 +295,7 @@ function Gallery({
         <img
           alt={`Foto ${facilityName}`}
           className="h-full w-full object-cover"
-          src={coverImageUrl}
+          src={apiAssetUrl(coverImageUrl) ?? coverImageUrl}
         />
       </div>
     );

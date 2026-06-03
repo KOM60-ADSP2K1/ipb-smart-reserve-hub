@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Route, Routes } from "react-router-dom";
@@ -262,6 +262,10 @@ describe("StudentReviewCancellationProfilePages", () => {
     expect(screen.getByText("081234567890")).toBeVisible();
     expect(screen.getByText("Ilmu Komputer")).toBeVisible();
     expect(screen.getAllByText("Belum tersedia")).toHaveLength(2);
+    expect(screen.getByRole("link", { name: /Profil/i })).toHaveAttribute("aria-current", "page");
+    const studentNav = screen.getByRole("navigation", { name: "Navigasi mahasiswa" });
+    expect(studentNav).toBeVisible();
+    expect(within(studentNav).getByRole("link", { name: "Reservasi" })).not.toHaveAttribute("aria-current", "page");
   });
 
   it("redirects to login when current session validation fails", async () => {

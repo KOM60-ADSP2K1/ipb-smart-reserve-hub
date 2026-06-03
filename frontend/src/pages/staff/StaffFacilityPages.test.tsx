@@ -157,7 +157,12 @@ describe("StaffFacilityPages", () => {
       "https://cdn.example.test/grand-auditorium-cover.jpg",
     );
     expect(screen.getByRole("heading", { name: "Agri-Tech Greenhouses" })).toBeVisible();
-    expect(screen.getByText((_, element) => element?.textContent === "Menampilkan 2 fasilitas")).toBeVisible();
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === "P" && element.textContent?.includes("Menampilkan 2 dari 2 fasilitas") === true,
+      ),
+    ).toBeVisible();
     expect(screen.getByText("Rp100.000 / jam")).toBeVisible();
     expect(screen.getByText("Senin-Jumat, 08:00-18:00")).toBeVisible();
     expect(screen.getAllByText("Nonaktif")[1]).toBeVisible();
@@ -173,6 +178,35 @@ describe("StaffFacilityPages", () => {
     await waitFor(() => {
       expect(fetchMock).toHaveBeenCalledWith("http://localhost:8000/staff/facilities", expect.any(Object));
     });
+  });
+
+  it("filters assigned facilities by search text and active status", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const url = String(input);
+
+      if (url === "http://localhost:8000/staff/facilities") {
+        return jsonResponse(facilitiesResponse);
+      }
+
+      return jsonResponse({ detail: `Unhandled ${url}` }, 404);
+    });
+
+    renderFacilityList();
+
+    expect(await screen.findByRole("heading", { name: "Grand Auditorium" })).toBeVisible();
+    await user.type(screen.getByLabelText("Cari fasilitas staff"), "greenhouse");
+    expect(screen.getByRole("heading", { name: "Agri-Tech Greenhouses" })).toBeVisible();
+    expect(screen.queryByRole("heading", { name: "Grand Auditorium" })).not.toBeInTheDocument();
+    expect(
+      screen.getByText(
+        (_, element) =>
+          element?.tagName === "P" && element.textContent?.includes("Menampilkan 1 dari 2 fasilitas") === true,
+      ),
+    ).toBeVisible();
+
+    await user.selectOptions(screen.getByLabelText("Filter status fasilitas staff"), "active");
+    expect(await screen.findByText("Tidak ada fasilitas yang cocok dengan pencarian atau filter.")).toBeVisible();
   });
 
   it("renders empty and recoverable error states for assigned facilities", async () => {
@@ -692,15 +726,13 @@ describe("StaffFacilityPages", () => {
         return jsonResponse(categoriesResponse);
       }
 
-      if (url === "http://localhost:8000/staff/facilities/grand-auditorium/images" && init?.method === "POST") {
-        expect(init.body).toBe(
-          JSON.stringify({
-            alt_text: "Cover auditorium",
-            display_order: 0,
-            is_cover: false,
-            url: "https://cdn.example.test/auditorium.jpg",
-          }),
-        );
+      if (url === "http://localhost:8000/staff/facilities/grand-auditorium/images/upload" && init?.method === "POST") {
+        expect(init.body).toBeInstanceOf(FormData);
+        const body = init.body as FormData;
+        expect(body.get("alt_text")).toBe("Grand Auditorium - auditorium");
+        expect(body.get("is_cover")).toBe("false");
+        expect(body.get("file")).toBeInstanceOf(File);
+        expect((body.get("file") as File).name).toBe("auditorium.jpg");
         return jsonResponse({ id: "image-1" }, 201);
       }
 
@@ -724,9 +756,11 @@ describe("StaffFacilityPages", () => {
       "src",
       "https://cdn.example.test/existing-auditorium.jpg",
     );
-    await user.type(await screen.findByLabelText("URL Gambar"), "https://cdn.example.test/auditorium.jpg");
-    await user.type(screen.getByLabelText("Teks Alternatif"), "Cover auditorium");
-    await user.click(screen.getByRole("button", { name: "Tambah Gambar" }));
+    await user.upload(
+      await screen.findByLabelText("Pilih file gambar fasilitas"),
+      new File(["facility-image"], "auditorium.jpg", { type: "image/jpeg" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Unggah Gambar" }));
     expect(await screen.findByText("Gambar fasilitas ditambahkan.")).toBeVisible();
     expect(await screen.findByRole("img", { name: "Cover auditorium" })).toHaveAttribute(
       "src",
@@ -742,7 +776,7 @@ describe("StaffFacilityPages", () => {
     await waitFor(() => {
       expect(facilitiesGetCount).toBe(3);
       expect(fetchMock).toHaveBeenCalledWith(
-        "http://localhost:8000/staff/facilities/grand-auditorium/images",
+        "http://localhost:8000/staff/facilities/grand-auditorium/images/upload",
         expect.objectContaining({ method: "POST" }),
       );
       expect(fetchMock).toHaveBeenCalledWith(
@@ -750,6 +784,83 @@ describe("StaffFacilityPages", () => {
         expect.objectContaining({ method: "POST" }),
       );
     });
+  });
+
+  it("removes an uploaded facility image from the media gallery", async () => {
+    const user = userEvent.setup();
+    let facilitiesGetCount = 0;
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation((input, init) => {
+      const url = String(input);
+
+      if (url === "http://localhost:8000/staff/facilities" && !init?.method) {
+        facilitiesGetCount += 1;
+        return jsonResponse([
+          {
+            ...facilitiesResponse[0],
+            images:
+              facilitiesGetCount === 1
+                ? [
+                    {
+                      alt_text: "Cover auditorium",
+                      display_order: 0,
+                      id: "image-cover",
+                      is_active: true,
+                      is_cover: true,
+                      url: "https://cdn.example.test/auditorium-cover.jpg",
+                    },
+                    {
+                      alt_text: "Tampak samping auditorium",
+                      display_order: 1,
+                      id: "image-side",
+                      is_active: true,
+                      is_cover: false,
+                      url: "https://cdn.example.test/auditorium-side.jpg",
+                    },
+                  ]
+                : [
+                    {
+                      alt_text: "Cover auditorium",
+                      display_order: 0,
+                      id: "image-cover",
+                      is_active: true,
+                      is_cover: true,
+                      url: "https://cdn.example.test/auditorium-cover.jpg",
+                    },
+                  ],
+          },
+        ]);
+      }
+
+      if (url === "http://localhost:8000/facility-categories") {
+        return jsonResponse(categoriesResponse);
+      }
+
+      if (url === "http://localhost:8000/staff/facilities/grand-auditorium/images/image-side" && init?.method === "DELETE") {
+        return jsonResponse({
+          alt_text: "Tampak samping auditorium",
+          display_order: 1,
+          id: "image-side",
+          is_active: false,
+          is_cover: false,
+          url: "https://cdn.example.test/auditorium-side.jpg",
+        });
+      }
+
+      return jsonResponse({ detail: `Unhandled ${url}` }, 404);
+    });
+
+    renderFacilityEdit();
+
+    await user.click(await screen.findByRole("button", { name: "Hapus gambar Tampak samping auditorium" }));
+
+    expect(await screen.findByText("Gambar fasilitas dihapus.")).toBeVisible();
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "http://localhost:8000/staff/facilities/grand-auditorium/images/image-side",
+        expect.objectContaining({ method: "DELETE" }),
+      );
+    });
+    expect(screen.queryByRole("img", { name: "Tampak samping auditorium" })).not.toBeInTheDocument();
   });
 
   it("lets staff choose an existing facility image as the cover", async () => {
@@ -838,5 +949,50 @@ describe("StaffFacilityPages", () => {
       );
     });
     expect(screen.getByText("Cover", { selector: "span" })).toBeVisible();
+  });
+
+  it("opens a larger preview modal for existing facility images", async () => {
+    const user = userEvent.setup();
+    vi.spyOn(globalThis, "fetch").mockImplementation((input) => {
+      const url = String(input);
+
+      if (url === "http://localhost:8000/staff/facilities") {
+        return jsonResponse([
+          {
+            ...facilitiesResponse[0],
+            images: [
+              {
+                alt_text: "Cover auditorium",
+                display_order: 0,
+                id: "image-cover",
+                is_active: true,
+                is_cover: true,
+                url: "https://cdn.example.test/auditorium-cover.jpg",
+              },
+            ],
+          },
+        ]);
+      }
+
+      if (url === "http://localhost:8000/facility-categories") {
+        return jsonResponse(categoriesResponse);
+      }
+
+      return jsonResponse({ detail: `Unhandled ${url}` }, 404);
+    });
+
+    renderFacilityEdit();
+
+    await user.click(await screen.findByRole("button", { name: "Lihat gambar Cover auditorium" }));
+    expect(screen.getByRole("dialog", { name: "Preview Cover auditorium" })).toBeVisible();
+    expect(screen.getAllByRole("img", { name: "Cover auditorium" })[1]).toHaveAttribute(
+      "src",
+      "https://cdn.example.test/auditorium-cover.jpg",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Tutup" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Preview Cover auditorium" })).not.toBeInTheDocument();
+    });
   });
 });

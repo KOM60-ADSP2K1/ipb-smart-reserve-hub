@@ -12,6 +12,11 @@ fi
 BACKEND_URL="${BACKEND_URL:-http://localhost:8000}"
 VITE_API_BASE_URL="${VITE_API_BASE_URL:-$BACKEND_URL}"
 PYTHON_BIN="${PYTHON_BIN:-}"
+IPB_ENVIRONMENT="local"
+IPB_DATABASE_URL="sqlite+pysqlite:///./ipb_smart_reserve_hub.db"
+
+export IPB_ENVIRONMENT
+export IPB_DATABASE_URL
 
 backend_pid=""
 frontend_pid=""

@@ -116,6 +116,7 @@ class FacilityModuleFactory:
         facility_management_repository = SqlAlchemyFacilityManagementRepository(session)
         return FacilityManagementModule(
             facility_management_repository=facility_management_repository,
+            storage=self._private_storage,
             assigned_facility_access=AssignedFacilityAccessModule(
                 facility_repository=facility_management_repository
             ),

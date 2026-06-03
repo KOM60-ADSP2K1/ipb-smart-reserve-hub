@@ -10,10 +10,10 @@ import {
   Upload,
   Users,
 } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ChangeEvent, type DragEvent, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
-import { ApiError, apiRequest } from "../../api/http";
+import { ApiError, apiAssetUrl, apiRequest } from "../../api/http";
 import { type StaffFacility, type StaffScheduleEntry } from "../../fixtures/staffFacilities";
 import { mapStaffReservationStatus } from "../../reservations/staffReservationOperations";
 import { campusDateKey, formatCampusDate, formatCampusTime } from "../../utils/campusTime";
@@ -171,12 +171,16 @@ function activateStaffFacility(facilityId: string) {
   return updateStaffFacility(facilityId, { is_active: true });
 }
 
-function createStaffFacilityImage(facilityId: string, body: ApiJsonObject) {
-  return apiRequest<unknown>(`/staff/facilities/${facilityId}/images`, { body, method: "POST" });
+function uploadStaffFacilityImage(facilityId: string, body: FormData) {
+  return apiRequest<unknown>(`/staff/facilities/${facilityId}/images/upload`, { body, method: "POST" });
 }
 
 function chooseStaffFacilityCoverImage(facilityId: string, imageId: string) {
   return apiRequest<unknown>(`/staff/facilities/${facilityId}/images/${imageId}/cover`, { method: "POST" });
+}
+
+function removeStaffFacilityImage(facilityId: string, imageId: string) {
+  return apiRequest<unknown>(`/staff/facilities/${facilityId}/images/${imageId}`, { method: "DELETE" });
 }
 
 function createStaffFacilityBlackout(facilityId: string, body: ApiJsonObject) {
@@ -311,6 +315,20 @@ function generatedOpenHoursSummary(openHours: OpenHourFormRow[]) {
   }).join("; ");
 }
 
+function formatBytes(size: number) {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${Math.round(size / 102.4) / 10} KB`;
+  return `${Math.round(size / (1024 * 102.4)) / 10} MB`;
+}
+
+function facilityImageAltText(facilityName: string, fileName: string) {
+  const stem = fileName.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim();
+  return stem ? `${facilityName} - ${stem}` : `Gambar ${facilityName}`;
+}
+
+const facilityImageTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const maxFacilityImageBytes = 5 * 1024 * 1024;
+
 function dateKeyFromUtcParts(year: number, monthIndex: number, day: number) {
   const date = new Date(Date.UTC(year, monthIndex, day, 12));
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-${String(
@@ -376,7 +394,7 @@ function mapStaffFacility(facility: FacilityManagementProfileResponse): StaffFac
     capacity: facility.capacity,
     categoryLabel: facility.category,
     coverImageAlt: coverImage?.alt_text,
-    coverImageUrl: coverImage?.url ?? null,
+    coverImageUrl: apiAssetUrl(coverImage?.url ?? null),
     description: `${facility.description} ${facility.location}.`.trim(),
     editHref: `/staff/facilities/${facility.id}/edit`,
     id: facility.id,
@@ -428,6 +446,10 @@ function apiErrorMessage(error: unknown, fallback: string) {
     return error.message;
   }
   return fallback;
+}
+
+function normalizedText(value: string) {
+  return value.trim().toLowerCase();
 }
 
 function mapScheduleEntry(entry: StaffFacilityScheduleEntryResponse): StaffScheduleEntry {
@@ -561,6 +583,22 @@ export function StaffFacilityListPage() {
     queryKey: ["staff", "facilities"],
   });
   const facilities = facilitiesQuery.data?.map(mapStaffFacility) ?? [];
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const categoryOptions = Array.from(new Set(facilities.map((facility) => facility.categoryLabel))).sort((left, right) =>
+    left.localeCompare(right),
+  );
+  const filteredFacilities = facilities.filter((facility) => {
+    const matchesSearch =
+      normalizedText(searchQuery).length === 0 ||
+      normalizedText(
+        `${facility.name} ${facility.categoryLabel} ${facility.description} ${facility.openHoursSummary} ${facility.priceSummary}`,
+      ).includes(normalizedText(searchQuery));
+    const matchesCategory = categoryFilter === "all" || facility.categoryLabel === categoryFilter;
+    const matchesStatus = statusFilter === "all" || facility.status === statusFilter;
+    return matchesSearch && matchesCategory && matchesStatus;
+  });
 
   return (
     <StaffShell active="facilities">
@@ -579,28 +617,40 @@ export function StaffFacilityListPage() {
 
         <section className="mt-8 flex items-center justify-between gap-4 rounded-xl border border-[#e5e7eb] bg-white px-6 py-4 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.05),0_2px_4px_-1px_rgba(0,0,0,0.03)] max-md:flex-col max-md:items-stretch max-md:p-4">
           <div className="flex items-center gap-4 max-md:grid max-md:grid-cols-2 max-md:gap-3">
+            <input
+              aria-label="Cari fasilitas staff"
+              className="h-10 min-w-[240px] rounded-md border border-[#e5e7eb] bg-white px-4 text-sm text-[#111827] outline-none max-md:col-span-2 max-md:min-w-0 max-md:w-full"
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Cari nama atau kategori"
+              value={searchQuery}
+            />
             <select
-              aria-label="Filter by facility type"
+              aria-label="Filter kategori fasilitas staff"
               className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 text-sm text-[#111827] outline-none max-md:w-full"
-              defaultValue=""
+              onChange={(event) => setCategoryFilter(event.target.value)}
+              value={categoryFilter}
             >
-              <option value="">Semua Tipe</option>
-              <option value="auditorium">Auditorium</option>
-              <option value="lab">Laboratorium</option>
-              <option value="class">Ruang Kelas</option>
+              <option value="all">Semua Kategori</option>
+              {categoryOptions.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
             </select>
             <select
-              aria-label="Filter by facility status"
+              aria-label="Filter status fasilitas staff"
               className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 text-sm text-[#111827] outline-none max-md:w-full"
-              defaultValue=""
+              onChange={(event) => setStatusFilter(event.target.value)}
+              value={statusFilter}
             >
-              <option value="">Semua Status</option>
+              <option value="all">Semua Status</option>
               <option value="active">Aktif</option>
               <option value="inactive">Nonaktif</option>
             </select>
           </div>
           <p className="m-0 text-sm text-[#6b7280]">
-            Menampilkan <strong>{facilitiesQuery.isLoading ? "-" : facilities.length}</strong> fasilitas
+            Menampilkan <strong>{facilitiesQuery.isLoading ? "-" : filteredFacilities.length}</strong> dari{" "}
+            <strong>{facilitiesQuery.isLoading ? "-" : facilities.length}</strong> fasilitas
           </p>
         </section>
 
@@ -616,7 +666,10 @@ export function StaffFacilityListPage() {
           {facilitiesQuery.isSuccess && facilities.length === 0 ? (
             <QueryStateMessage>Belum ada fasilitas yang ditugaskan kepada Anda.</QueryStateMessage>
           ) : null}
-          {facilities.map((facility) => (
+          {facilitiesQuery.isSuccess && facilities.length > 0 && filteredFacilities.length === 0 ? (
+            <QueryStateMessage>Tidak ada fasilitas yang cocok dengan pencarian atau filter.</QueryStateMessage>
+          ) : null}
+          {filteredFacilities.map((facility) => (
             <FacilityCard facility={facility} key={facility.id} />
           ))}
         </section>
@@ -1026,7 +1079,10 @@ export function StaffFacilityEditPage() {
   const form: FacilityEditForm = { ...(facility ? facilityToEditForm(facility) : emptyForm), ...formEdits };
   const [formError, setFormError] = useState("");
   const [message, setMessage] = useState("");
-  const [imageForm, setImageForm] = useState({ alt_text: "", url: "" });
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+  const [imageFileError, setImageFileError] = useState("");
+  const [dragActive, setDragActive] = useState(false);
+  const [previewImage, setPreviewImage] = useState<FacilityImageManagementResponse | null>(null);
   const [blackoutForm, setBlackoutForm] = useState({
     ends_date: "2026-06-01",
     ends_time: "04:00",
@@ -1034,6 +1090,7 @@ export function StaffFacilityEditPage() {
     starts_date: "2026-06-01",
     starts_time: "03:00",
   });
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
 
   const invalidateFacilities = async () => {
     await queryClient.invalidateQueries({ queryKey: ["staff", "facilities"] });
@@ -1125,22 +1182,85 @@ export function StaffFacilityEditPage() {
     },
   });
 
+  function validateImageFile(file: File) {
+    if (!facilityImageTypes.has(file.type)) {
+      return "Unggah gambar harus berupa JPG, PNG, atau WEBP.";
+    }
+    if (file.size > maxFacilityImageBytes) {
+      return "Ukuran gambar maksimal 5 MB.";
+    }
+    return "";
+  }
+
+  function clearSelectedImageFile() {
+    setSelectedImageFile(null);
+    setDragActive(false);
+    setImageFileError("");
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
+  }
+
+  function handleSelectedImageFile(file: File | null) {
+    setMessage("");
+    setFormError("");
+    setImageFileError("");
+    setSelectedImageFile(file);
+    if (!file) {
+      return;
+    }
+    const nextError = validateImageFile(file);
+    if (nextError) {
+      setImageFileError(nextError);
+    }
+  }
+
+  function handleImageFileChange(event: ChangeEvent<HTMLInputElement>) {
+    handleSelectedImageFile(event.target.files?.[0] ?? null);
+  }
+
+  function handleImageDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setDragActive(false);
+    handleSelectedImageFile(event.dataTransfer.files?.[0] ?? null);
+  }
+
   const imageMutation = useMutation({
-    mutationFn: () =>
-      createStaffFacilityImage(facilityId, {
-        alt_text: imageForm.alt_text.trim(),
-        display_order: 0,
-        is_cover: images.length === 0,
-        url: imageForm.url.trim(),
-      }),
+    mutationFn: () => {
+      if (!selectedImageFile) {
+        throw new Error("Pilih file gambar terlebih dahulu.");
+      }
+      const nextError = validateImageFile(selectedImageFile);
+      if (nextError) {
+        throw new Error(nextError);
+      }
+      const body = new FormData();
+      body.append("file", selectedImageFile);
+      body.append("alt_text", facilityImageAltText(form.name, selectedImageFile.name));
+      body.append("is_cover", String(images.length === 0));
+      return uploadStaffFacilityImage(facilityId, body);
+    },
     onError: (error) => {
       setMessage("");
       setFormError(apiErrorMessage(error, "Gambar fasilitas belum dapat ditambahkan."));
     },
     onSuccess: async () => {
       setFormError("");
-      setImageForm({ alt_text: "", url: "" });
+      clearSelectedImageFile();
       setMessage("Gambar fasilitas ditambahkan.");
+      await invalidateFacilities();
+    },
+  });
+
+  const deleteImageMutation = useMutation({
+    mutationFn: (imageId: string) => removeStaffFacilityImage(facilityId, imageId),
+    onError: (error) => {
+      setMessage("");
+      setFormError(apiErrorMessage(error, "Gambar fasilitas belum dapat dihapus."));
+    },
+    onSuccess: async () => {
+      setFormError("");
+      setMessage("Gambar fasilitas dihapus.");
       await invalidateFacilities();
     },
   });
@@ -1196,6 +1316,7 @@ export function StaffFacilityEditPage() {
     deactivateMutation.isPending ||
     activateMutation.isPending ||
     imageMutation.isPending ||
+    deleteImageMutation.isPending ||
     coverImageMutation.isPending ||
     blackoutMutation.isPending;
 
@@ -1524,7 +1645,7 @@ export function StaffFacilityEditPage() {
               <h2 className="m-0 text-sm font-bold text-[#111827]">Galeri Media</h2>
             </div>
             <div className="rounded-lg border border-[#e5e7eb] bg-[#f8fafc] p-3 text-xs leading-5 text-[#6b7280]">
-              Media yang ada dikelola oleh backend. Tambahkan gambar baru dengan URL dan teks alternatif.
+              Unggah gambar fasilitas langsung dari perangkat Anda. Format yang didukung: JPG, PNG, atau WEBP maksimal 5 MB.
             </div>
             <div className="mt-4 grid gap-3">
               {images.length === 0 ? (
@@ -1537,11 +1658,18 @@ export function StaffFacilityEditPage() {
                   className="overflow-hidden rounded-lg border border-[#e5e7eb] bg-[#f8fafc]"
                   key={image.id}
                 >
-                  <img
-                    alt={image.alt_text}
-                    className="h-32 w-full object-cover"
-                    src={image.url}
-                  />
+                  <button
+                    aria-label={`Lihat gambar ${image.alt_text}`}
+                    className="block w-full cursor-zoom-in border-0 bg-transparent p-0"
+                    onClick={() => setPreviewImage(image)}
+                    type="button"
+                  >
+                    <img
+                      alt={image.alt_text}
+                      className="h-32 w-full object-cover"
+                      src={apiAssetUrl(image.url) ?? image.url}
+                    />
+                  </button>
                   <figcaption className="grid gap-2 px-3 py-2 text-xs text-[#6b7280]">
                     <div className="flex items-center justify-between gap-3">
                       <span className="min-w-0 break-words font-semibold text-[#111827]">{image.alt_text}</span>
@@ -1552,46 +1680,102 @@ export function StaffFacilityEditPage() {
                       ) : null}
                     </div>
                     {!image.is_cover ? (
+                      <div className="grid gap-2">
+                        <button
+                          aria-label={`Pilih ${image.alt_text} sebagai cover`}
+                          className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#d1fae5] bg-white px-3 text-xs font-bold text-[#0f9d58]"
+                          disabled={busy}
+                          onClick={() => coverImageMutation.mutate(image.id)}
+                          type="button"
+                        >
+                          Pilih sebagai cover
+                        </button>
+                        <button
+                          aria-label={`Hapus gambar ${image.alt_text}`}
+                          className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#fecaca] bg-white px-3 text-xs font-bold text-[#dc2626]"
+                          disabled={busy}
+                          onClick={() => deleteImageMutation.mutate(image.id)}
+                          type="button"
+                        >
+                          Hapus gambar
+                        </button>
+                      </div>
+                    ) : (
                       <button
-                        aria-label={`Pilih ${image.alt_text} sebagai cover`}
-                        className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#d1fae5] bg-white px-3 text-xs font-bold text-[#0f9d58]"
+                        aria-label={`Hapus gambar ${image.alt_text}`}
+                        className="inline-flex min-h-9 items-center justify-center rounded-lg border border-[#fecaca] bg-white px-3 text-xs font-bold text-[#dc2626]"
                         disabled={busy}
-                        onClick={() => coverImageMutation.mutate(image.id)}
+                        onClick={() => deleteImageMutation.mutate(image.id)}
                         type="button"
                       >
-                        Pilih sebagai cover
+                        Hapus gambar
                       </button>
-                    ) : null}
+                    )}
                   </figcaption>
                 </figure>
               ))}
             </div>
             <div className="mt-4 grid gap-3">
-              <Field id="facility-image-url" label="URL Gambar">
-                <input
-                  className="h-[42px] w-full rounded-lg border border-[#e5e7eb] bg-[#f8fafc] px-3 text-sm"
-                  id="facility-image-url"
-                  onChange={(event) => setImageForm((current) => ({ ...current, url: event.target.value }))}
-                  value={imageForm.url}
-                />
-              </Field>
-              <Field id="facility-image-alt" label="Teks Alternatif">
-                <input
-                  className="h-[42px] w-full rounded-lg border border-[#e5e7eb] bg-[#f8fafc] px-3 text-sm"
-                  id="facility-image-alt"
-                  onChange={(event) => setImageForm((current) => ({ ...current, alt_text: event.target.value }))}
-                  value={imageForm.alt_text}
-                />
-              </Field>
-              <button
-                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#d1fae5] bg-[#e8f5e9] px-4 text-sm font-bold text-[#0f9d58]"
-                disabled={busy || !imageForm.url.trim() || !imageForm.alt_text.trim()}
-                onClick={() => imageMutation.mutate()}
-                type="button"
+              <label
+                className={`block rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors ${
+                  dragActive ? "border-[#0f9d58] bg-[#ecfdf5]" : "border-[#bbf7d0] bg-[#f8fafc]"
+                }`}
+                htmlFor="facility-image-file"
+                onDragEnter={(event) => {
+                  event.preventDefault();
+                  setDragActive(true);
+                }}
+                onDragLeave={(event) => {
+                  event.preventDefault();
+                  setDragActive(false);
+                }}
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={handleImageDrop}
               >
-                <Upload aria-hidden="true" size={16} />
-                Tambah Gambar
-              </button>
+                <Upload aria-hidden="true" className="mx-auto text-[#0f9d58]" size={28} />
+                <p className="m-0 mt-3 text-sm font-bold text-[#111827]">Unggah gambar fasilitas</p>
+                <p className="m-0 mt-1 text-xs leading-5 text-[#6b7280]">
+                  Klik area ini atau seret file ke sini.
+                </p>
+                <input
+                  ref={imageInputRef}
+                  aria-label="Pilih file gambar fasilitas"
+                  className="sr-only"
+                  id="facility-image-file"
+                  onChange={handleImageFileChange}
+                  type="file"
+                />
+                <p className="m-0 mt-4 text-sm font-semibold text-[#374151]">
+                  {selectedImageFile ? selectedImageFile.name : "Belum ada file dipilih"}
+                </p>
+                {selectedImageFile ? (
+                  <p className="m-0 mt-1 text-xs text-[#6b7280]">
+                    {selectedImageFile.type || "image"} · {formatBytes(selectedImageFile.size)}
+                  </p>
+                ) : null}
+              </label>
+              {imageFileError ? (
+                <p className="m-0 text-xs font-semibold text-[#dc2626]">{imageFileError}</p>
+              ) : null}
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#d1d5db] bg-white px-4 text-sm font-bold text-[#374151]"
+                  disabled={busy}
+                  onClick={clearSelectedImageFile}
+                  type="button"
+                >
+                  Reset File
+                </button>
+                <button
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-[#d1fae5] bg-[#e8f5e9] px-4 text-sm font-bold text-[#0f9d58]"
+                  disabled={busy || !selectedImageFile || Boolean(imageFileError)}
+                  onClick={() => imageMutation.mutate()}
+                  type="button"
+                >
+                  <Upload aria-hidden="true" size={16} />
+                  Unggah Gambar
+                </button>
+              </div>
             </div>
 
             <section className="mt-5 border-t border-[#e5e7eb] pt-5 text-sm">
@@ -1706,7 +1890,48 @@ export function StaffFacilityEditPage() {
           </aside>
         </form>
         ) : null}
+        {previewImage ? (
+          <ImagePreviewModal image={previewImage} onClose={() => setPreviewImage(null)} />
+        ) : null}
       </main>
     </StaffShell>
+  );
+}
+
+function ImagePreviewModal({
+  image,
+  onClose,
+}: {
+  image: FacilityImageManagementResponse;
+  onClose: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/70 px-4"
+      onClick={onClose}
+    >
+      <section
+        aria-label={`Preview ${image.alt_text}`}
+        className="w-full max-w-[960px] rounded-2xl border border-[#e5e7eb] bg-white p-4 shadow-[0_24px_48px_rgba(15,23,42,0.24)]"
+        onClick={(event) => event.stopPropagation()}
+        role="dialog"
+      >
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="m-0 min-w-0 break-words text-sm font-bold text-[#111827]">{image.alt_text}</p>
+          <button
+            className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#e5e7eb] px-4 text-sm font-bold text-[#111827]"
+            onClick={onClose}
+            type="button"
+          >
+            Tutup
+          </button>
+        </div>
+        <img
+          alt={image.alt_text}
+          className="max-h-[75vh] w-full rounded-xl object-contain"
+          src={apiAssetUrl(image.url) ?? image.url}
+        />
+      </section>
+    </div>
   );
 }

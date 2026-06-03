@@ -151,6 +151,10 @@ describe("StudentFacilityDetailPage", () => {
     expect(screen.getAllByText("0251-8620000")[0]).toBeVisible();
     expect(screen.getByText("Rp100.000")).toBeVisible();
     expect(screen.getByText("Ruangannya luas dan tata suara jelas.")).toBeVisible();
+    expect(screen.getByRole("link", { name: "Tampilkan semua ulasan" })).toHaveAttribute(
+      "href",
+      "#facility-reviews",
+    );
     expect(await screen.findByText("Belum ada jadwal terblokir pada tanggal ini.")).toBeVisible();
     const calendarHeading = screen.getByRole("heading", { name: "Kalender Publik" });
     const reviewsHeading = screen.getByRole("heading", { name: "Ulasan Peminjam" });

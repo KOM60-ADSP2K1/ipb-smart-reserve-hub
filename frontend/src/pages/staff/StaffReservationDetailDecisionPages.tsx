@@ -2,7 +2,7 @@ import { CalendarDays, Check, Clock, Download, Eye, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { ApiError, apiDownload, apiPreview, apiRequest } from "../../api/http";
+import { ApiError, apiAssetUrl, apiDownload, apiPreview, apiRequest } from "../../api/http";
 import {
   staffDecisionDialogFixture,
   staffReservationDetailFixture,
@@ -278,7 +278,7 @@ function SummaryImage({
         <img
           alt={`Foto ${facilityName}`}
           className="h-full w-full object-cover"
-          src={coverImageUrl}
+          src={apiAssetUrl(coverImageUrl) ?? coverImageUrl}
         />
       </div>
     );

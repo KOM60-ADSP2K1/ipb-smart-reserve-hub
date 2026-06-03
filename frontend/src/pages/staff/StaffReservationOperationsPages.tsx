@@ -94,9 +94,11 @@ function isActionableQueueItem(item: StaffReservationOperationResponse) {
 export function StaffShell({
   active,
   children,
+  profileActive = false,
 }: {
   active: "facilities" | "home" | "reservations";
   children: ReactNode;
+  profileActive?: boolean;
 }) {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
   const auth = useAuth();
@@ -131,7 +133,11 @@ export function StaffShell({
             <NotificationSurface className="text-[#6b7280]" label="Notifikasi staff" role="staff" />
             <a
               aria-label="Profil Bagus Saputra"
-              className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-[#0f9d58] text-[13px] font-bold text-white no-underline"
+              aria-current={profileActive ? "page" : undefined}
+              className={cn(
+                "flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white no-underline",
+                profileActive ? "bg-[#0b7340] ring-2 ring-[#bbf7d0] ring-offset-2" : "bg-[#0f9d58]",
+              )}
               href="/staff/profile"
             >
               BS

@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { LucideIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
-import { apiRequest } from "../../api/http";
+import { apiAssetUrl, apiRequest } from "../../api/http";
 import { NotificationSurface } from "../../components/NotificationSurface";
 import { StudentHeaderSearch } from "../../components/layout/StudentHeaderSearch";
 import { studentHomeSession } from "../../fixtures/studentHome";
@@ -351,7 +351,10 @@ function MediaBox({
 }
 
 function Gallery({ detail }: { detail: FacilityDetailResponse }) {
-  const images = detail.images.length > 0 ? detail.images : [{ alt_text: `Media fallback ${detail.name}`, is_cover: true, url: "" }];
+  const images =
+    detail.images.length > 0
+      ? detail.images.map((image) => ({ ...image, url: apiAssetUrl(image.url) ?? image.url }))
+      : [{ alt_text: `Media fallback ${detail.name}`, is_cover: true, url: "" }];
   const galleryImages = [0, 1, 2, 3].map(
     (index) => images[index % images.length] ?? { alt_text: `Media fallback ${detail.name}`, is_cover: true, url: "" },
   );
@@ -445,7 +448,7 @@ function ReserveWidget({
 
 function Reviews({ detail }: { detail: FacilityDetailResponse }) {
   return (
-    <section className="mt-10 border-t border-[#e5e7eb] pt-10 max-md:mt-9 max-md:pt-9">
+    <section className="mt-10 border-t border-[#e5e7eb] pt-10 max-md:mt-9 max-md:pt-9" id="facility-reviews">
       <div className="mb-6 flex items-center justify-between gap-4 max-md:items-start">
         <h2 className="m-0 text-xl font-semibold">Ulasan Peminjam</h2>
         <div className="flex items-center gap-1 font-semibold">
@@ -480,7 +483,7 @@ function Reviews({ detail }: { detail: FacilityDetailResponse }) {
       ))}
       <a
         className="mt-4 inline-block text-sm font-semibold text-[#0f9d58] underline"
-        href={`/student/facilities/${detail.id}/reviews`}
+        href="#facility-reviews"
       >
         Tampilkan semua ulasan
       </a>

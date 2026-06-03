@@ -3,7 +3,7 @@ import { CalendarDays, Clock, LogOut, Menu } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { Navigate, useNavigate, useParams } from "react-router-dom";
-import { ApiError, apiRequest } from "../../api/http";
+import { ApiError, apiAssetUrl, apiRequest } from "../../api/http";
 import { useAuth } from "../../auth/session";
 import { NotificationSurface } from "../../components/NotificationSurface";
 import { StudentHeaderSearch } from "../../components/layout/StudentHeaderSearch";
@@ -39,6 +39,16 @@ function errorMessage(error: unknown) {
 }
 
 function StudentHeader() {
+  return <StudentHeaderNav activeNav="reservasi" profileActive={false} />;
+}
+
+function StudentHeaderNav({
+  activeNav,
+  profileActive,
+}: {
+  activeNav: "beranda" | "fasilitas" | "reservasi" | "none";
+  profileActive: boolean;
+}) {
   return (
     <header className="fixed inset-x-0 top-0 z-50 flex h-[72px] justify-center border-b border-[#e5e7eb] bg-white max-md:h-16">
       <div className="flex h-full w-[1200px] max-w-[95%] items-center justify-between gap-[22px] max-md:max-w-full max-md:px-3.5">
@@ -70,9 +80,17 @@ function StudentHeader() {
         >
           {navItems.map((item) => (
             <a
-              aria-current={item.label === "Reservasi" ? "page" : undefined}
+              aria-current={
+                (activeNav === "beranda" && item.label === "Beranda") ||
+                (activeNav === "fasilitas" && item.label === "Fasilitas") ||
+                (activeNav === "reservasi" && item.label === "Reservasi")
+                  ? "page"
+                  : undefined
+              }
               className={`border-b-2 pb-1 text-sm font-bold no-underline ${
-                item.label === "Reservasi"
+                (activeNav === "beranda" && item.label === "Beranda") ||
+                (activeNav === "fasilitas" && item.label === "Fasilitas") ||
+                (activeNav === "reservasi" && item.label === "Reservasi")
                   ? "border-[#0f9d58] text-[#0f9d58]"
                   : "border-transparent text-slate-500"
               }`}
@@ -88,7 +106,10 @@ function StudentHeader() {
           <NotificationSurface className="text-slate-500" role="student" />
           <a
             aria-label={`Profil ${studentHomeSession.name}`}
-            className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-[#0f9d58] text-[13px] font-bold text-white no-underline"
+            aria-current={profileActive ? "page" : undefined}
+            className={`flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full text-[13px] font-bold text-white no-underline ${
+              profileActive ? "bg-[#0b7340] ring-2 ring-[#bbf7d0] ring-offset-2" : "bg-[#0f9d58]"
+            }`}
             href="/student/profile"
           >
             {studentHomeSession.initials}
@@ -134,10 +155,18 @@ function StudentFooter() {
   );
 }
 
-function PageShell({ children }: { children: ReactNode }) {
+function PageShell({
+  activeNav = "reservasi",
+  children,
+  profileActive = false,
+}: {
+  activeNav?: "beranda" | "fasilitas" | "reservasi" | "none";
+  children: ReactNode;
+  profileActive?: boolean;
+}) {
   return (
     <div className="min-h-screen overflow-x-hidden bg-[#f8fafc] text-[#111827]">
-      <StudentHeader />
+      <StudentHeaderNav activeNav={activeNav} profileActive={profileActive} />
       <main className="mx-auto mt-[104px] w-[1200px] max-w-[95%] max-md:mt-[88px] max-md:w-full max-md:max-w-full max-md:px-[26px]">
         {children}
       </main>
@@ -159,7 +188,7 @@ function SummaryMedia({
         <img
           alt={`Foto ${facilityName}`}
           className="h-full w-full object-cover"
-          src={coverImageUrl}
+          src={apiAssetUrl(coverImageUrl) ?? coverImageUrl}
         />
       </div>
     );
@@ -448,7 +477,7 @@ export function StudentProfilePage() {
   );
 
   return (
-    <PageShell>
+    <PageShell activeNav="none" profileActive>
       <section className="max-w-[620px]">
         <h1 className="m-0 text-[32px] font-bold max-md:text-[30px]">Profil Mahasiswa</h1>
         <p className="m-0 mt-3 text-sm leading-6 text-[#6b7280]">

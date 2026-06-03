@@ -157,7 +157,10 @@ async def test_approved_paid_reservation_cancellation_request_immediately_cancel
 
 @pytest.mark.anyio
 async def test_automatic_cancellation_releases_slot_and_leaves_no_staff_review_work():
-    app = create_app(database_url="sqlite+pysqlite:///:memory:")
+    app = create_app(
+        database_url="sqlite+pysqlite:///:memory:",
+        clock=lambda: datetime(2026, 5, 1, tzinfo=UTC),
+    )
     test_data = DataBuilder(app)
     test_data.create_user(email="admin@ipb.ac.id", role=UserRole.super_admin)
     staff_id = test_data.create_user(email="staff@ipb.ac.id", role=UserRole.staff)

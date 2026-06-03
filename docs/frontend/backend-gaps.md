@@ -78,6 +78,7 @@ Gap statuses:
 | [BG-STAFF-01-01](per-page-brief/staff-01-facility-list.md#bg-staff-01-01-staff-assigned-facility-list) | `staff-01-facility-list.md` | resolved | Staff assigned facility list |
 | [BG-STAFF-02-01](per-page-brief/staff-02-facility-schedule.md#bg-staff-02-01-staff-facility-schedule) | `staff-02-facility-schedule.md` | resolved | Staff facility schedule |
 | [BG-STAFF-03-01](per-page-brief/staff-03-edit-facility-details.md#bg-staff-03-01-staff-facility-profile-editing) | `staff-03-edit-facility-details.md` | resolved | Staff facility profile editing |
+| [BG-STAFF-03-02](per-page-brief/staff-03-edit-facility-details.md#bg-staff-03-02-staff-facility-binary-image-upload-and-deletion) | `staff-03-edit-facility-details.md` | resolved | Staff facility binary image upload and deletion |
 | [BG-STAFF-10-01](per-page-brief/staff-10-reservation-lists.md#bg-staff-10-01-staff-reservation-list-read-model) | `staff-10-reservation-lists.md` | resolved | Staff reservation list read model |
 | [BG-STAFF-11-01](per-page-brief/staff-11-reservation-details.md#bg-staff-11-01-staff-reservation-detail-read-model) | `staff-11-reservation-details.md` | resolved | Staff reservation detail read model |
 | [BG-STAFF-12-01](per-page-brief/staff-12-review-decision-dialogs.md#bg-staff-12-01-staff-review-decision-actions) | `staff-12-review-decision-dialogs.md` | resolved | Staff review decision actions |

@@ -7,6 +7,7 @@ from app.core.student_email_policy import DEFAULT_ALLOWED_STUDENT_EMAIL_DOMAINS,
 DEFAULT_DATABASE_URL = "sqlite+pysqlite:///./ipb_smart_reserve_hub.db"
 DEFAULT_SECRET_KEY = "dev-secret-change-me"
 PRODUCTION_ENVIRONMENT = "production"
+RAILWAY_VOLUME_MOUNT_PATH = "RAILWAY_VOLUME_MOUNT_PATH"
 
 
 @dataclass(frozen=True)
@@ -25,7 +26,7 @@ class SettingsModule:
             allowed_student_email_domains=cls._parse_allowed_domains(
                 source.get("IPB_ALLOWED_STUDENT_EMAIL_DOMAINS")
             ),
-            private_storage_path=source.get("IPB_PRIVATE_STORAGE_PATH"),
+            private_storage_path=source.get("IPB_PRIVATE_STORAGE_PATH") or source.get(RAILWAY_VOLUME_MOUNT_PATH),
         )
         if source.get("IPB_ENVIRONMENT") == PRODUCTION_ENVIRONMENT:
             settings._validate_production(source)
